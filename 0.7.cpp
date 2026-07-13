@@ -1,4 +1,4 @@
-//指令现在可以正常使用
+﻿//指令现在可以正常使用
 //地下可以正常生成箱子
 #define _CRT_SECURE_NO_WARNINGS
 #include <fstream>
@@ -4143,9 +4143,10 @@ void st_move() {
         if (shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
             shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
             shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > 5000 ||
-            shiti[l].gy > 1000)
+            shiti[l].gy > 1000) {
           update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
+        }
         shiti[l].randomtick++;
         if (shiti[l].randomtick > 1200) {
           update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
