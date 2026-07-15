@@ -1,6 +1,4 @@
-//指令现在可以正常使用
-//地下可以正常生成箱子
-#define _CRT_SECURE_NO_WARNINGS
+﻿
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -14,6 +12,8 @@
 #include <cstdio>
 #include <map>
 #include <vector>
+#include <cstdarg>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -36,15 +36,53 @@ bool ep[5001][5001];
 
 struct Chunk {
   int blocks[CHUNK_SIZE][CHUNK_SIZE];
+  unsigned char light[CHUNK_SIZE][CHUNK_SIZE];
   bool loaded;
   bool modified;
+  bool dirty;       // 需要重新渲染
   
-  Chunk() : loaded(false), modified(false) {
+  Chunk() : loaded(false), modified(false), dirty(true) {
     memset(blocks, 0, sizeof(blocks));
+    memset(light, 0, sizeof(light));
   }
 };
 
 Chunk chunk_data[CHUNK_X_COUNT][CHUNK_Y_COUNT];
+
+// 脏矩形：记录屏幕范围 [sx1,sx2] x [sy1,sy2] 内需要重绘的区域
+struct DirtyRect {
+  int x1, y1, x2, y2;
+  bool valid;
+  DirtyRect() : x1(1000), y1(1000), x2(-1), y2(-1), valid(false) {}
+  void reset() { x1 = 1000; y1 = 1000; x2 = -1; y2 = -1; valid = false; }
+  void add(int x, int y) {
+    if (x < x1) x1 = x;
+    if (x > x2) x2 = x;
+    if (y < y1) y1 = y;
+    if (y > y2) y2 = y;
+    valid = true;
+  }
+};
+static DirtyRect dirty_rect;
+
+// 渲染缓存：记录每个屏幕单元最近渲染的内容，避免重复计算
+struct RenderCache {
+  int block_id;
+  int light_level;
+  unsigned short entity_id;
+  bool valid;
+  RenderCache() : block_id(-1), light_level(-1), entity_id(0), valid(false) {}
+};
+static RenderCache render_cache[102][102];
+static bool use_render_cache = true;
+
+extern double jx, jy;
+extern int printx, printy;
+
+#define world_to_screen_x(wx) (int((wx) - jx + printx * 0.5 + 0.5))
+#define world_to_screen_y(wy) (int((wy) - jy + printy * 0.5 + 0.5))
+#define screen_to_world_x(sx) ((sx) + jx - printx * 0.5)
+#define screen_to_world_y(sy) ((sy) + jy - printy * 0.5)
 
 inline int get_chunk_x(int x) { return x / CHUNK_SIZE; }
 inline int get_chunk_y(int y) { return y / CHUNK_SIZE; }
@@ -60,7 +98,7 @@ inline int get_block(int x, int y) {
   return chunk_data[cx][cy].blocks[lx][ly];
 }
 
-inline void set_block(int x, int y, int val) {
+void set_block(int x, int y, int val) {
   if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
   int cx = get_chunk_x(x);
   int cy = get_chunk_y(y);
@@ -68,6 +106,17 @@ inline void set_block(int x, int y, int val) {
   int ly = get_local_y(y);
   chunk_data[cx][cy].blocks[lx][ly] = val;
   chunk_data[cx][cy].modified = true;
+  chunk_data[cx][cy].dirty = true;
+  dirty_rect.add(world_to_screen_x(x), world_to_screen_y(y));
+}
+
+void set_light_chunk(int x, int y, int val) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  int cx = get_chunk_x(x);
+  int cy = get_chunk_y(y);
+  int lx = get_local_x(x);
+  int ly = get_local_y(y);
+  chunk_data[cx][cy].light[lx][ly] = (unsigned char)val;
 }
 
 inline int get_s2(int x, int y) {
@@ -207,6 +256,8 @@ int bed, GetIn = 1, ed = 8000, sun = 1, back_x = 10, now_wait = 0, wait = 0,
          setfps = 1, gongji = 1, gongjicd = 20, hujiazhi = 0, wudi = 0;
 double jx = 1, jy = 50, x = 1, y = 50, g = 0.6, spx = 0, spy = 0, wj = 0,
        FIX = 1, jianshang = 0, life = 20, boss2hp;
+
+// 坐标系说明（见顶部宏 world_to_screen_x/y, screen_to_world_x/y）
 string zzz;
 struct Box_ {
   unsigned short things[27], bx, by;
@@ -271,6 +322,26 @@ void remove_entity_from_hash(int index, double x, double y) {
   }
 }
 
+void query_visible_entities(double cx, double cy, double half_w, double half_h, vector<int>& results) {
+  results.clear();
+  int min_hx = hash_coord(cx - half_w);
+  int max_hx = hash_coord(cx + half_w);
+  int min_hy = hash_coord(cy - half_h);
+  int max_hy = hash_coord(cy + half_h);
+  for (int hx = min_hx; hx <= max_hx; hx++) {
+    for (int hy = min_hy; hy <= max_hy; hy++) {
+      if (hx < 0 || hx >= HASH_SIZE || hy < 0 || hy >= HASH_SIZE) continue;
+      for (int idx : entity_hash[hx][hy]) {
+        if (shiti[idx].type > 0 &&
+            shiti[idx].gx >= cx - half_w && shiti[idx].gx <= cx + half_w &&
+            shiti[idx].gy >= cy - half_h && shiti[idx].gy <= cy + half_h) {
+          results.push_back(idx);
+        }
+      }
+    }
+  }
+}
+
 void query_nearby_entities(double x, double y, double range, vector<int>& results) {
   results.clear();
   int hx = hash_coord(x);
@@ -310,6 +381,14 @@ void Setpos2(float x, float y) {
   pos.X = To_int(x) + 1, pos.Y = To_int(y);
   SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
+
+void wait_key_release(int vk1, int vk2 = 0) {
+  while ((GetAsyncKeyState(vk1) & 0x8000) ||
+         (vk2 != 0 && (GetAsyncKeyState(vk2) & 0x8000))) {
+    Sleep(1);
+  }
+}
+
 void Color(int a) {
   if (a == 0 || a == 8 || a == -8)
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
@@ -556,6 +635,88 @@ void flush_buffer() {
   WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
   delete[] screenBuffer;
 }
+
+static wchar_t frame_chars[SCREEN_HEIGHT][SCREEN_WIDTH * 2];
+static WORD frame_attrs[SCREEN_HEIGHT][SCREEN_WIDTH];
+static int frame_cx = 0, frame_cy = 0;
+static WORD frame_color = 0x07;
+static bool frame_dirty = false;
+
+void frame_clear() {
+  for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
+      frame_chars[y][x] = L' ';
+    }
+    for (int x = 0; x < SCREEN_WIDTH; x++) {
+      frame_attrs[y][x] = 0x07;
+    }
+  }
+  frame_dirty = false;
+}
+
+void frame_set_color(int c) {
+  if (c >= 0)
+    frame_color = (WORD)c;
+  else
+    frame_color = (WORD)(c + 16);
+}
+
+void frame_set_pos(int x, int y) {
+  frame_cx = x * 2;
+  frame_cy = y;
+}
+
+void frame_draw_char(wchar_t ch) {
+  if (frame_cx < 0 || frame_cx >= SCREEN_WIDTH * 2 || frame_cy < 0 || frame_cy >= SCREEN_HEIGHT)
+    return;
+  frame_chars[frame_cy][frame_cx] = ch;
+  frame_attrs[frame_cy][frame_cx / 2] = frame_color;
+  frame_cx++;
+  frame_dirty = true;
+}
+
+void frame_draw_str(const char* s) {
+  for (int i = 0; s[i]; i++) {
+    frame_draw_char((wchar_t)(unsigned char)s[i]);
+  }
+}
+
+void frame_draw_str_w(const wchar_t* s) {
+  for (int i = 0; s[i]; i++) {
+    frame_draw_char(s[i]);
+  }
+}
+
+void frame_printf(const char* fmt, ...) {
+  char buf[64];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+  frame_draw_str(buf);
+}
+
+void frame_present() {
+  if (!frame_dirty)
+    return;
+  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  COORD bufferSize = {SCREEN_WIDTH * 2, SCREEN_HEIGHT};
+  COORD bufferCoord = {0, 0};
+  SMALL_RECT writeRegion = {0, 0, SCREEN_WIDTH * 2 - 1, SCREEN_HEIGHT - 1};
+  
+  CHAR_INFO *screenBuffer = new CHAR_INFO[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+  for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
+      screenBuffer[y * SCREEN_WIDTH * 2 + x].Char.UnicodeChar = frame_chars[y][x];
+      screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = frame_attrs[y][x / 2];
+    }
+  }
+  
+  WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
+  delete[] screenBuffer;
+  frame_dirty = false;
+}
+
 void Clear() {
   if (weidu == 2)
     return;
@@ -1719,328 +1880,344 @@ void getcolor() {
 void pr_mouse() {
   if (light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
     if (co != 0)
-      Color(0), co = 0;
-    printf("[]");
+      frame_set_color(0), co = 0;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 11) {
     if (weidu == 1) {
       if (co != -6 && night == 0)
-        Color(-6), co = -6;
+        frame_set_color(-6), co = -6;
       else if (co != -23 && night == 1)
-        Color(-23), co = -23;
+        frame_set_color(-23), co = -23;
       else if (co != -29 && night == 2)
-        Color(-29), co = -29;
+        frame_set_color(-29), co = -29;
       else if (co != -31 && night == 3)
-        Color(-31), co = -31;
-      printf("[]");
+        frame_set_color(-31), co = -31;
+      frame_draw_str("[]");
     } else {
       if (co != -33)
-        Color(-33), co = -33;
-      printf("[]");
+        frame_set_color(-33), co = -33;
+      frame_draw_str("[]");
     }
   } else if (s[dx][dy] == 0) {
     if (co != 0)
-      Color(0), co = 0;
-    printf("[]");
+      frame_set_color(0), co = 0;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 1) {
     if (co != -7)
-      Color(-7), co = -7;
-    printf("[]");
+      frame_set_color(-7), co = -7;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 3) {
     if (co != 7)
-      Color(7), co = 7;
-    printf("[]");
+      frame_set_color(7), co = 7;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 4) {
     if (co != 8)
-      Color(8), co = 8;
-    printf("[]");
+      frame_set_color(8), co = 8;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 2) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("[]");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 5) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("[]");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 9) {
     if (co != -15)
-      Color(-15), co = -15;
-    printf("{}");
+      frame_set_color(-15), co = -15;
+    frame_draw_str("{}");
   } else if (s[dx][dy] == 12) {
     if (co != 11)
-      Color(11), co = 11;
-    printf("[]");
+      frame_set_color(11), co = 11;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 19 || s[dx][dy] == 20 || s[dx][dy] == 21 ||
              s[dx][dy] == 22) {
     if (co != -21)
-      Color(-21), co = -21;
-    printf("[]");
+      frame_set_color(-21), co = -21;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 36) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("[]");
+      frame_set_color(3), co = 3;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 38) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("{}");
+      frame_set_color(3), co = 3;
+    frame_draw_str("{}");
   } else if (s[dx][dy] == 39) {
     if (co != -32)
-      Color(-32), co = -32;
-    printf("[]");
+      frame_set_color(-32), co = -32;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 32 || s[dx][dy] == 33 || s[dx][dy] == 34) {
     if (co != -4)
-      Color(-4), co = -4;
-    printf("[]");
+      frame_set_color(-4), co = -4;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 23) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("[]");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("[]");
   } else if (s[dx][dy] == 16) {
     if (co != -1)
-      Color(-1), co = -1;
+      frame_set_color(-1), co = -1;
     if (s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11) {
       if (!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
-        printf("/<");
+        frame_draw_str("/<");
       else
-        printf(">\\");
+        frame_draw_str(">\\");
     } else
-      printf("I<");
+      frame_draw_str("I<");
   } else if (s[dx][dy] == 40) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("{}");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("{}");
   }
 }
 void Updateblock(bool ismap) {
   if (ismap && !ep[dx][dy]) {
     if (co != 0)
-      Color(0), co = 0;
-    printf("  ");
+      frame_set_color(0), co = 0;
+    frame_draw_str("  ");
     return;
   }
   if (s[dx][dy] == 11 || (s[dx][dy] == 0 && boimes2[dx] == 2)) {
     if (weidu == 1) {
       if (light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
         if (co != 0)
-          Color(0), co = 0;
+          frame_set_color(0), co = 0;
       } else if ((co != -6 && night == 0) ||
                  (s[dx][dy] == 0 && boimes2[dx] == 2))
-        Color(-6), co = -6;
+        frame_set_color(-6), co = -6;
       else if (co != -23 && night == 1)
-        Color(-23), co = -23;
+        frame_set_color(-23), co = -23;
       else if (co != -29 && night == 2)
-        Color(-29), co = -29;
+        frame_set_color(-29), co = -29;
       else if (co != -31 && night == 3)
-        Color(-31), co = -31;
-      printf("  ");
+        frame_set_color(-31), co = -31;
+      frame_draw_str("  ");
     } else {
       if (co != -33)
-        Color(-33), co = -33;
-      printf("  ");
+        frame_set_color(-33), co = -33;
+      frame_draw_str("  ");
     }
   } else if (s[dx][dy] == 0) {
     if (light[dx][dy] > 0 || abs(jl(dx - To_int(x), dy - To_int(y))) < 4) {
       if (weidu == 1) {
         if (co != -1)
-          Color(-1), co = -1;
+          frame_set_color(-1), co = -1;
       } else {
         if (co != -33)
-          Color(-33), co = -33;
+          frame_set_color(-33), co = -33;
       }
-      printf("  ");
+      frame_draw_str("  ");
     } else {
       if (weidu == 1) {
         if (co != 0)
-          Color(0), co = 0;
+          frame_set_color(0), co = 0;
       } else {
         if (co != -3)
-          Color(-3), co = -3;
+          frame_set_color(-3), co = -3;
       }
-      printf("  ");
+      frame_draw_str("  ");
     }
   } else if (light[dx][dy] <= 0 &&
              abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
     if (co != 0)
-      Color(0), co = 0;
-    printf("  ");
+      frame_set_color(0), co = 0;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 1) {
     if (co != -7)
-      Color(-7), co = -7;
-    printf("  ");
+      frame_set_color(-7), co = -7;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 3) {
     if (co != 7)
-      Color(7), co = 7;
-    printf("##");
+      frame_set_color(7), co = 7;
+    frame_draw_str("##");
   } else if (s[dx][dy] == 4) {
     if (co != 8)
-      Color(8), co = 8;
-    printf("##");
+      frame_set_color(8), co = 8;
+    frame_draw_str("##");
   } else if (s[dx][dy] == 2) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("  ");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 5) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("  ");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 9) {
     if (co != -15)
-      Color(-15), co = -15;
-    printf("<>");
+      frame_set_color(-15), co = -15;
+    frame_draw_str("<>");
   } else if (s[dx][dy] == 12) {
     if (co != 11)
-      Color(11), co = 11;
-    printf("##");
+      frame_set_color(11), co = 11;
+    frame_draw_str("##");
   } else if (s[dx][dy] == 19 || s[dx][dy] == 20 || s[dx][dy] == 21 ||
              s[dx][dy] == 22) {
     if (co != -21)
-      Color(-21), co = -21;
-    printf("  ");
+      frame_set_color(-21), co = -21;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 36) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("##");
+      frame_set_color(3), co = 3;
+    frame_draw_str("##");
   } else if (s[dx][dy] == 38) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("@@");
+      frame_set_color(3), co = 3;
+    frame_draw_str("@@");
   } else if (s[dx][dy] == 39) {
     if (co != -32)
-      Color(-32), co = -32;
-    printf("  ");
+      frame_set_color(-32), co = -32;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 32 || s[dx][dy] == 33 || s[dx][dy] == 34) {
     if (co != -4)
-      Color(-4), co = -4;
-    printf("  ");
+      frame_set_color(-4), co = -4;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 23) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("  ");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 16) {
     if (co != -1)
-      Color(-1), co = -1;
+      frame_set_color(-1), co = -1;
     if (s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11) {
       if (!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
-        printf("/ ");
+        frame_draw_str("/ ");
       else
-        printf(" \\");
+        frame_draw_str(" \\");
     } else
-      printf("I ");
+      frame_draw_str("I ");
   } else if (s[dx][dy] == 40) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("--");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("--");
   } else if (s[dx][dy] == 53) {
     if (co != -1)
-      Color(-1), co = -1;
-    printf("  ");
+      frame_set_color(-1), co = -1;
+    frame_draw_str("  ");
   } else if (s[dx][dy] == 54) {
     if (co != -36)
-      Color(-36), co = -36;
-    printf("  ");
+      frame_set_color(-36), co = -36;
+    frame_draw_str("  ");
   }
 }
 void Ubformap(int pt, bool ex) {
   if (!ex) {
     if (co != 0)
-      Color(0), co = 0;
-    printf("  ");
+      frame_set_color(0), co = 0;
+    frame_draw_str("  ");
   } else if (pt == 11) {
     if (weidu == 1) {
       if (co != -6 && night == 0)
-        Color(-6), co = -6;
+        frame_set_color(-6), co = -6;
       else if (co != -23 && night == 1)
-        Color(-23), co = -23;
+        frame_set_color(-23), co = -23;
       else if (co != -29 && night == 2)
-        Color(-29), co = -29;
+        frame_set_color(-29), co = -29;
       else if (co != -31 && night == 3)
-        Color(-31), co = -31;
-      printf("  ");
+        frame_set_color(-31), co = -31;
+      frame_draw_str("  ");
     } else {
       if (co != -33)
-        Color(-33), co = -33;
-      printf("  ");
+        frame_set_color(-33), co = -33;
+      frame_draw_str("  ");
     }
   } else if (pt == 0) {
     if (weidu == 1) {
       if (co != -1)
-        Color(-1), co = -1;
+        frame_set_color(-1), co = -1;
     } else {
       if (co != -33)
-        Color(-33), co = -33;
+        frame_set_color(-33), co = -33;
     }
-    printf("  ");
+    frame_draw_str("  ");
   } else if (pt == 1) {
     if (co != -7)
-      Color(-7), co = -7;
-    printf("  ");
+      frame_set_color(-7), co = -7;
+    frame_draw_str("  ");
   } else if (pt == 3) {
     if (co != 7)
-      Color(7), co = 7;
-    printf("##");
+      frame_set_color(7), co = 7;
+    frame_draw_str("##");
   } else if (pt == 4) {
     if (co != 8)
-      Color(8), co = 8;
-    printf("##");
+      frame_set_color(8), co = 8;
+    frame_draw_str("##");
   } else if (pt == 2) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("  ");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("  ");
   } else if (pt == 5) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("  ");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("  ");
   } else if (pt == 9) {
     if (co != -15)
-      Color(-15), co = -15;
-    printf("<>");
+      frame_set_color(-15), co = -15;
+    frame_draw_str("<>");
   } else if (pt == 12) {
     if (co != 11)
-      Color(11), co = 11;
-    printf("##");
+      frame_set_color(11), co = 11;
+    frame_draw_str("##");
   } else if (pt == 19 || pt == 20 || pt == 21 || pt == 22) {
     if (co != -21)
-      Color(-21), co = -21;
-    printf("  ");
+      frame_set_color(-21), co = -21;
+    frame_draw_str("  ");
   } else if (pt == 36) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("##");
+      frame_set_color(3), co = 3;
+    frame_draw_str("##");
   } else if (pt == 38) {
     if (co != 3)
-      Color(3), co = 3;
-    printf("@@");
+      frame_set_color(3), co = 3;
+    frame_draw_str("@@");
   } else if (pt == 39) {
     if (co != -32)
-      Color(-32), co = -32;
-    printf("  ");
+      frame_set_color(-32), co = -32;
+    frame_draw_str("  ");
   } else if (pt == 32 || pt == 33 || pt == 34) {
     if (co != -4)
-      Color(-4), co = -4;
-    printf("  ");
+      frame_set_color(-4), co = -4;
+    frame_draw_str("  ");
   } else if (pt == 23) {
     if (co != -12)
-      Color(-12), co = -12;
-    printf("  ");
+      frame_set_color(-12), co = -12;
+    frame_draw_str("  ");
   } else if (pt == 16) {
     if (co != -1)
-      Color(-1), co = -1;
-    printf("I ");
+      frame_set_color(-1), co = -1;
+    frame_draw_str("I ");
   } else if (pt == 40) {
     if (co != -5)
-      Color(-5), co = -5;
-    printf("--");
+      frame_set_color(-5), co = -5;
+    frame_draw_str("--");
   } else
-    printf("--");
+    frame_draw_str("--");
 }
 bool pr = false;
 void Print() {
   co = 0;
-  Color(0);
-  vector<int> nearby_entities;
+  frame_clear();
+  frame_set_color(0);
+  
+  // 视锥剔除：一次性查询屏幕范围内的所有实体，避免每个单元格单独查询空间哈希
+  vector<int> visible_entities;
+  query_visible_entities(jx, jy, printx * 0.5 + 2, printy * 0.5 + 2, visible_entities);
+  static int entity_at[102][102];
+  for (int j = 0; j <= printy; j++)
+    for (int i = 0; i <= printx; i++)
+      entity_at[i][j] = -1;
+  for (int idx : visible_entities) {
+    int ex = world_to_screen_x(shiti[idx].gx);
+    int ey = world_to_screen_y(shiti[idx].gy);
+    if (ex >= 0 && ex <= printx && ey >= 0 && ey <= printy)
+      entity_at[ex][ey] = idx;
+  }
+  
   for (int j = 0; j <= printy; j++) {
     for (int i = 0; i <= printx; i++) {
-      dx = int(jx + i - printx * 0.5 + 0.5);
-      dy = int(jy + j - printy * 0.5 + 0.5);
+      frame_set_pos(i, j);
+      dx = int(screen_to_world_x(i) + 0.5);
+      dy = int(screen_to_world_y(j) + 0.5);
       if ((light[dx][dy] > 0 ||
            (abs(jl(dx - To_int(x), dy - To_int(y))) < 4)) &&
           ep[dx][dy] == 0)
@@ -2049,33 +2226,31 @@ void Print() {
         if (i >= 15 && i <= ((bosshp * 1.0 / 25) + 15) && j == 7) {
           painting[i][j][0] = 17;
           painting[i][j][1] = 17;
-          Setpos(i, j);
-          co = -4, Color(-4);
+          co = -4, frame_set_color(-4);
           if (i == 25) {
             if (bosshp >= 100)
-              printf("%d", bosshp / 10);
+              frame_printf("%d", bosshp / 10);
             else
-              printf("%d", bosshp);
+              frame_printf("%d", bosshp);
           } else if (i == 26 && bosshp >= 100)
-            printf("%d ", bosshp % 10);
+            frame_printf("%d ", bosshp % 10);
           else
-            printf("  ");
+            frame_draw_str("  ");
           continue;
         }
         if (i > ((bosshp * 1.0 / 25) + 15) && i <= 35 && j == 7) {
           painting[i][j][0] = 17;
           painting[i][j][1] = 17;
-          Setpos(i, j);
-          co = 0, Color(0);
+          co = 0, frame_set_color(0);
           if (i == 25) {
             if (bosshp >= 100)
-              printf("%d", bosshp / 10);
+              frame_printf("%d", bosshp / 10);
             else
-              printf("%d", bosshp);
+              frame_printf("%d", bosshp);
           } else if (i == 26 && bosshp >= 100)
-            printf("%d ", bosshp % 10);
+            frame_printf("%d ", bosshp % 10);
           else
-            printf("  ");
+            frame_draw_str("  ");
           continue;
         }
       }
@@ -2086,17 +2261,16 @@ void Print() {
             continue;
           painting[i][j][0] = 21;
           painting[i][j][1] = 21;
-          Setpos(i, j);
-          co = -4, Color(-4);
+          co = -4, frame_set_color(-4);
           if (i == 25) {
             if (boss2hp >= 100)
-              printf("%d", ((int)(boss2hp)) / 10);
+              frame_printf("%d", ((int)(boss2hp)) / 10);
             else
-              printf("%d", int(boss2hp));
+              frame_printf("%d", int(boss2hp));
           } else if (i == 26 && boss2hp >= 100)
-            printf("%d ", ((int)(boss2hp)) % 10);
+            frame_printf("%d ", ((int)(boss2hp)) % 10);
           else
-            printf("  ");
+            frame_draw_str("  ");
           continue;
         }
         if (i > ((boss2hp * 1.0 / 32) + 15) && i <= 35 && j == 7) {
@@ -2105,17 +2279,16 @@ void Print() {
             continue;
           painting[i][j][0] = 20;
           painting[i][j][1] = 20;
-          Setpos(i, j);
-          co = 0, Color(0);
+          co = 0, frame_set_color(0);
           if (i == 25) {
             if (boss2hp >= 100)
-              printf("%d", ((int)(boss2hp)) / 10);
+              frame_printf("%d", ((int)(boss2hp)) / 10);
             else
-              printf("%d", int(boss2hp));
+              frame_printf("%d", int(boss2hp));
           } else if (i == 26 && boss2hp >= 100)
-            printf("%d ", ((int)(boss2hp)) % 10);
+            frame_printf("%d ", ((int)(boss2hp)) % 10);
           else
-            printf("  ");
+            frame_draw_str("  ");
           continue;
         }
       }
@@ -2124,65 +2297,57 @@ void Print() {
           if (To_int(bz[k].x) == dx && To_int(bz[k].y) == dy) {
             painting[i][j][0] = 17;
             painting[i][j][1] = 17;
-            Setpos(i, j);
-            Color(bz[k].color), co = bz[k].color;
-            printf("  ");
+            frame_set_color(bz[k].color), co = bz[k].color;
+            frame_draw_str("  ");
             pr = true;
             break;
           }
         }
       }
-      nearby_entities.clear();
-      query_nearby_entities(dx, dy, 1.5, nearby_entities);
-      for (int k : nearby_entities) {
+      int k = entity_at[i][j];
+      if (k >= 0) {
         if (shiti[k].type > 0) {
-          if (light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4))
-            continue;
-          if (To_int(shiti[k].gx) == dx && To_int(shiti[k].gy) == dy) {
+          if (!(light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4))) {
             painting[i][j][0] = 17;
             painting[i][j][1] = 17;
-            Setpos(i, j);
-            Color(1), co = 1;
+            frame_set_color(1), co = 1;
             if (shiti[k].type == 1)
-              printf("ZZ");
+              frame_draw_str("ZZ");
             else if (shiti[k].type == 2) {
               if (shiti[k].CD == 0)
-                Color(2), co = 2;
+                frame_set_color(2), co = 2;
               else
-                Color(0), co = 0;
-              printf("CR");
+                frame_set_color(0), co = 0;
+              frame_draw_str("CR");
             } else if (shiti[k].type == 3) {
-              Color(0), co = 0;
-              printf("SK");
+              frame_set_color(0), co = 0;
+              frame_draw_str("SK");
             } else if (shiti[k].type == 4) {
-              // getcolor();
               if (shiti[k].nbt == 1)
-                Color(3), co = 3;
+                frame_set_color(3), co = 3;
               else
-                Color(0), co = 0;
+                frame_set_color(0), co = 0;
               if (shiti[k].spgx > 0)
-                printf("->");
+                frame_draw_str("->");
               else
-                printf("<-");
-
+                frame_draw_str("<-");
             } else if (shiti[k].type == 5) {
-              Color(0), co = 0;
-              printf("OI");
+              frame_set_color(0), co = 0;
+              frame_draw_str("OI");
             } else if (shiti[k].type == 6) {
-              Color(0), co = 0;
-              printf("SP");
+              frame_set_color(0), co = 0;
+              frame_draw_str("SP");
             } else if (shiti[k].type == 7) {
-              Color(0), co = 0;
-              printf("ZP");
+              frame_set_color(0), co = 0;
+              frame_draw_str("ZP");
             } else if (shiti[k].type == 8) {
               if (shiti[k].gongjitick > 600 && shiti[k].gongjitick < 900)
-                Color(12), co = 12;
+                frame_set_color(12), co = 12;
               else
-                Color(0), co = 0;
-              printf("%d", int(shiti[k].maxHP + 0.5));
+                frame_set_color(0), co = 0;
+              frame_printf("%d", int(shiti[k].maxHP + 0.5));
             }
             pr = true;
-            break;
           }
         }
       }
@@ -2193,21 +2358,17 @@ void Print() {
       if (dx == int(x + 0.5) && dy == int(y + 0.5)) {
         painting[i][j][0] = 12;
         painting[i][j][1] = 12;
-        Setpos(i, j);
-        Color(1), co = 1;
-        printf("{}");
+        frame_set_color(1), co = 1;
+        frame_draw_str("{}");
       } else if (dx == int(mpx + 0.5) && dy == int(mpy + 0.5)) {
         painting[i][j][0] = 12;
         painting[i][j][1] = 12;
-        Setpos(i, j);
-        Color(co);
+        frame_set_color(co);
         pr_mouse();
       } else if ((abs(jl(dx - To_int(x), dy - To_int(y))) < 4) &&
                  light[dx][dy] <= 0) {
-        if (/*lx!=To_int(x)||ly!=To_int(y))&&*/ painting[i][j][0] !=
-                s[dx][dy] ||
+        if (painting[i][j][0] != s[dx][dy] ||
             (painting[i][j][1] > 0) != (light[dx][dy] > 0)) {
-          Setpos(i, j);
           Updateblock(0);
         }
         painting[i][j][0] = s[dx][dy];
@@ -2216,12 +2377,11 @@ void Print() {
                  (painting[i][j][1] > 0) != (light[dx][dy] > 0)) {
         painting[i][j][0] = s[dx][dy];
         painting[i][j][1] = light[dx][dy];
-        Setpos(i, j);
         Updateblock(0);
       }
     }
-    Setpos(0, j);
   }
+  frame_present();
 }
 LARGE_INTEGER frequency;
 LARGE_INTEGER lastTime;
@@ -2251,7 +2411,8 @@ int sdprint[100][60][2];
 int sf;
 void printformap() {
   co = 0;
-  Color(0);
+  frame_clear();
+  frame_set_color(0);
   int aaa[60];
   int spt = 0;
   int tmax = 0, exed = 0;
@@ -2285,16 +2446,16 @@ void printformap() {
         continue;
       if (i == printx - 1 && j == 3)
         continue;
+      frame_set_pos(i, j);
       if (((painting[i][j][0] != sdprint[i][j][0]) && sdprint[i][j][1]) ||
           ((painting[i][j][1] == 1) != (sdprint[i][j][1] == 1))) {
         painting[i][j][0] = sdprint[i][j][0];
         painting[i][j][1] = sdprint[i][j][1];
-        Setpos(i, j);
         Ubformap(sdprint[i][j][0], sdprint[i][j][1]);
       }
     }
-    Setpos(0, j);
   }
+  frame_present();
 }
 void openmap() {
 
@@ -2320,22 +2481,19 @@ void openmap() {
       mpy = To_int(p.y - 14);
       int mprx, mpry;
       if (GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-        while (GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
-          continue;
+        wait_key_release('M', VK_ESCAPE);
         jx = rx, jy = ry;
         break;
       }
       if (KEY_DOWN(VK_LBUTTON)) {
         if ((mpx == 24 || mpx == 23) && mpy == -12) {
-          while (KEY_DOWN(VK_LBUTTON))
-            continue;
+          wait_key_release(VK_LBUTTON);
           if (sf < 25)
             sf++;
           memset(sdprint, 0, sizeof(sdprint));
         }
         if ((mpx == 24 || mpx == 23) && mpy == -10) {
-          while (KEY_DOWN(VK_LBUTTON))
-            continue;
+          wait_key_release(VK_LBUTTON);
           if (sf > 1)
             sf--;
           memset(sdprint, 0, sizeof(sdprint));
@@ -2368,8 +2526,360 @@ void openmap() {
     Sleep(1);
   }
 }
+const char BIN_MAGIC[] = "2DMCBIN";
+const int BIN_VERSION = 1;
+
+bool save_binary(const char* filename) {
+  FILE* fp = fopen(filename, "wb");
+  if (!fp) return false;
+  
+  fwrite(BIN_MAGIC, 1, 7, fp);
+  fwrite(&BIN_VERSION, sizeof(int), 1, fp);
+  
+  size_t buf_size = 5001 * 1001 * sizeof(int) * 3 + 
+                    101 * 2 * sizeof(int) + 
+                    5005 * 2 * sizeof(short) + 
+                    6 * sizeof(int) + 
+                    sizeof(double) * 6 + sizeof(int) * 3 +
+                    500 * sizeof(guaiwu) * 2 +
+                    5001 * 5001 * sizeof(bool) +
+                    sizeof(int) + 1000 * (2 * sizeof(unsigned short) + 27 * sizeof(unsigned short)) +
+                    sizeof(double) + 5000 * 2 * sizeof(int);
+  
+  unsigned char* buf = new unsigned char[buf_size];
+  unsigned char* ptr = buf;
+  
+  fwrite(s, sizeof(int), 5001 * 1001, fp);
+  fwrite(s2, sizeof(int), 5001 * 1001, fp);
+  fwrite(beibao, sizeof(int), 101 * 2, fp);
+  fwrite(&weidu, sizeof(int), 1, fp);
+  fwrite(&x, sizeof(double), 1, fp);
+  fwrite(&y, sizeof(double), 1, fp);
+  fwrite(&back_x, sizeof(int), 1, fp);
+  fwrite(&back_y, sizeof(int), 1, fp);
+  fwrite(&life, sizeof(double), 1, fp);
+  fwrite(&now_time, sizeof(int), 1, fp);
+  fwrite(&night, sizeof(int), 1, fp);
+  fwrite(&will_night, sizeof(int), 1, fp);
+  fwrite(&will_light, sizeof(int), 1, fp);
+  fwrite(shiti, sizeof(guaiwu), 500, fp);
+  fwrite(shiti2, sizeof(guaiwu), 500, fp);
+  fwrite(wear, sizeof(int), 6, fp);
+  fwrite(&ed, sizeof(int), 1, fp);
+  fwrite(ep, sizeof(bool), 5001 * 5001, fp);
+  
+  int box_count = box.size();
+  fwrite(&box_count, sizeof(int), 1, fp);
+  for (int i = 0; i < box_count; i++) {
+    fwrite(&box[i].bx, sizeof(unsigned short), 1, fp);
+    fwrite(&box[i].by, sizeof(unsigned short), 1, fp);
+    fwrite(box[i].things, sizeof(unsigned short), 27, fp);
+  }
+  
+  fwrite(&boss2hp, sizeof(double), 1, fp);
+  fwrite(boimes, sizeof(short), 5000, fp);
+  fwrite(boimes2, sizeof(short), 5000, fp);
+  
+  fclose(fp);
+  return true;
+}
+
+bool load_binary(const char* filename) {
+  FILE* fp = fopen(filename, "rb");
+  if (!fp) return false;
+  
+  char magic[7];
+  fread(magic, 1, 7, fp);
+  if (memcmp(magic, BIN_MAGIC, 7) != 0) {
+    fclose(fp);
+    return false;
+  }
+  
+  int version;
+  fread(&version, sizeof(int), 1, fp);
+  
+  fread(s, sizeof(int), 5001 * 1001, fp);
+  fread(s2, sizeof(int), 5001 * 1001, fp);
+  fread(beibao, sizeof(int), 101 * 2, fp);
+  fread(&weidu, sizeof(int), 1, fp);
+  fread(&x, sizeof(double), 1, fp);
+  fread(&y, sizeof(double), 1, fp);
+  fread(&back_x, sizeof(int), 1, fp);
+  fread(&back_y, sizeof(int), 1, fp);
+  fread(&life, sizeof(double), 1, fp);
+  fread(&now_time, sizeof(int), 1, fp);
+  fread(&night, sizeof(int), 1, fp);
+  fread(&will_night, sizeof(int), 1, fp);
+  fread(&will_light, sizeof(int), 1, fp);
+  fread(shiti, sizeof(guaiwu), 500, fp);
+  fread(shiti2, sizeof(guaiwu), 500, fp);
+  fread(wear, sizeof(int), 6, fp);
+  fread(&ed, sizeof(int), 1, fp);
+  fread(ep, sizeof(bool), 5001 * 5001, fp);
+  
+  int box_count;
+  fread(&box_count, sizeof(int), 1, fp);
+  box.clear();
+  boxlen = box_count;
+  for (int i = 0; i < box_count; i++) {
+    unsigned short bx, by;
+    unsigned short things[27];
+    fread(&bx, sizeof(unsigned short), 1, fp);
+    fread(&by, sizeof(unsigned short), 1, fp);
+    fread(things, sizeof(unsigned short), 27, fp);
+    box.push_back({{0}, bx, by});
+    memcpy(box.back().things, things, sizeof(things));
+  }
+  
+  fread(&boss2hp, sizeof(double), 1, fp);
+  fread(boimes, sizeof(short), 5000, fp);
+  fread(boimes2, sizeof(short), 5000, fp);
+  
+  fclose(fp);
+  
+  clear_entity_hash();
+  for (int i = 0; i <= 249; i++) {
+    if (shiti[i].type > 0)
+      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+  }
+  setlight();
+  return true;
+}
+
+const char CHUNK_BIN_MAGIC[] = "2DMCV2";
+const int CHUNK_BIN_VERSION = 1;
+
+void sync_chunks_from_s();
+void sync_s_from_chunks();
+bool save_chunk_file(int cx, int cy, const char* dir);
+bool load_chunk_file(int cx, int cy, const char* dir);
+
+bool save_binary_v2(const char* filename) {
+  char dir[256];
+  strcpy(dir, filename);
+  char* dot = strrchr(dir, '.');
+  if (dot) *dot = '\0';
+  strcat(dir, "_chunks");
+#ifdef _WIN32
+  CreateDirectoryA(dir, NULL);
+#else
+  mkdir(dir, 0755);
+#endif
+  
+  sync_chunks_from_s();
+  
+  FILE* fp = fopen(filename, "wb");
+  if (!fp) return false;
+  
+  fwrite(CHUNK_BIN_MAGIC, 1, 6, fp);
+  fwrite(&CHUNK_BIN_VERSION, sizeof(int), 1, fp);
+  
+  fwrite(beibao, sizeof(int), 101 * 2, fp);
+  fwrite(&weidu, sizeof(int), 1, fp);
+  fwrite(&x, sizeof(double), 1, fp);
+  fwrite(&y, sizeof(double), 1, fp);
+  fwrite(&back_x, sizeof(int), 1, fp);
+  fwrite(&back_y, sizeof(int), 1, fp);
+  fwrite(&life, sizeof(double), 1, fp);
+  fwrite(&now_time, sizeof(int), 1, fp);
+  fwrite(&night, sizeof(int), 1, fp);
+  fwrite(&will_night, sizeof(int), 1, fp);
+  fwrite(&will_light, sizeof(int), 1, fp);
+  fwrite(shiti, sizeof(guaiwu), 500, fp);
+  fwrite(shiti2, sizeof(guaiwu), 500, fp);
+  fwrite(wear, sizeof(int), 6, fp);
+  fwrite(&ed, sizeof(int), 1, fp);
+  fwrite(ep, sizeof(bool), 5001 * 5001, fp);
+  
+  int box_count = box.size();
+  fwrite(&box_count, sizeof(int), 1, fp);
+  for (int i = 0; i < box_count; i++) {
+    fwrite(&box[i].bx, sizeof(unsigned short), 1, fp);
+    fwrite(&box[i].by, sizeof(unsigned short), 1, fp);
+    fwrite(box[i].things, sizeof(unsigned short), 27, fp);
+  }
+  
+  fwrite(&boss2hp, sizeof(double), 1, fp);
+  fwrite(boimes, sizeof(short), 5000, fp);
+  fwrite(boimes2, sizeof(short), 5000, fp);
+  
+  int modified_count = 0;
+  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
+    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++)
+      if (chunk_data[cx][cy].loaded && chunk_data[cx][cy].modified)
+        modified_count++;
+  fwrite(&modified_count, sizeof(int), 1, fp);
+  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
+    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++)
+      if (chunk_data[cx][cy].loaded && chunk_data[cx][cy].modified)
+        save_chunk_file(cx, cy, dir);
+  
+  fclose(fp);
+  return true;
+}
+
+bool load_binary_v2(const char* filename) {
+  FILE* fp = fopen(filename, "rb");
+  if (!fp) return false;
+  
+  char magic[6];
+  fread(magic, 1, 6, fp);
+  if (memcmp(magic, CHUNK_BIN_MAGIC, 6) != 0) {
+    fclose(fp);
+    return false;
+  }
+  
+  int version;
+  fread(&version, sizeof(int), 1, fp);
+  
+  char dir[256];
+  strcpy(dir, filename);
+  char* dot = strrchr(dir, '.');
+  if (dot) *dot = '\0';
+  strcat(dir, "_chunks");
+  
+  fread(beibao, sizeof(int), 101 * 2, fp);
+  fread(&weidu, sizeof(int), 1, fp);
+  fread(&x, sizeof(double), 1, fp);
+  fread(&y, sizeof(double), 1, fp);
+  fread(&back_x, sizeof(int), 1, fp);
+  fread(&back_y, sizeof(int), 1, fp);
+  fread(&life, sizeof(double), 1, fp);
+  fread(&now_time, sizeof(int), 1, fp);
+  fread(&night, sizeof(int), 1, fp);
+  fread(&will_night, sizeof(int), 1, fp);
+  fread(&will_light, sizeof(int), 1, fp);
+  fread(shiti, sizeof(guaiwu), 500, fp);
+  fread(shiti2, sizeof(guaiwu), 500, fp);
+  fread(wear, sizeof(int), 6, fp);
+  fread(&ed, sizeof(int), 1, fp);
+  fread(ep, sizeof(bool), 5001 * 5001, fp);
+  
+  int box_count;
+  fread(&box_count, sizeof(int), 1, fp);
+  box.clear();
+  boxlen = box_count;
+  for (int i = 0; i < box_count; i++) {
+    unsigned short bx, by;
+    unsigned short things[27];
+    fread(&bx, sizeof(unsigned short), 1, fp);
+    fread(&by, sizeof(unsigned short), 1, fp);
+    fread(things, sizeof(unsigned short), 27, fp);
+    box.push_back({{0}, bx, by});
+    memcpy(box.back().things, things, sizeof(things));
+  }
+  
+  fread(&boss2hp, sizeof(double), 1, fp);
+  fread(boimes, sizeof(short), 5000, fp);
+  fread(boimes2, sizeof(short), 5000, fp);
+  
+  int modified_count;
+  fread(&modified_count, sizeof(int), 1, fp);
+  
+  memset(s, 0, sizeof(s));
+  memset(light, 0, sizeof(light));
+  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
+    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++) {
+      chunk_data[cx][cy].loaded = false;
+      chunk_data[cx][cy].modified = false;
+      chunk_data[cx][cy].dirty = true;
+    }
+  
+  for (int i = 0; i < modified_count; i++) {
+    int tcx, tcy;
+    fread(&tcx, sizeof(int), 1, fp);
+    fread(&tcy, sizeof(int), 1, fp);
+    load_chunk_file(tcx, tcy, dir);
+  }
+  sync_s_from_chunks();
+  
+  fclose(fp);
+  
+  clear_entity_hash();
+  for (int i = 0; i <= 249; i++) {
+    if (shiti[i].type > 0)
+      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+  }
+  setlight();
+  return true;
+}
+
+bool save_chunk_file(int cx, int cy, const char* dir) {
+  if (!chunk_data[cx][cy].loaded || !chunk_data[cx][cy].modified)
+    return true;
+  char path[128];
+  sprintf(path, "%s/c_%d_%d.chunk", dir, cx, cy);
+  FILE* fp = fopen(path, "wb");
+  if (!fp) return false;
+  fwrite(&cx, sizeof(int), 1, fp);
+  fwrite(&cy, sizeof(int), 1, fp);
+  fwrite(chunk_data[cx][cy].blocks, sizeof(int), CHUNK_SIZE * CHUNK_SIZE, fp);
+  fwrite(chunk_data[cx][cy].light, sizeof(unsigned char), CHUNK_SIZE * CHUNK_SIZE, fp);
+  fclose(fp);
+  chunk_data[cx][cy].modified = false;
+  return true;
+}
+
+bool load_chunk_file(int cx, int cy, const char* dir) {
+  char path[128];
+  sprintf(path, "%s/c_%d_%d.chunk", dir, cx, cy);
+  FILE* fp = fopen(path, "rb");
+  if (!fp) return false;
+  int rx, ry;
+  fread(&rx, sizeof(int), 1, fp);
+  fread(&ry, sizeof(int), 1, fp);
+  if (rx != cx || ry != cy) {
+    fclose(fp);
+    return false;
+  }
+  fread(chunk_data[cx][cy].blocks, sizeof(int), CHUNK_SIZE * CHUNK_SIZE, fp);
+  fread(chunk_data[cx][cy].light, sizeof(unsigned char), CHUNK_SIZE * CHUNK_SIZE, fp);
+  chunk_data[cx][cy].loaded = true;
+  chunk_data[cx][cy].modified = false;
+  chunk_data[cx][cy].dirty = true;
+  fclose(fp);
+  return true;
+}
+
+void sync_chunks_from_s() {
+  for (int i = 0; i <= 5000; i++) {
+    for (int j = 0; j <= 1000; j++) {
+      int cx = get_chunk_x(i);
+      int cy = get_chunk_y(j);
+      int lx = get_local_x(i);
+      int ly = get_local_y(j);
+      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
+      chunk_data[cx][cy].light[lx][ly] = (unsigned char)light[i][j];
+      chunk_data[cx][cy].loaded = true;
+    }
+  }
+}
+
+void sync_s_from_chunks() {
+  for (int cx = 0; cx < CHUNK_X_COUNT; cx++) {
+    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++) {
+      if (!chunk_data[cx][cy].loaded) continue;
+      for (int lx = 0; lx < CHUNK_SIZE; lx++) {
+        for (int ly = 0; ly < CHUNK_SIZE; ly++) {
+          int wx = cx * CHUNK_SIZE + lx;
+          int wy = cy * CHUNK_SIZE + ly;
+          if (wx > 5000 || wy > 1000) continue;
+          s[wx][wy] = chunk_data[cx][cy].blocks[lx][ly];
+          light[wx][wy] = chunk_data[cx][cy].light[lx][ly];
+        }
+      }
+    }
+  }
+}
+
 int r;
 void save(string nam) {
+  string bin_name = nam + ".bin";
+  if (save_binary_v2(bin_name.c_str()))
+    return;
+  if (save_binary(bin_name.c_str()))
+    return;
+  
   int block_math = 0;
   int last_block = s[0][0];
   nam += ".txt";
@@ -2654,6 +3164,12 @@ void spawn_chest(int xxx, int yyy) {
   fill_box_loot(idx);
 }
 bool read(string nam) {
+  string bin_name = nam + ".bin";
+  if (load_binary_v2(bin_name.c_str()))
+    return true;
+  if (load_binary(bin_name.c_str()))
+    return true;
+  
   int rd_c = 0, ZHI = 0;
   unsigned short sx, sy;
   int rd = 0;
@@ -4143,9 +4659,10 @@ void st_move() {
         if (shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
             shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
             shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > 5000 ||
-            shiti[l].gy > 1000)
+            shiti[l].gy > 1000) {
           update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
+        }
         shiti[l].randomtick++;
         if (shiti[l].randomtick > 1200) {
           update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
@@ -4577,8 +5094,7 @@ void movethings(int upd) {
   if (wear_slot > 0 && wear[wear_slot] != 0) {
     if (KEY_DOWN(VK_LBUTTON)) {
       int wear_item = wear[wear_slot];
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
       while (!(KEY_DOWN(VK_LBUTTON))) {
         POINT p = GetMousePos();
         mpx = To_int(p.x / 2 - 26);
@@ -4600,8 +5116,7 @@ void movethings(int upd) {
           craft_update(upd);
         }
       }
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
     }
   }
 
@@ -4622,8 +5137,7 @@ void movethings(int upd) {
         AN = 0;
       if (KEY_DOWN(VK_LBUTTON) && beibao[c_thing][1] != 0) {
         cc = c_thing;
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         while (!(KEY_DOWN(VK_LBUTTON))) {
           POINT p = GetMousePos();
           mpx = To_int(p.x / 2 - 26);
@@ -4702,8 +5216,7 @@ void movethings(int upd) {
           }
         }
       }
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
     }
   }
   if (upda) {
@@ -4783,8 +5296,7 @@ void moveinbox() {
         if ((c_thing > 0 && beibao[c_thing][1] != 0) ||
             (c_thing < -4 && box[open_].things[(29 + c_thing)] >= 1000)) {
           cc = c_thing;
-          while (KEY_DOWN(VK_LBUTTON))
-            continue;
+          wait_key_release(VK_LBUTTON);
           while (!(KEY_DOWN(VK_LBUTTON))) {
             POINT p = GetMousePos();
             mpx = To_int(p.x / 2 - 24);
@@ -4881,8 +5393,7 @@ void moveinbox() {
           }
         }
       }
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
       POINT p = GetMousePos();
       mpx = To_int(p.x / 2 - 24);
       mpy = To_int(p.y - 17);
@@ -4905,8 +5416,7 @@ void zz(int Y, int need1, int type1, int need2, int type2, int get, int sl,
   if (mpy == Y && mpx < -9) {
     if (KEY_DOWN(VK_LBUTTON)) {
       Setpos(5, Y + 13), cout << " ->";
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
       for (int i = 1; i <= 100; i++) {
         ls[i][0] = beibao[i][0];
         ls[i][1] = beibao[i][1];
@@ -4935,8 +5445,7 @@ void zz2(int Y, int need1, int type1, int get, int sl, int upd) {
   if (mpy == Y && mpx < -9) {
     if (KEY_DOWN(VK_LBUTTON)) {
       Setpos(5, Y + 13), cout << " ->";
-      while (KEY_DOWN(VK_LBUTTON))
-        continue;
+      wait_key_release(VK_LBUTTON);
       for (int i = 1; i <= 100; i++) {
         ls[i][0] = beibao[i][0];
         ls[i][1] = beibao[i][1];
@@ -4989,8 +5498,7 @@ void openbox() {
   AN = 0;
   while (1) {
     if (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-      while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
-        continue;
+      wait_key_release('E', VK_ESCAPE);
       memset(painting, 114, sizeof(painting));
       break;
     }
@@ -5022,8 +5530,7 @@ void craft_1() {
   AN = 0;
   while (1) {
     if (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-      while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
-        continue;
+      wait_key_release('E', VK_ESCAPE);
       page = 1;
       break;
     } else
@@ -5036,8 +5543,7 @@ void craft_1() {
       if (mpy == -5 && mpx < -9) {
         if (KEY_DOWN(VK_LBUTTON)) {
           Setpos(5, 8), cout << " ->";
-          while (KEY_DOWN(VK_LBUTTON))
-            continue;
+          wait_key_release(VK_LBUTTON);
           int U = getbeibao_2(2);
           if (U > 0) {
             beibao[U][1]--;
@@ -5083,8 +5589,7 @@ void craft_1() {
     if (mpy == 10 && mpx < -9) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(5, 23), cout << "->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         page = 1 - page;
         for (int i = 8; i <= 22; i++)
           Setpos(5, i), cout << "                        ";
@@ -5172,8 +5677,7 @@ void SET() {
     if (mpy == 0 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 14), cout << " ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         if (setfps == 1)
           setfps = 2;
         else if (setfps == 2)
@@ -5188,8 +5692,7 @@ void SET() {
     if (mpy == 7 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 21), cout << " ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         save(zzz);
         run = false;
         return;
@@ -5200,8 +5703,7 @@ void SET() {
     if (mpy == -4 && mpx > 2 && mpx < 8) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(30, 9), cout << "  ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         if (printx < 90)
           printx += 2;
         update_set();
@@ -5212,8 +5714,7 @@ void SET() {
     if (mpy == -3 && mpx > 2 && mpx < 8) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(30, 10), cout << "  ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         if (printy < 46)
           printy += 2;
         update_set();
@@ -5225,8 +5726,7 @@ void SET() {
     if (mpy == -4 && mpx > 8 && mpx < 16) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(33, 9), cout << "  ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         if (printx > 20)
           printx -= 2;
         update_set();
@@ -5237,8 +5737,7 @@ void SET() {
     if (mpy == -3 && mpx > 8 && mpx < 16) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(33, 10), cout << "  ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         if (printy > 20)
           printy -= 2;
         update_set();
@@ -5249,8 +5748,7 @@ void SET() {
     if (mpy == 3 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 17), cout << " ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         sun = (sun == 0 ? 1 : 0);
         update_set();
       } else
@@ -5260,8 +5758,7 @@ void SET() {
     if (mpy == 5 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 19), cout << " ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         ed = (ed == 8000 ? 6000 : (ed == 6000 ? 4000 : 8000));
         update_set();
       } else
@@ -5271,8 +5768,7 @@ void SET() {
     if (mpy == -1 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 12), cout << " ->";
-        while (KEY_DOWN(VK_LBUTTON))
-          continue;
+        wait_key_release(VK_LBUTTON);
         CanGet = (CanGet == 0 ? 1 : 0);
         update_set();
       } else
@@ -5370,8 +5866,7 @@ void delete_world() {
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
       Setpos(22, 3);
       cout << "                      ";
-      while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
-        continue;
+      wait_key_release(VK_ESCAPE);
       return;
     }
     POINT p = GetMousePos();
@@ -5383,8 +5878,7 @@ void delete_world() {
       if (mpy >= i * 2 - 8 && mpy <= i * 2 - 7) {
         Color(10);
         if (KEY_DOWN(VK_LBUTTON)) {
-          while (KEY_DOWN(VK_LBUTTON))
-            continue;
+          wait_key_release(VK_LBUTTON);
           abcde = true;
           delete_savelist(saves[i]);
           read_savelist();
@@ -5418,8 +5912,7 @@ void make_newworld() {
   while (1) {
     if (clock() - Clocknum >= 15) {
       if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-        while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
-          continue;
+        wait_key_release(VK_ESCAPE);
         break;
       }
       brtick++;
@@ -5579,8 +6072,7 @@ void game_loop() {
           Print();
         }
         if ((GetAsyncKeyState('E') & 0x8000) && GetIn == 1) {
-          while (GetAsyncKeyState('E') & 0x8000)
-            continue;
+          wait_key_release('E');
           craft_1();
           setlight();
           hujia_update();
@@ -5588,15 +6080,13 @@ void game_loop() {
         } else
           anx = 0;
         if ((GetAsyncKeyState('M')) && GetIn == 1) {
-          while (GetAsyncKeyState('M'))
-            continue;
+          wait_key_release('M');
           openmap();
           setlight();
         } else
           anx = 0;
         if (GetAsyncKeyState('I') & 0x8000) {
-          while (GetAsyncKeyState('I') & 0x8000)
-            Sleep(1);
+          wait_key_release('I');
           gamemode = 1 - gamemode;
         }
 
@@ -6060,8 +6550,7 @@ int main() {
             while (1) {
               if (clock() - Clocknum >= 15) {
                 if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-                  while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
-                    continue;
+                  wait_key_release(VK_ESCAPE);
                   willclear = 1;
                   break;
                 }
@@ -6083,8 +6572,7 @@ int main() {
                   cout << "  ----------";
                   if (KEY_DOWN(VK_LBUTTON)) {
                     willclear = true;
-                    while (KEY_DOWN(VK_LBUTTON))
-                      continue;
+                    wait_key_release(VK_LBUTTON);
                     oi = 1 - oi;
                   }
                 } else {
@@ -6123,13 +6611,11 @@ int main() {
 
           if (KEY_DOWN(VK_LBUTTON)) {
             willclear = true;
-            while (KEY_DOWN(VK_LBUTTON))
-              continue;
+            wait_key_release(VK_LBUTTON);
             while (1) {
               if (clock() - Clocknum >= 15) {
                 if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-                  while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
-                    continue;
+                  wait_key_release(VK_ESCAPE);
                   break;
                 }
                 Color(0);
