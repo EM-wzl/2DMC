@@ -1,10 +1,12 @@
-//指令现在可以正常使用
+
 //地下可以正常生成箱子
 #define _CRT_SECURE_NO_WARNINGS
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <time.h>
+#include <algorithm>
 
 // #include<thread>
 #include <cmath>
@@ -27,44 +29,138 @@ int s2[5001][1001];
 int light[5001][1001];
 int painting[102][102][2];
 bool ep[5001][5001];
-char title[256];
+
+#define CHUNK_SIZE 32
+#define CHUNK_X_COUNT 157
+#define CHUNK_Y_COUNT 32
+
+struct Chunk {
+  int blocks[CHUNK_SIZE][CHUNK_SIZE];
+  bool loaded;
+  bool modified;
+  
+  Chunk() : loaded(false), modified(false) {
+    memset(blocks, 0, sizeof(blocks));
+  }
+};
+
+Chunk chunk_data[CHUNK_X_COUNT][CHUNK_Y_COUNT];
+
+inline int get_chunk_x(int x) { return x / CHUNK_SIZE; }
+inline int get_chunk_y(int y) { return y / CHUNK_SIZE; }
+inline int get_local_x(int x) { return x % CHUNK_SIZE; }
+inline int get_local_y(int y) { return y % CHUNK_SIZE; }
+
+inline int get_block(int x, int y) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
+  int cx = get_chunk_x(x);
+  int cy = get_chunk_y(y);
+  int lx = get_local_x(x);
+  int ly = get_local_y(y);
+  return chunk_data[cx][cy].blocks[lx][ly];
+}
+
+inline void set_block(int x, int y, int val) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  int cx = get_chunk_x(x);
+  int cy = get_chunk_y(y);
+  int lx = get_local_x(x);
+  int ly = get_local_y(y);
+  chunk_data[cx][cy].blocks[lx][ly] = val;
+  chunk_data[cx][cy].modified = true;
+}
+
+inline int get_s2(int x, int y) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
+  return s2[x][y];
+}
+
+inline void set_s2(int x, int y, int val) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  s2[x][y] = val;
+}
+
+inline int get_light(int x, int y) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 15;
+  return light[x][y];
+}
+
+inline void set_light(int x, int y, int val) {
+  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  light[x][y] = val;
+}
+
+inline bool get_ep(int x, int y) {
+  if (x < 0 || x > 5000 || y < 0 || y > 5000) return false;
+  return ep[x][y];
+}
+
+inline void set_ep(int x, int y, bool val) {
+  if (x < 0 || x > 5000 || y < 0 || y > 5000) return;
+  ep[x][y] = val;
+}
+
+wchar_t title[256];
 string name[101] = {"air",
                     "stone",
                     "wood",
-                    "BlackFire",
+                    "coal",
+                    "raw_iron",
                     "dirt",
-                    "pencil",
-                    "WoodDig",
-                    "StoneDig",
-                    "FireStone",
-                    "StrongStone",
+                    "stick",
+                    "wood_pickaxe",
+                    "stone_pickaxe",
+                    "furnace",
+                    "bedrock",
                     "sky",
-                    "BuleStone",
-                    "GeryStone",
-                    "GeryDig",
-                    "BuleDig",
-                    "FireWood",
-                    "StoneFight",
-                    "StoneCut",
+                    "diamond",
+                    "iron_ingot",
+                    "iron_pickaxe",
+                    "diamond_pickaxe",
+                    "torch",
+                    "stone_sword",
+                    "stone_axe",
                     "water",
-                    "WaterThreeInFour",
-                    "WaterTwoInFour",
-                    "WaterOneInFour",
+                    "flowing_water_3",
+                    "flowing_water_2",
+                    "flowing_water_1",
                     "leaf",
-                    "LifeDrink",
-                    "bottle",
-                    "WaterBottle",
-                    "GeryShirt",
-                    "GeryPants",
-                    "GeryHat",
-                    "GeryShoes",
-                    "SaveMe",
-                    "FireHot",
-                    "FireHotTwoInThree",
-                    "FireHotOneInThree",
-                    "FireBottle",
-                    "BlackStrongStone",
-                    "BadMeat"};
+                    "health_potion",
+                    "bucket",
+                    "water_bucket",
+                    "iron_chestplate",
+                    "iron_leggings",
+                    "iron_helmet",
+                    "iron_boots",
+                    "shield",
+                    "lava",
+                    "flowing_lava_2",
+                    "flowing_lava_1",
+                    "lava_bucket",
+                    "obsidian",
+                    "rotten_flesh",
+                    "nether_portal",
+                    "netherrack",
+                    "chest",
+                    "bow",
+                    "string",
+                    "gunpowder",
+                    "wood_arrow",
+                    "iron_arrow",
+                    "explosive_arrow",
+                    "iron_sword",
+                    "iron_axe",
+                    "diamond_sword",
+                    "diamond_axe",
+                    "oi_core",
+                    "recursive",
+                    "snow",
+                    "ice",
+                    "apple",
+                    "diamond_helmet",
+                    "diamond_chestplate",
+                    "diamond_leggings",
+                    "diamond_boots"};
 map<string, int> thing;
 int blockwj[101] = {0,    200, 200, 400, 800, 100, 0,   0,  0,  200, -1, 0,
                     1200, 0,   0,   0,   5,   -1,  0,   -1, -1, -1,  -1, 12,
@@ -77,8 +173,8 @@ int blocktouch[101] = {0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1,
 int blocklv[101] = {0, 2, 1,  2,  3,  1,  0,  0,  0,  2,  114, 0, 4, 0, 0,
                     0, 1, 0,  0,  10, 10, 10, 10, 15, -1, 0,   0, 0, 0, 0,
                     0, 0, 10, 10, 10, 0,  0,  5,  0,  2,  0,   0, 0, 0, 0,
-                    0, 0, 0,  0,  0,  0,  0,  0,  0,  1,  1,   0};
-string test[101] = {
+                    0, 0, 0,  0,  0,  0,  0,  0,  0,  1,  1,   0, 0, 0, 0};
+string test[150] = {
     " \b空气",       " \b圆石",       " \b原木",       " \b煤炭",
     " \b粗铁",       " \b泥土",       " \b木棍",       " \b木稿",
     " \b石稿",       " \b熔炉",       " \b基岩",       " \b天空",
@@ -92,15 +188,16 @@ string test[101] = {
     " \b箱子",       " \b木弓",       " \b线",         " \b火药",
     " \b木箭",       " \b铁箭",       " \b爆炸箭",     " \b铁剑",
     " \b铁斧",       " \b钻石剑",     " \b钻石斧",     " \bOI核心",
-    " \b递归",       " \b雪",         " \b冰",         " \b苹果"};
+    " \b递归",       " \b雪",         " \b冰",         " \b苹果",
+    " \b钻石头盔",   " \b钻石胸甲",   " \b钻石护腿",   " \b钻石靴子"};
 int beibao[101][2];
 short boimes[5005];
 short boimes2[5005];
 int wear[6], fbnq[12] = {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 short page = 1;
-int printx = 50, printy = 30, boxlen = 0;
+int printx = 60, printy = 36, boxlen = 0;
 bool run = 1, can = 0, start = 0, yes = 0, SetLife = 0, CanGet = 1, oi = false,
-     checkhp = 0;
+     checkhp = 0,bag;
 int l, bosshp = 0, slow_update = 0, eat = 0, weidu = 1, savetick = 0;
 int gamemode = 1;
 int bed, GetIn = 1, ed = 8000, sun = 1, back_x = 10, now_wait = 0, wait = 0,
@@ -129,9 +226,84 @@ guaiwu shiti2[500];
 int To_int(double a) { return int(a + 0.5); }
 float Abs(float a) { return (a >= 0) ? a : -a; }
 float Min(float a, float b) { return (a <= b) ? a : b; }
+
+#define HASH_SIZE 160
+#define HASH_CELL 32
+vector<int> entity_hash[HASH_SIZE][HASH_SIZE];
+
+inline int hash_coord(double x) {
+  int ix = To_int(x);
+  int h = ix / HASH_CELL;
+  if (h < 0) h = 0;
+  if (h >= HASH_SIZE) h = HASH_SIZE - 1;
+  return h;
+}
+
+void update_entity_hash(int index, double old_x, double old_y, double new_x, double new_y) {
+  int old_hx = hash_coord(old_x);
+  int old_hy = hash_coord(old_y);
+  int new_hx = hash_coord(new_x);
+  int new_hy = hash_coord(new_y);
+  
+  if (old_hx != new_hx || old_hy != new_hy) {
+    auto& old_bucket = entity_hash[old_hx][old_hy];
+    auto it = std::find(old_bucket.begin(), old_bucket.end(), index);
+    if (it != old_bucket.end()) {
+      old_bucket.erase(it);
+    }
+    entity_hash[new_hx][new_hy].push_back(index);
+  }
+}
+
+void add_entity_to_hash(int index, double x, double y) {
+  int hx = hash_coord(x);
+  int hy = hash_coord(y);
+  entity_hash[hx][hy].push_back(index);
+}
+
+void remove_entity_from_hash(int index, double x, double y) {
+  int hx = hash_coord(x);
+  int hy = hash_coord(y);
+  auto& bucket = entity_hash[hx][hy];
+  auto it = std::find(bucket.begin(), bucket.end(), index);
+  if (it != bucket.end()) {
+    bucket.erase(it);
+  }
+}
+
+void query_nearby_entities(double x, double y, double range, vector<int>& results) {
+  results.clear();
+  int hx = hash_coord(x);
+  int hy = hash_coord(y);
+  int range_cells = (int)(range / HASH_CELL) + 1;
+  
+  for (int dhx = -range_cells; dhx <= range_cells; dhx++) {
+    for (int dhy = -range_cells; dhy <= range_cells; dhy++) {
+      int chx = hx + dhx;
+      int chy = hy + dhy;
+      if (chx < 0 || chx >= HASH_SIZE || chy < 0 || chy >= HASH_SIZE) continue;
+      for (int idx : entity_hash[chx][chy]) {
+        double dx = shiti[idx].gx - x;
+        double dy = shiti[idx].gy - y;
+        if (dx*dx + dy*dy <= range*range) {
+          results.push_back(idx);
+        }
+      }
+    }
+  }
+}
+
+void clear_entity_hash() {
+  for (int i = 0; i < HASH_SIZE; i++) {
+    for (int j = 0; j < HASH_SIZE; j++) {
+      entity_hash[i][j].clear();
+    }
+  }
+}
 void Setpos(float x, float y) {
   COORD pos;
   pos.X = To_int(x) * 2 + 1, pos.Y = To_int(y);
+  if(bag==1)pos.X+=(printx-50),pos.Y+=(printy-30)/2;
   SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
 void Setpos2(float x, float y) {
@@ -285,6 +457,13 @@ void Color(int a) {
                             BACKGROUND_RED | BACKGROUND_BLUE);
   if (a == -34)
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BACKGROUND_BLUE);
+  if (a == -35)
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                            BACKGROUND_INTENSITY | BACKGROUND_GREEN | BACKGROUND_BLUE |
+                            FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+  if (a == -36)
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                            BACKGROUND_BLUE | FOREGROUND_INTENSITY | FOREGROUND_BLUE);
 }
 void HideCursor() {
   CONSOLE_CURSOR_INFO cursor_info = {1, 0};
@@ -315,11 +494,70 @@ POINT GetMousePos() {
   p.x /= fontWidth;
   p.y /= fontHeight;
   // p.y-=3;
+  if(bag==1)p.x-=(printx-50),p.y-=(printy-30)/2;
   return p;
 }
 boomthings bz[1000];
 int KK;
 boomthings zc[1000];
+
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 60
+wchar_t back_buffer[SCREEN_HEIGHT][SCREEN_WIDTH * 2 + 1];
+WORD color_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+int current_x = 0, current_y = 0;
+WORD current_color = 0x07;
+
+void init_buffer() {
+  memset(back_buffer, L' ', sizeof(back_buffer));
+  memset(color_buffer, 0x07, sizeof(color_buffer));
+}
+
+void Setpos_buf(int x, int y) {
+  current_x = x;
+  current_y = y;
+}
+
+void Color_buf(int color) {
+  if (color >= 0) current_color = color;
+  else current_color = color + 16;
+}
+
+void Print_buf(const wchar_t* str) {
+  for (int i = 0; str[i]; i++) {
+    if (current_x >= SCREEN_WIDTH) {
+      current_x = 0;
+      current_y++;
+    }
+    if (current_y < SCREEN_HEIGHT) {
+      back_buffer[current_y][current_x * 2] = str[i];
+      back_buffer[current_y][current_x * 2 + 1] = L' ';
+      color_buffer[current_y][current_x] = current_color;
+    }
+    current_x++;
+  }
+}
+
+void flush_buffer() {
+  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  COORD bufferSize = {SCREEN_WIDTH * 2, SCREEN_HEIGHT};
+  COORD bufferCoord = {0, 0};
+  SMALL_RECT writeRegion = {0, 0, SCREEN_WIDTH * 2 - 1, SCREEN_HEIGHT - 1};
+  
+  CHAR_INFO *screenBuffer = new CHAR_INFO[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+  for (int y = 0; y < SCREEN_HEIGHT; y++) {
+    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
+      screenBuffer[y * SCREEN_WIDTH * 2 + x].Char.UnicodeChar = back_buffer[y][x];
+      if (x % 2 == 0)
+        screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
+      else
+        screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
+    }
+  }
+  
+  WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
+  delete[] screenBuffer;
+}
 void Clear() {
   if (weidu == 2)
     return;
@@ -342,10 +580,10 @@ void Clear_formap() {
 }
 void Clear_2() {
   Color(0);
-  for (int kkk = 0; kkk <= 36; kkk++) {
+  for (int kkk = 0; kkk <= printy+5; kkk++) {
     Setpos(0, kkk);
-    printf("                                                                   "
-           "                                   ");
+    for(int i=0;i<=printx+5;i+=2)
+    printf("    ");
   }
 }
 void boom_add(int i, int j, int col) {
@@ -677,9 +915,9 @@ void Make_deep(int i) {
   int j;
   if (rand() % 2 == 0) {
     j = 100;
-    while (s[i][j] != 0 && j < 999) {
-      j--;
-      if (s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2)
+    while (s[i][j] != 0 && j <300) {
+      j++;
+      if (s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)
         return;
     }
   } else
@@ -687,13 +925,22 @@ void Make_deep(int i) {
   int move_ = 0;
   int deep_ = rand() % 120 + 20;
   int wei_ = rand() % 6 + 3;
-  for (int uu = 0; uu <= deep_; uu++) {
-    for (int kk = 0; kk <= wei_; kk++) {
+  for (int uu = 0; uu <= deep_+1; uu++) {
+  	if(uu==deep_+1){
+  	for (int kk = int(wei_/4.0+0.5); kk <= int(wei_/4.0*3.0+0.5); kk++) {
       if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ > 5000 ||
           j + uu > 999)
         return;
       s[i + kk + move_][j + uu] = 0;
     }
+	}
+	else{
+    for (int kk = 0; kk <= wei_; kk++) {
+      if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ > 5000 ||
+          j + uu > 999)
+        return;
+      s[i + kk + move_][j + uu] = 0;
+    }}
     if (rand() % 6 == 0)
       move_++;
     if (rand() % 6 == 0)
@@ -703,13 +950,14 @@ void Make_deep(int i) {
     if (rand() % 15 == 0)
       wei_--;
   }
+  
 }
 void make_skycave(int i) {
   int j;
-  j = 200;
-  while (s[i][j] != 0 && j < 999) {
-    j--;
-    if (s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2)
+  j = 100;
+  while (s[i][j] != 0 && j <300) {
+    j++;
+    if (s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)
       return;
   }
   int move_ = 0;
@@ -739,6 +987,56 @@ void make_skycave(int i) {
       wei_--;
   }
 }
+void make_lake(int i,bool isunder)
+{
+	int j=50;
+	bool islava;
+	if(rand()%2==0)islava=1;
+	else islava=0;
+	int wei_=rand()%13+5;
+	int dep=rand()%3+2;
+	int now_high=1,low=0;
+	if(isunder==0){
+	for (int uu = i-7,kk; uu <= i+wei_-7; uu++) {
+	kk=50;
+	while (kk < 999) {
+    kk++;
+    if ((s[uu][kk] >= 19 && s[uu][kk] <= 23)){
+		return;}
+  	if (s[uu][kk]!=0){
+    	low=max(low,kk);
+		break;}
+  	}
+  }
+	if(low==0)return;j=low;}
+	else j=rand()%700+200;
+	for (int uu = i-7; uu <= i+wei_-7; uu++) {
+		for (int kk = j-2; kk <= j+1; kk++) {
+			s[uu][kk]=0;
+		}
+		for (int kk = j-8; kk <= j-3; kk++) {
+			if(s[uu][kk]==25||s[uu][kk]==2)s[uu][kk]=0;
+		}
+	}
+	for (int uu = i-8; uu <= i+wei_-6; uu++) {
+		if(uu>=i-7&&uu<=i+wei_-7){
+		for (int kk = j; kk <= j+now_high; kk++) {
+			if(islava==1)s[uu][kk]=32;
+			else s[uu][kk]=19;
+		}}
+		for (int kk = j+now_high+1-(!(uu>=i-7&&uu<=i+wei_-7))*2; kk <= j+now_high+2; kk++) {
+			if(islava==1||j>=200)s[uu][kk]=1;
+			else s[uu][kk]=5;
+		}
+		if(uu>=i-7&&uu<=i+wei_-7){
+		if(uu<=i-7+wei_/2&&now_high<dep){
+		if(rand()%5!=0)now_high++;
+		}
+		if(uu>i-7+wei_/2&&now_high>0){
+		if(rand()%5!=0)now_high--;
+		}}
+	}
+}
 void noodle_cave_nether(int i, int j) {
   int move_ = 0;
   int len_ = rand() % 20 + 10;
@@ -764,89 +1062,86 @@ void noodle_cave_nether(int i, int j) {
 }
 int night = 0, will_night = 0, will_light = 0;
 int now_time = 0;
-void dfs(int i, int j, int lt, int v) {
-  if (i < 0 || i > 5000 || j < 0 || j > 1000 || lt <= 0)
-    return;
-  if (blocktouch[s[i][j]] == true)
-    v = 3;
-  else
-    v = 1;
-  light[i][j] = lt;
-  if (lt - v > light[i + 1][j])
-    dfs(i + 1, j, lt - v, v);
-  if (lt - v > light[i - 1][j])
-    dfs(i - 1, j, lt - v, v);
-  if (lt - v > light[i][j + 1])
-    dfs(i, j + 1, lt - v, v);
-  if (lt - v > light[i][j - 1])
-    dfs(i, j - 1, lt - v, v);
+struct LightPos {
+  int x, y, level;
+};
+void dfs(int i, int j, int lt, int v)
+{
+    if (i < 0 || i > 5000 || j < 0 || j > 1000 || lt <= 0) return;
+    if (blocktouch[s[i][j]] == true)v = 3;
+    else v = 1;
+    light[i][j] = lt;
+    if (lt - v > light[i + 1][j])dfs(i + 1, j, lt - v, v);
+    if (lt - v > light[i - 1][j])dfs(i - 1, j, lt - v, v);
+    if (lt - v > light[i][j + 1])dfs(i, j + 1, lt - v, v);
+    if (lt - v > light[i][j - 1])dfs(i, j - 1, lt - v, v);
 }
 void setlight() {
-  if (gamemode == 0) {
-    memset(light, 15, sizeof(light));
-    return;
-  }
-  memset(light, 0, sizeof(light));
-  if (beibao[cho][0] == 16)
-    light[int(x + 0.5)][int(y + 0.5)] = 20;
-  if (weidu == 2) {
-    for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000)
-        continue;
-      for (int j = 0; j <= 1000; j++) {
-        if ((s[i][j] == 0 || s[i][j] == 11) && light[i][j] <= 8)
-          light[i][j] = 8;
-      }
-    }
-  }
-  if (night == 1 && weidu != 2) {
-    for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000)
-        continue;
-      if ((s[i][0] == 0 || s[i][0] == 11) && light[i][0] < 4)
-        light[i][0] = 4;
-    }
-    for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000)
-        continue;
-      for (int j = 0; j <= 1000; j++) {
-        if ((s[i][j] == 0 || s[i][j] == 11) && light[i][j] < 4 &&
-            light[i][j - 1] == 4) {
-          light[i][j] = 4;
+  if(gamemode==0){memset(light, 15, sizeof(light));return;}
+    memset(light, 0, sizeof(light));
+    if(beibao[cho][0]==16)light[int(x+0.5)][int(y+0.5)]=20;
+    if(weidu==2)
+    {for (int i = int(x-149.5); i <= int(x+150.5); i++)
+    {
+    	if(i<0||i>5000)continue;
+        for (int j = 0; j <= 1000; j++)
+        {
+            if((s[i][j]==0||s[i][j]==11)&&light[i][j]<=8)light[i][j]=8;
         }
-      }
-    }
-  } else {
-    for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000)
-        continue;
-      if (s[i][0] == 0 || s[i][0] == 11)
-        light[i][0] = 20;
-    }
-    for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000)
-        continue;
-      for (int j = 0; j <= 1000; j++) {
-        if (j > 0 && (s[i][j] == 0 || s[i][j] == 11) && light[i][j - 1] == 20) {
-          light[i][j] = 20;
+    }}
+    if (night == 1&&weidu!=2)
+    {
+        for (int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+        	if(i<0||i>5000)continue;
+            if ((s[i][0] == 0 || s[i][0] == 11)&&light[i][0]<4)light[i][0] = 4;}
+        for (int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+        	if(i<0||i>5000)continue;
+            for (int j = 0; j <= 1000; j++)
+            {
+                if ((s[i][j] == 0 || s[i][j] == 11)&&light[i][j]<4 && light[i][j - 1] == 4)
+                {
+                    light[i][j] = 4;
+                }
+            }
         }
-      }
     }
-  }
-  for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-    if (i < 0 || i > 5000)
-      continue;
-    for (int j = int(y - 199.5); j <= int(y + 200.5); j++) {
-      if (j < 0 || j > 1000)
-        continue;
-      if ((s[i][j] == 16 || (s[i][j] >= 32 && s[i][j] <= 34))) {
-        dfs(i, j, 19, 1);
-      } else {
-        if (light[i][j] > 0)
-          dfs(i, j, light[i][j], 1);
-      }
+    else
+    {
+        for (int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+        	if(i<0||i>5000)continue;
+            if (s[i][0] == 0 || s[i][0] == 11)light[i][0] = 20;
+        }
+        for (int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+        	if(i<0||i>5000)continue;
+            for (int j = 0; j <= 1000; j++)
+            {
+                if (j > 0 && (s[i][j] == 0 || s[i][j] == 11) && light[i][j - 1] == 20)
+                {
+                    light[i][j] = 20;
+                }
+            }
+        }
     }
-  }
+    for (int i = int(x-149.5); i <= int(x+150.5); i++)
+    {
+    	if(i<0||i>5000)continue;
+        for (int j = int(y-199.5); j <= int(y+200.5); j++)
+        {
+        	if(j<0||j>1000)continue;
+            if ((s[i][j] == 16||(s[i][j]>=32&&s[i][j]<=34)))
+            {
+                dfs(i, j, 19, 1);
+            }
+            else
+            {
+                if (light[i][j] > 0)dfs(i, j, light[i][j], 1);
+            }
+        }
+    }
 }
 void shuaxin() {
   Color(0);
@@ -884,12 +1179,20 @@ void hujia_update() {
   hujiazhi = 0;
   if (wear[1] == 27)
     hujiazhi += 6;
+  else if (wear[1] == 57)
+    hujiazhi += 8;
   if (wear[2] == 28)
     hujiazhi += 5;
+  else if (wear[2] == 58)
+    hujiazhi += 6;
   if (wear[3] == 29)
     hujiazhi += 2;
+  else if (wear[3] == 56)
+    hujiazhi += 3;
   if (wear[4] == 30)
     hujiazhi += 2;
+  else if (wear[4] == 59)
+    hujiazhi += 3;
   jianshang = 1 - hujiazhi * 0.04;
 }
 void st(int type, int x, int y, int ra2) {
@@ -942,6 +1245,7 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0) {
       boss2hp = 689;
     shiti[l].sd = 200, shiti[l].AI = 3;
   }
+  add_entity_to_hash(l, tx, ty);
 }
 void MAP_nether() {
   HideCursor();
@@ -1063,6 +1367,8 @@ void MAP_nether() {
 
 void spawn_chest(int xxx, int yyy);
 void MAP() {
+  box.clear();
+  boxlen = 0;
   memset(boimes, 0, sizeof(boimes));
   memset(boimes2, 0, sizeof(boimes2));
   for (int i = 0; i <= 5000; i++)
@@ -1118,6 +1424,7 @@ void MAP() {
   int wmax = 0, wh = 0;
   tall = 149;
   life = 20;
+  water=0;
   memset(beibao, 0, sizeof(beibao));
   Setpos(21, 13);
   cout << "  正在生成主世界...";
@@ -1356,6 +1663,15 @@ void MAP() {
         noodle_cave(i, j);
     }
   }
+  for (int i = 20; i <= 4980; i++) {
+       if (rand() % 10 == 0) {
+      		if (rand() % 10 == 0) {
+      		make_lake(i,0);
+    		}
+    		else make_lake(i,1);
+		}
+    }
+  
   for (int i = 10; i <= 4990; i++) {
     for (int j = 200; j <= 950; j++) {
       if (rand() % 12000 == 0) {
@@ -1370,6 +1686,17 @@ void MAP() {
   Clear_formap();
   MAP_nether();
   sky();
+  
+  for (int i = 0; i <= 5000; i++) {
+    for (int j = 0; j <= 1000; j++) {
+      int cx = get_chunk_x(i);
+      int cy = get_chunk_y(j);
+      int lx = get_local_x(i);
+      int ly = get_local_y(j);
+      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
+      chunk_data[cx][cy].loaded = true;
+    }
+  }
 }
 
 void swap_map() {
@@ -1383,6 +1710,11 @@ void swap_map() {
     }
   }
   swap(shiti, shiti2);
+  clear_entity_hash();
+  for (int i = 0; i <= 249; i++) {
+    if (shiti[i].type > 0)
+      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+  }
   setlight();
   memset(painting, -1, sizeof(painting));
   x = mpx, y = mpy;
@@ -1651,8 +1983,8 @@ void Updateblock(bool ismap) {
       Color(-1), co = -1;
     printf("  ");
   } else if (s[dx][dy] == 54) {
-    if (co != -34)
-      Color(-34), co = -34;
+    if (co != -36)
+      Color(-36), co = -36;
     printf("  ");
   }
 }
@@ -1753,6 +2085,7 @@ bool pr = false;
 void Print() {
   co = 0;
   Color(0);
+  vector<int> nearby_entities;
   for (int j = 0; j <= printy; j++) {
     for (int i = 0; i <= printx; i++) {
       dx = int(jx + i - printx * 0.5 + 0.5);
@@ -1848,7 +2181,9 @@ void Print() {
           }
         }
       }
-      for (int k = 0; k <= 100; k++) {
+      nearby_entities.clear();
+      query_nearby_entities(dx, dy, 1.5, nearby_entities);
+      for (int k : nearby_entities) {
         if (shiti[k].type > 0) {
           if (light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4))
             continue;
@@ -1957,8 +2292,8 @@ void UpdateFPS() {
     fps = frameCount / deltaTime;
     frameCount = 0;
     lastTime = currentTime;
-    sprintf(title, "我的世界 - FPS: %.2f", fps);
-    SetWindowTextA(GetConsoleWindow(), title);
+    swprintf(title, 256, L"我的世界 - FPS: %.2f", fps);
+    SetWindowTextW(GetConsoleWindow(), title);
   }
 }
 int sdprint[100][60][2];
@@ -2015,7 +2350,7 @@ void openmap() {
   double rx = jx, ry = jy;
   double jjx = jx, jjy = jy;
   POINT p;
-  memset(light, 15, sizeof(light));
+  std::fill(&light[0][0], &light[0][0] + sizeof(light) / sizeof(int), 15);
   // memset(ep,1,sizeof(ep));
   sf = 1;
   while (1) {
@@ -2079,6 +2414,7 @@ void openmap() {
       mprx = mpx;
       mpry = mpy;
     }
+    Sleep(1);
   }
 }
 int r;
@@ -2528,12 +2864,14 @@ bool read(string nam) {
     ZHI = 0;
     rd_c = 0;
   }
+  box.clear();
+  boxlen = 0;
   fscanf(fp, " %d", &boxlen);
   for (int i = 0; i < boxlen; i++) {
     fscanf(fp, " %hu %hu", &sx, &sy);
     box.push_back({{0}, sx, sy});
     for (int j = 0; j <= 24; j++) {
-      fscanf(fp, " %hu", &box[i].things[j]);
+      fscanf(fp, " %hu", &box.back().things[j]);
     }
   }
   if (fscanf(fp, " %lf", &boss2hp) == 0)
@@ -2542,6 +2880,11 @@ bool read(string nam) {
     fscanf(fp, " %d %d", &boimes[i], &boimes2[i]);
   }
   fclose(fp);
+  clear_entity_hash();
+  for (int i = 0; i <= 249; i++) {
+    if (shiti[i].type > 0)
+      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+  }
   setlight();
   return true;
 }
@@ -2891,6 +3234,8 @@ void InToGet() {
         x += y;
         std::cout << y;
       }
+    } else {
+      Sleep(1);
     }
   }
   //	std::cout<<"\n"<<x<<"\n";
@@ -2975,87 +3320,215 @@ void InToGet() {
   //	GetIn=0;
   return;
 }
+string g_cmd_input;
+HWND g_hEdit;
+void execute_command(const string& cmd);
+
+LRESULT CALLBACK CmdWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  switch (msg) {
+    case WM_COMMAND:
+      if (LOWORD(wParam) == 1001 && HIWORD(wParam) == EN_CHANGE) {
+        char buf[256];
+        GetWindowTextA(g_hEdit, buf, sizeof(buf));
+      }
+      break;
+    case WM_KEYDOWN:
+      if (wParam == VK_ESCAPE) {
+        g_cmd_input = "";
+        DestroyWindow(hWnd);
+        return 0;
+      }
+      break;
+    case WM_CLOSE:
+      g_cmd_input = "";
+      DestroyWindow(hWnd);
+      return 0;
+    case WM_DESTROY:
+      PostQuitMessage(0);
+      return 0;
+  }
+  return DefWindowProcA(hWnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK EditWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+  switch (msg) {
+    case WM_KEYDOWN:
+      if (wParam == VK_RETURN) {
+        char buf[256];
+        GetWindowTextA(hWnd, buf, sizeof(buf));
+        g_cmd_input = buf;
+        DestroyWindow(GetParent(hWnd));
+        return 0;
+      } else if (wParam == VK_ESCAPE) {
+        g_cmd_input = "";
+        DestroyWindow(GetParent(hWnd));
+        return 0;
+      }
+      break;
+  }
+  return CallWindowProcA((WNDPROC)GetWindowLongPtrA(hWnd, GWLP_USERDATA), hWnd, msg, wParam, lParam);
+}
+
 void getin() {
   GetIn = -4;
-  Setpos(0, 28);
-  cout << "--------------------------------------------------------------------"
-          "-----------\n";
-  cout << " |                                                                  "
-          "           |\n";
-  cout << " -------------------------------------------------------------------"
-          "------------";
-  Setpos(1, 29);
-  while (_kbhit()) _getch();
-  string nx;
-  while (1) {
-    nx.clear();
-    char ny = 0;
-    while (ny != (char)(32) && ny != '\r') {
-      ny = _getch();
-      if (ny == '/') {
-        SetClean();
-        return;
-      }
-      if (ny == (char)(32) || ny == '\r') break;
-      if (nx.size() < 8) {
-        nx += ny;
-        cout << ny;
-      }
-    }
-    if (nx == "set") {
-      InToSet();
+  g_cmd_input = "";
+  
+  HINSTANCE hInst = GetModuleHandleA(NULL);
+  WNDCLASSEXA wc = {0};
+  wc.cbSize = sizeof(WNDCLASSEXA);
+  wc.lpfnWndProc = CmdWndProc;
+  wc.hInstance = hInst;
+  wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
+  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  wc.lpszClassName = "2DMC_CmdWndClass";
+  RegisterClassExA(&wc);
+  
+  HWND hWnd = CreateWindowExA(
+    WS_EX_TOPMOST | WS_EX_CLIENTEDGE,
+    "2DMC_CmdWndClass",
+    "2DMC Command",
+    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    100, 100, 420, 100,
+    NULL, NULL, hInst, NULL
+  );
+  
+  g_hEdit = CreateWindowExA(
+    0,
+    "EDIT",
+    "",
+    WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_BORDER,
+    10, 15, 380, 25,
+    hWnd, (HMENU)1001, hInst, NULL
+  );
+  
+  SetWindowLongPtrA(g_hEdit, GWLP_USERDATA, (LONG_PTR)GetWindowLongPtrA(g_hEdit, GWLP_WNDPROC));
+  SetWindowLongPtrA(g_hEdit, GWLP_WNDPROC, (LONG_PTR)EditWndProc);
+  
+  SetFocus(g_hEdit);
+  
+  MSG msg;
+  while (GetMessageA(&msg, NULL, 0, 0)) {
+    TranslateMessage(&msg);
+    DispatchMessageA(&msg);
+  }
+  
+  UnregisterClassA("2DMC_CmdWndClass", hInst);
+  
+  if (!g_cmd_input.empty()) {
+    execute_command(g_cmd_input);
+  }
+  SetClean();
+}
+
+void execute_command(const string& cmd) {
+  stringstream ss(cmd);
+  string cmd_name;
+  ss >> cmd_name;
+  
+  if (cmd_name == "help" || cmd_name == "/help") {
+    Setpos(0, 28);
+    cout << "--------------------------------------------------------------------"
+            "-----------\n";
+    cout << " | /help              - 显示帮助信息                                |\n";
+    cout << " | /give <item> <num> - 获得物品（如: /give diamond 10）            |\n";
+    cout << " | /heal              - 恢复全部生命                                |\n";
+    cout << " | /life <num>        - 设置生命（0-20）                            |\n";
+    cout << " | /kill              - 自杀（重生到出生点）                        |\n";
+    cout << " | /gamemode          - 切换创造/生存模式                           |\n";
+    cout << " | /clear             - 清空背包                                   |\n";
+    cout << " | /time <num>        - 设置时间（0-40000）                         |\n";
+    cout << " | /tp <x> <y>        - 传送到指定位置                             |\n";
+    cout << " -------------------------------------------------------------------"
+            "------------";
+    Sleep(3000);
+  } else if (cmd_name == "heal" || cmd_name == "/heal") {
+    life = 20;
+    Setpos(1, 29);
+    cout << " 生命已恢复                                                    ";
+  } else if (cmd_name == "life" || cmd_name == "/life") {
+    int w = 0;
+    ss >> w;
+    if (w >= 0 && w <= 20) {
+      life = w;
       Setpos(1, 29);
-      std::cout << " 已完成                                          ";
-      return;
-    } else if (nx == "get") {
-      InToGet();
-      Setpos(1, 29);
-      std::cout << " 已完成                                          ";
-      return;
-    } else if (nx == "tp") {
-      int h = 0, w = 0;
-      char t = 0;
-      while (t != (char)(32) && t != '\r') {
-        t = _getch();
-        if (t == '/') return;
-        if (t >= '0' && t <= '9') {
-          w = (t - '0') + w * 10;
-          cout << t;
-        }
-      }
-      if (t == '\r') {
-        Setpos(1, 29);
-        std::cout << " 错误位置                                          ";
-        return;
-      }
-      cout << " ";
-      t = 0;
-      while (t != '\r') {
-        t = _getch();
-        if (t == '/') return;
-        if (t >= '0' && t <= '9') {
-          h = (t - '0') + h * 10;
-          cout << t;
-        }
-      }
-      if (w <= 5000 && h <= 1000) {
-        x = w, y = (1000 - h);
-        Setpos(1, 29);
-        std::cout << " 已完成                                          ";
-        shuaxin();
-        return;
-      } else {
-        Setpos(1, 29);
-        std::cout << " 错误位置                                          ";
-        return;
-      }
+      cout << " 生命已设置为 " << w << "                                     ";
     } else {
       Setpos(1, 29);
-      cout << " 不正确的指令                                            ";
+      cout << " 错误: 生命必须在0-20之间                                      ";
+    }
+  } else if (cmd_name == "kill" || cmd_name == "/kill") {
+    life = 0;
+    Start();
+    spx = 0;
+    spy = 0;
+    jump = 0;
+    shuaxin();
+    Setpos(1, 29);
+    cout << " 你死了，已重生到出生点                                       ";
+  } else if (cmd_name == "gamemode" || cmd_name == "/gamemode") {
+    gamemode = 1 - gamemode;
+    Setpos(1, 29);
+    cout << " 游戏模式已切换为 " << (gamemode == 1 ? "创造" : "生存") << "             ";
+  } else if (cmd_name == "clear" || cmd_name == "/clear") {
+    memset(beibao, 0, sizeof(beibao));
+    Setpos(1, 29);
+    cout << " 背包已清空                                                    ";
+  } else if (cmd_name == "give" || cmd_name == "/give") {
+    string item_name;
+    int amount = 1;
+    ss >> item_name >> amount;
+    if (amount <= 0 || amount > 64) {
+      Setpos(1, 29);
+      cout << " 错误: 数量必须在1-64之间                                      ";
       return;
     }
+    auto it = thing.find(item_name);
+    if (it == thing.end()) {
+      Setpos(1, 29);
+      cout << " 错误: 未知物品: " << item_name << "                          ";
+      return;
+    }
+    int item_id = it->second;
+    int slot = getbeibao(item_id);
+    if (slot > 0) {
+      beibao[slot][0] = item_id;
+      beibao[slot][1] += amount;
+      if (beibao[slot][1] > 64) beibao[slot][1] = 64;
+      Setpos(1, 29);
+      cout << " 已获得 " << amount << " " << test[item_id] << "              ";
+    } else {
+      Setpos(1, 29);
+      cout << " 错误: 背包已满                                                ";
+    }
+  } else if (cmd_name == "time" || cmd_name == "/time") {
+    int w = 0;
+    ss >> w;
+    if (w >= 0 && w <= 40000) {
+      now_time = w;
+      night = (w >= 20000) ? 1 : 0;
+      Setpos(1, 29);
+      cout << " 时间已设置为 " << w << "                                     ";
+    } else {
+      Setpos(1, 29);
+      cout << " 错误: 时间必须在0-40000之间                                  ";
+    }
+  } else if (cmd_name == "tp" || cmd_name == "/tp") {
+    int w = 0, h = 0;
+    ss >> w >> h;
+    if (w >= 0 && w <= 5000 && h >= 0 && h <= 1000) {
+      x = w;
+      y = (1000 - h);
+      shuaxin();
+      Setpos(1, 29);
+      cout << " 已传送到 (" << w << ", " << h << ")                          ";
+    } else {
+      Setpos(1, 29);
+      cout << " 错误: 位置无效                                                ";
+    }
+  } else {
+    Setpos(1, 29);
+    cout << " 未知命令: " << cmd_name << "，输入 /help 查看帮助             ";
   }
-  Setpos(0, 28);
 }
 short getnew[5001][1001];
 int TT;
@@ -3269,6 +3742,7 @@ void make_jian(int tx, int ty, int stx, int sty, int nbt_) {
   shiti[l].randomtick = 0, shiti[l].direction = 0;
   shiti[l].sd = 0;
   shiti[l].AI = 2;
+  add_entity_to_hash(l, tx, ty);
 }
 int QQQQ = 0;
 void try_make_st() {
@@ -3315,6 +3789,7 @@ void st_kill(int l) {
       }
     }
   }
+  remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
   // shiti[l].HP = 0, shiti[l].hurt = 0, shiti[l].type = 0, shiti[l].gx = 0,
   // shiti[l].gy = 0, shiti[l].spgx = 0, shiti[l].spgy = 0;
   shiti[l] = {0};
@@ -3341,6 +3816,7 @@ void st_kill_fall(int l) {
   if (shiti[l].type == 6) {
     thing_fall(rand() % 2 + 1, 42);
   }
+  remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
   // shiti[l].HP = 0, shiti[l].hurt = 0, shiti[l].type = 0, shiti[l].gx = 0,
   // shiti[l].gy = 0, shiti[l].spgx = 0, shiti[l].spgy = 0;
   shiti[l] = {0};
@@ -3351,6 +3827,8 @@ void st_move() {
     playerCD--;
   for (l = 0; l <= 100; l++) {
     if (shiti[l].type > 0) {
+      double old_gx = shiti[l].gx;
+      double old_gy = shiti[l].gy;
       if (shiti[l].AI == 1) {
         gj = 0;
         if (KEY_DOWN(VK_LBUTTON) &&
@@ -3365,7 +3843,9 @@ void st_move() {
                                      playerCD = gongjicd;
             if (shiti[l].type == 7) {
               shiti[l].ch = 1;
-              for (int i = 0; i <= 100; i++)
+              vector<int> nearby_zombies;
+              query_nearby_entities(x, y, shiti[l].sd, nearby_zombies);
+              for (int i : nearby_zombies)
                 if (shiti[i].type == 7 &&
                     jl(abs(shiti[i].gx - x), abs(shiti[i].gy - y)) <
                         shiti[l].sd)
@@ -3402,6 +3882,7 @@ void st_move() {
               Clear();
             }
             if (shiti[l].HP <= 0) {
+              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill_fall(l);
               continue;
             }
@@ -3412,10 +3893,12 @@ void st_move() {
               shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
               shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
               shiti[l].gy < 0 || shiti[l].gx > 5000 || shiti[l].gy > 1000) {
+            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
             st_kill(l);
             continue;
           }
         } else if (shiti[l].HP < 0) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
         }
         if (shiti[l].CD > 0)
@@ -3592,6 +4075,7 @@ void st_move() {
                 jump = 0;
                 shuaxin();
               }
+              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill(l);
               continue;
             }
@@ -3708,16 +4192,20 @@ void st_move() {
         if (shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
             shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
             shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > 5000 ||
-            shiti[l].gy > 1000)
+            shiti[l].gy > 1000) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
+        }
         shiti[l].randomtick++;
         if (shiti[l].randomtick > 1200) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
         }
         shiti[l].spgx *= 0.995;
         shiti[l].gx += shiti[l].spgx * 0.03;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -3732,6 +4220,7 @@ void st_move() {
             jump = 0;
             shuaxin();
           }
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -3742,7 +4231,8 @@ void st_move() {
                   abs(shiti[LL].gy - shiti[l].gy) < 1) {
                 shiti[LL].spgy = -6,
                 shiti[LL].spgx = ((shiti[l].spgx > 0) * 2 - 1) * 0.5;
-                shiti[LL].HP -= 4, st_kill(l);
+                shiti[LL].HP -= 4, update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+ st_kill(l);
                 continue;
               }
             }
@@ -3751,6 +4241,7 @@ void st_move() {
         shiti[l].gx += shiti[l].spgx * 0.03;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -3759,6 +4250,7 @@ void st_move() {
         shiti[l].spgy *= 0.98;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -3773,6 +4265,7 @@ void st_move() {
             jump = 0;
             shuaxin();
           }
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -3781,6 +4274,7 @@ void st_move() {
         if (shiti[l].HP <= 0) {
           boss2hp -= shiti[l].direction;
           int xxxx = shiti[l].gx, yyyy = shiti[l].gy, nbtt = shiti[l].nbt - 1;
+          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           if (nbtt >= 1) {
             if (nbtt >= 0)
@@ -3825,6 +4319,7 @@ void st_move() {
               }
               int xxxx = shiti[l].gx, yyyy = shiti[l].gy,
                   nbtt = shiti[l].nbt - 1;
+              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill(l);
               if (nbtt >= 1) {
                 if (nbtt >= 0)
@@ -3891,6 +4386,7 @@ void st_move() {
           wudi = 45;
         }
       }
+      update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
     }
   }
   if (!checkhp)
@@ -3995,21 +4491,29 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0) {
   Setpos(19, 9);
   if (wear[1] == 27)
     cout << " 铁胸甲   ";
+  else if (wear[1] == 57)
+    cout << " 钻石胸甲 ";
   else
     cout << " 胸甲位   ";
   Setpos(19, 12);
   if (wear[2] == 28)
     cout << " 铁护腿   ";
+  else if (wear[2] == 58)
+    cout << " 钻石护腿 ";
   else
     cout << " 护腿位   ";
   Setpos(24, 9);
   if (wear[3] == 29)
     cout << " 铁头盔   ";
+  else if (wear[3] == 56)
+    cout << " 钻石头盔 ";
   else
     cout << " 头盔位   ";
   Setpos(24, 12);
   if (wear[4] == 30)
     cout << " 铁靴子   ";
+  else if (wear[4] == 59)
+    cout << " 钻石靴子 ";
   else
     cout << " 靴子位  ";
   for (int j = 10; j <= 18; j += 2) {
@@ -4040,24 +4544,22 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0) {
     Setpos(6, 12);
     cout << "  2木棍+3铁锭->铁镐";
     Setpos(6, 13);
-    cout << "  2木棍+3钻石->钻石镐";
-    Setpos(6, 14);
     cout << "  10黑曜石->下界传送门";
-    Setpos(6, 15);
+    Setpos(6, 14);
     cout << "  1木棍+1煤炭->5火把";
-    Setpos(6, 16);
+    Setpos(6, 15);
     cout << "  1木棍+2圆石->石剑";
-    Setpos(6, 17);
+    Setpos(6, 16);
     cout << "  2木棍+3原石->石斧";
-    Setpos(6, 18);
+    Setpos(6, 17);
     cout << "  3铁锭->桶";
-    Setpos(6, 19);
+    Setpos(6, 18);
     cout << "  8铁锭->铁胸甲";
-    Setpos(6, 20);
+    Setpos(6, 19);
     cout << "  7铁锭->铁护腿";
-    Setpos(6, 21);
+    Setpos(6, 20);
     cout << "  5铁锭->铁头盔";
-    Setpos(6, 22);
+    Setpos(6, 21);
     cout << "  4铁锭->铁靴子";
     Setpos(6, 23);
     cout << "  下一页";
@@ -4084,11 +4586,21 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0) {
     Setpos(6, 14);
     cout << "  2木棍+3铁锭->铁斧";
     Setpos(6, 15);
-    cout << "  1木棍+2钻石->钻石剑";
+    cout << "  2木棍+3钻石->钻石镐";
     Setpos(6, 16);
-    cout << "  2木棍+3钻石->钻石斧";
+    cout << "  1木棍+2钻石->钻石剑";
     Setpos(6, 17);
+    cout << "  2木棍+3钻石->钻石斧";
+    Setpos(6, 18);
     cout << "  4铁锭->OI";
+    Setpos(6, 19);
+    cout << "  8钻石->钻石头盔";
+    Setpos(6, 20);
+    cout << "  7钻石->钻石胸甲";
+    Setpos(6, 21);
+    cout << "  5钻石->钻石护腿";
+    Setpos(6, 22);
+    cout << "  4钻石->钻石靴子";
     Setpos(6, 23);
     cout << "  上一页";
   }
@@ -4096,10 +4608,53 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0) {
 short AN;
 void movethings(int upd) {
   int c_thing = 0, cc = 0;
+  int wear_slot = 0; // 护甲栏位置索引
   POINT p = GetMousePos();
   bool upda = (mpx != To_int(p.x / 2 - 26) || mpy != To_int(p.y - 14));
   mpx = To_int(p.x / 2 - 26);
   mpy = To_int(p.y - 14);
+  c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+  // 检测护甲栏点击
+  if (c_thing == -7 || c_thing == -8 || c_thing == -2 || c_thing == -3)
+    wear_slot = 1; // 胸甲位
+  else if (c_thing == 2 || c_thing == 1)
+    wear_slot = 2; // 护腿位
+  else if (c_thing == -6 || c_thing == -1)
+    wear_slot = 3; // 头盔位
+  else if (c_thing == 3)
+    wear_slot = 4; // 靴子位
+
+  if (wear_slot > 0 && wear[wear_slot] != 0) {
+    if (KEY_DOWN(VK_LBUTTON)) {
+      int wear_item = wear[wear_slot];
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
+      while (!(KEY_DOWN(VK_LBUTTON))) {
+        POINT p = GetMousePos();
+        mpx = To_int(p.x / 2 - 26);
+        mpy = To_int(p.y - 14);
+        c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+      }
+      if (KEY_DOWN(VK_LBUTTON)) {
+        POINT p = GetMousePos();
+        mpx = To_int(p.x / 2 - 26);
+        mpy = To_int(p.y - 14);
+        c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+        // 拖到背包格子时卸下盔甲
+        if (c_thing > 0 && c_thing < 26) {
+          int O = getbeibao(wear_item);
+          beibao[O][0] = wear_item;
+          beibao[O][1] += 1;
+          wear[wear_slot] = 0;
+          hujia_update();
+          craft_update(upd);
+        }
+      }
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
+    }
+  }
+
   if (!(int((mpx + 12) / 4 + 0.5) > 5 || int((mpx + 12) / 4 + 0.5) < 1 ||
         int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < 1)) {
     c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
@@ -4156,6 +4711,27 @@ void movethings(int upd) {
             craft_update(upd);
           } else if (beibao[cc][0] == 30 && (c_thing == 3)) {
             wear[4] = 30;
+            beibao[cc][0] = 0;
+            beibao[cc][1] = 0;
+            craft_update(upd);
+          } else if (beibao[cc][0] == 57 && (c_thing == -7 || c_thing == -8 ||
+                                      c_thing == -2 || c_thing == -3)) {
+            wear[1] = 57;
+            beibao[cc][0] = 0;
+            beibao[cc][1] = 0;
+            craft_update(upd);
+          } else if (beibao[cc][0] == 58 && (c_thing == 2 || c_thing == 1)) {
+            wear[2] = 58;
+            beibao[cc][0] = 0;
+            beibao[cc][1] = 0;
+            craft_update(upd);
+          } else if (beibao[cc][0] == 56 && (c_thing == -6 || c_thing == -1)) {
+            wear[3] = 56;
+            beibao[cc][0] = 0;
+            beibao[cc][1] = 0;
+            craft_update(upd);
+          } else if (beibao[cc][0] == 59 && (c_thing == 3)) {
+            wear[4] = 59;
             beibao[cc][0] = 0;
             beibao[cc][1] = 0;
             craft_update(upd);
@@ -4435,6 +5011,7 @@ void zz2(int Y, int need1, int type1, int get, int sl, int upd) {
 
 void openbox() {
   Color(-7);
+  bag=1;
   open_ = findbox(mpx, mpy);
   if (open_ == -1)
     return;
@@ -4466,6 +5043,7 @@ void openbox() {
       while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
         continue;
       memset(painting, 114, sizeof(painting));
+      bag=0;
       break;
     }
     moveinbox();
@@ -4473,12 +5051,14 @@ void openbox() {
   }
 }
 void craft_2() {
+bag=1;
   craft_update(2, 1);
   AN = 0;
   while (1) {
     if (GetAsyncKeyState('E') & 0x8000) {
       if (anx == 0) {
         anx = 1;
+        bag=0;
         break;
       }
       anx = 1;
@@ -4486,11 +5066,13 @@ void craft_2() {
       anx = 0;
     movethings(2);
     zz(-5, 1, 3, 1, 4, 13, 1, 2);
+    Sleep(1);
   }
   setlight();
   memset(painting, 114, sizeof(painting));
 }
 void craft_1() {
+	bag=1;
   craft_update(1, 1);
   AN = 0;
   while (1) {
@@ -4498,6 +5080,7 @@ void craft_1() {
       while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
         continue;
       page = 1;
+      bag=0;
       break;
     } else
       anx = 0;
@@ -4527,16 +5110,15 @@ void craft_1() {
       zz(-3, 5, 1, 2, 6, 8, 1, 1);
       zz(-2, 20, 1, 5, 3, 9, 1, 1);
       zz(-1, 3, 13, 2, 6, 14, 1, 1);
-      zz(0, 3, 12, 2, 6, 15, 1, 1);
-      zz2(1, 10, 36, 38, 1, 1);
-      zz(2, 1, 3, 1, 6, 16, 5, 1);
-      zz(3, 1, 6, 2, 1, 17, 1, 1);
-      zz(4, 2, 6, 3, 1, 18, 1, 1);
-      zz2(5, 3, 13, 25, 1, 1);
-      zz2(6, 8, 13, 27, 1, 1);
-      zz2(7, 7, 13, 28, 1, 1);
-      zz2(8, 5, 13, 29, 1, 1);
-      zz2(9, 4, 13, 30, 1, 1);
+      zz2(0, 10, 36, 38, 1, 1);
+      zz(1, 1, 3, 1, 6, 16, 5, 1);
+      zz(2, 1, 6, 2, 1, 17, 1, 1);
+      zz(3, 2, 6, 3, 1, 18, 1, 1);
+      zz2(4, 3, 13, 25, 1, 1);
+      zz2(5, 8, 13, 27, 1, 1);
+      zz2(6, 7, 13, 28, 1, 1);
+      zz2(7, 5, 13, 29, 1, 1);
+      zz2(8, 4, 13, 30, 1, 1);
     } else {
       zz2(-5, 8, 2, 40, 1, 3);
       zz(-4, 3, 6, 3, 42, 41, 1, 3);
@@ -4545,9 +5127,14 @@ void craft_1() {
       zz(-1, 1, 6, 1, 43, 46, 8, 3);
       zz(0, 1, 6, 2, 13, 47, 1, 3);
       zz(1, 2, 6, 3, 13, 48, 1, 3);
-      zz(2, 1, 6, 2, 12, 49, 1, 3);
-      zz(3, 2, 6, 3, 12, 50, 1, 3);
-      zz2(4, 4, 13, 51, 1, 3);
+      zz(2, 3, 12, 2, 6, 15, 1, 3);
+      zz(3, 1, 6, 2, 12, 49, 1, 3);
+      zz(4, 2, 6, 3, 12, 50, 1, 3);
+      zz2(5, 4, 13, 51, 1, 3);
+      zz2(6, 8, 12, 56, 1, 3);
+      zz2(7, 7, 12, 57, 1, 3);
+      zz2(8, 5, 12, 58, 1, 3);
+      zz2(9, 4, 12, 59, 1, 3);
     }
     if (mpy == 10 && mpx < -9) {
       if (KEY_DOWN(VK_LBUTTON)) {
@@ -4565,6 +5152,7 @@ void craft_1() {
         Setpos(5, 23), cout << "->";
     } else
       Setpos(5, 23), cout << "   ";
+    Sleep(1);
   }
 }
 void SwitchMode() {
@@ -4624,11 +5212,13 @@ void update_set() {
   cout << " 保存并退出游戏";
 }
 void SET() {
+	bag=1;
   update_set();
   while (1) {
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
       if (anx == 0) {
         anx = 1;
+        bag=0;
         break;
       }
       anx = 1;
@@ -4747,6 +5337,7 @@ void SET() {
         Setpos(18, 12), cout << "-> ";
     } else
       Setpos(18, 12), cout << "   ";
+    Sleep(1);
   }
 }
 void cls() {
@@ -4800,7 +5391,7 @@ void SetWindowSize(int cols, int lines) {
   MoveWindow(console, r.left, r.top, cols * 8, lines * 16, TRUE);
 }
 void did() {
-  for (int x = 0; x < 37; x++) {
+  for (int x = 0; x < 60; x++) {
     thing.insert({name[x], x});
   }
 }
@@ -4864,6 +5455,7 @@ void delete_world() {
       if (!abcde)
         cout << saves[i];
     }
+    Sleep(1);
   }
 }
 void make_newworld() {
@@ -4941,6 +5533,7 @@ void make_newworld() {
         cout << "  ----------";
       }
     }
+    Sleep(1);
   }
 }
 void game_loop() {
@@ -4962,7 +5555,7 @@ void game_loop() {
   hujia_update();
   slow_update = 400;
   while (1) {
-    if (clock() - Clocknum >= 15 * setfps) {
+    if (setfps == 0 || clock() - Clocknum >= 15 * setfps) {
       GetIn += (GetIn >= 1 ? 0 : 1);
       keybd_event(VK_MENU, 0, 0, 0);               // 按下
       keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
@@ -5390,9 +5983,14 @@ void game_loop() {
               save_zidong.detach();
       }*/
     }
+    //Sleep(1);
   }
 }
 int main() {
+  // 设置控制台为UTF-8编码以支持中文显示
+  SetConsoleOutputCP(65001);
+  SetConsoleCP(65001);
+  
   try {
     did();
     SetConsoleToFullscreen();
@@ -5428,6 +6026,7 @@ int main() {
     }
     SetConsoleMode(hInput, mode);
     InitFPSCounter();
+    init_buffer();
     srand((unsigned)time(NULL));
     HideCursor();
     bool willclear = true;
@@ -5453,7 +6052,7 @@ int main() {
           cout << "   #     ####     ###    #   #  #####  #####  #   #  #   #  "
                   "#        #";
           Setpos(40, 12);
-          cout << "Alpha 0.5.5";
+          cout << "Alpha 0.7.1";
         };
         POINT p = GetMousePos();
         mpx = To_int(p.x / 2 - 26);
@@ -5547,19 +6146,20 @@ int main() {
                     oi = 1 - oi;
                   }
                 } else {
-                  if (oi)
-                    Color(9);
-                  else
-                    Color(10);
-                  Setpos(23, 23);
-                  cout << "  ----------";
-                  Setpos(23, 24);
-                  cout << " |  OI风暴  |";
-                  Setpos(23, 25);
-                  cout << "  ----------";
+                    if (oi)
+                      Color(9);
+                    else
+                      Color(10);
+                    Setpos(23, 23);
+                    cout << "  ----------";
+                    Setpos(23, 24);
+                    cout << " |  OI风暴  |";
+                    Setpos(23, 25);
+                    cout << "  ----------";
+                  }
+                  Sleep(1);
                 }
               }
-            }
           }
         } else {
           Color(0);
@@ -5639,6 +6239,7 @@ int main() {
                       read(saves[i]);
                       zzz = saves[i];
                       game_loop();
+                      bag=0;
                       Clear_2();
                       willclear = true;
                     }
@@ -5661,6 +6262,7 @@ int main() {
                     memset(painting, 114, sizeof(painting));
                     if (iscre)
                       game_loop();
+                      bag=0;
                     Clear_2();
                     willclear = true;
                   }
@@ -5694,6 +6296,7 @@ int main() {
                   Setpos(28, 29);
                   cout << "  ----------";
                 }
+                Sleep(1);
               }
             }
             willclear = true;
@@ -5720,11 +6323,15 @@ int main() {
           cout << "  ----------";
         }
       }
+      Sleep(1);
     }
     save(zzz);
     return 0;
+  } catch (const std::exception& e) {
+    cout << "error: " << e.what();
+    exit(1);
   } catch (...) {
-    cout << "error";
+    cout << "error: unknown exception";
     exit(1);
   }
 }

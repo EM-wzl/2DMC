@@ -1,10 +1,10 @@
-﻿
+﻿﻿//指令现在可以正常使用
+//地下可以正常生成箱子
+#define _CRT_SECURE_NO_WARNINGS
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <sstream>
 #include <time.h>
-#include <algorithm>
 
 // #include<thread>
 #include <cmath>
@@ -12,8 +12,6 @@
 #include <cstdio>
 #include <map>
 #include <vector>
-#include <cstdarg>
-#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -29,187 +27,44 @@ int s2[5001][1001];
 int light[5001][1001];
 int painting[102][102][2];
 bool ep[5001][5001];
-
-#define CHUNK_SIZE 32
-#define CHUNK_X_COUNT 157
-#define CHUNK_Y_COUNT 32
-
-struct Chunk {
-  int blocks[CHUNK_SIZE][CHUNK_SIZE];
-  unsigned char light[CHUNK_SIZE][CHUNK_SIZE];
-  bool loaded;
-  bool modified;
-  bool dirty;       // 需要重新渲染
-  
-  Chunk() : loaded(false), modified(false), dirty(true) {
-    memset(blocks, 0, sizeof(blocks));
-    memset(light, 0, sizeof(light));
-  }
-};
-
-Chunk chunk_data[CHUNK_X_COUNT][CHUNK_Y_COUNT];
-
-// 脏矩形：记录屏幕范围 [sx1,sx2] x [sy1,sy2] 内需要重绘的区域
-struct DirtyRect {
-  int x1, y1, x2, y2;
-  bool valid;
-  DirtyRect() : x1(1000), y1(1000), x2(-1), y2(-1), valid(false) {}
-  void reset() { x1 = 1000; y1 = 1000; x2 = -1; y2 = -1; valid = false; }
-  void add(int x, int y) {
-    if (x < x1) x1 = x;
-    if (x > x2) x2 = x;
-    if (y < y1) y1 = y;
-    if (y > y2) y2 = y;
-    valid = true;
-  }
-};
-static DirtyRect dirty_rect;
-
-// 渲染缓存：记录每个屏幕单元最近渲染的内容，避免重复计算
-struct RenderCache {
-  int block_id;
-  int light_level;
-  unsigned short entity_id;
-  bool valid;
-  RenderCache() : block_id(-1), light_level(-1), entity_id(0), valid(false) {}
-};
-static RenderCache render_cache[102][102];
-static bool use_render_cache = true;
-
-extern double jx, jy;
-extern int printx, printy;
-
-#define world_to_screen_x(wx) (int((wx) - jx + printx * 0.5 + 0.5))
-#define world_to_screen_y(wy) (int((wy) - jy + printy * 0.5 + 0.5))
-#define screen_to_world_x(sx) ((sx) + jx - printx * 0.5)
-#define screen_to_world_y(sy) ((sy) + jy - printy * 0.5)
-
-inline int get_chunk_x(int x) { return x / CHUNK_SIZE; }
-inline int get_chunk_y(int y) { return y / CHUNK_SIZE; }
-inline int get_local_x(int x) { return x % CHUNK_SIZE; }
-inline int get_local_y(int y) { return y % CHUNK_SIZE; }
-
-inline int get_block(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
-  int cx = get_chunk_x(x);
-  int cy = get_chunk_y(y);
-  int lx = get_local_x(x);
-  int ly = get_local_y(y);
-  return chunk_data[cx][cy].blocks[lx][ly];
-}
-
-void set_block(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
-  int cx = get_chunk_x(x);
-  int cy = get_chunk_y(y);
-  int lx = get_local_x(x);
-  int ly = get_local_y(y);
-  chunk_data[cx][cy].blocks[lx][ly] = val;
-  chunk_data[cx][cy].modified = true;
-  chunk_data[cx][cy].dirty = true;
-  dirty_rect.add(world_to_screen_x(x), world_to_screen_y(y));
-}
-
-void set_light_chunk(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
-  int cx = get_chunk_x(x);
-  int cy = get_chunk_y(y);
-  int lx = get_local_x(x);
-  int ly = get_local_y(y);
-  chunk_data[cx][cy].light[lx][ly] = (unsigned char)val;
-}
-
-inline int get_s2(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
-  return s2[x][y];
-}
-
-inline void set_s2(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
-  s2[x][y] = val;
-}
-
-inline int get_light(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 15;
-  return light[x][y];
-}
-
-inline void set_light(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
-  light[x][y] = val;
-}
-
-inline bool get_ep(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 5000) return false;
-  return ep[x][y];
-}
-
-inline void set_ep(int x, int y, bool val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 5000) return;
-  ep[x][y] = val;
-}
-
 wchar_t title[256];
 string name[101] = {"air",
                     "stone",
                     "wood",
-                    "coal",
-                    "raw_iron",
+                    "BlackFire",
                     "dirt",
-                    "stick",
-                    "wood_pickaxe",
-                    "stone_pickaxe",
-                    "furnace",
-                    "bedrock",
+                    "pencil",
+                    "WoodDig",
+                    "StoneDig",
+                    "FireStone",
+                    "StrongStone",
                     "sky",
-                    "diamond",
-                    "iron_ingot",
-                    "iron_pickaxe",
-                    "diamond_pickaxe",
-                    "torch",
-                    "stone_sword",
-                    "stone_axe",
+                    "BuleStone",
+                    "GeryStone",
+                    "GeryDig",
+                    "BuleDig",
+                    "FireWood",
+                    "StoneFight",
+                    "StoneCut",
                     "water",
-                    "flowing_water_3",
-                    "flowing_water_2",
-                    "flowing_water_1",
+                    "WaterThreeInFour",
+                    "WaterTwoInFour",
+                    "WaterOneInFour",
                     "leaf",
-                    "health_potion",
-                    "bucket",
-                    "water_bucket",
-                    "iron_chestplate",
-                    "iron_leggings",
-                    "iron_helmet",
-                    "iron_boots",
-                    "shield",
-                    "lava",
-                    "flowing_lava_2",
-                    "flowing_lava_1",
-                    "lava_bucket",
-                    "obsidian",
-                    "rotten_flesh",
-                    "nether_portal",
-                    "netherrack",
-                    "chest",
-                    "bow",
-                    "string",
-                    "gunpowder",
-                    "wood_arrow",
-                    "iron_arrow",
-                    "explosive_arrow",
-                    "iron_sword",
-                    "iron_axe",
-                    "diamond_sword",
-                    "diamond_axe",
-                    "oi_core",
-                    "recursive",
-                    "snow",
-                    "ice",
-                    "apple",
-                    "diamond_helmet",
-                    "diamond_chestplate",
-                    "diamond_leggings",
-                    "diamond_boots"};
+                    "LifeDrink",
+                    "bottle",
+                    "WaterBottle",
+                    "GeryShirt",
+                    "GeryPants",
+                    "GeryHat",
+                    "GeryShoes",
+                    "SaveMe",
+                    "FireHot",
+                    "FireHotTwoInThree",
+                    "FireHotOneInThree",
+                    "FireBottle",
+                    "BlackStrongStone",
+                    "BadMeat"};
 map<string, int> thing;
 int blockwj[101] = {0,    200, 200, 400, 800, 100, 0,   0,  0,  200, -1, 0,
                     1200, 0,   0,   0,   5,   -1,  0,   -1, -1, -1,  -1, 12,
@@ -256,8 +111,6 @@ int bed, GetIn = 1, ed = 8000, sun = 1, back_x = 10, now_wait = 0, wait = 0,
          setfps = 1, gongji = 1, gongjicd = 20, hujiazhi = 0, wudi = 0;
 double jx = 1, jy = 50, x = 1, y = 50, g = 0.6, spx = 0, spy = 0, wj = 0,
        FIX = 1, jianshang = 0, life = 20, boss2hp;
-
-// 坐标系说明（见顶部宏 world_to_screen_x/y, screen_to_world_x/y）
 string zzz;
 struct Box_ {
   unsigned short things[27], bx, by;
@@ -277,100 +130,6 @@ guaiwu shiti2[500];
 int To_int(double a) { return int(a + 0.5); }
 float Abs(float a) { return (a >= 0) ? a : -a; }
 float Min(float a, float b) { return (a <= b) ? a : b; }
-
-#define HASH_SIZE 160
-#define HASH_CELL 32
-vector<int> entity_hash[HASH_SIZE][HASH_SIZE];
-
-inline int hash_coord(double x) {
-  int ix = To_int(x);
-  int h = ix / HASH_CELL;
-  if (h < 0) h = 0;
-  if (h >= HASH_SIZE) h = HASH_SIZE - 1;
-  return h;
-}
-
-void update_entity_hash(int index, double old_x, double old_y, double new_x, double new_y) {
-  int old_hx = hash_coord(old_x);
-  int old_hy = hash_coord(old_y);
-  int new_hx = hash_coord(new_x);
-  int new_hy = hash_coord(new_y);
-  
-  if (old_hx != new_hx || old_hy != new_hy) {
-    auto& old_bucket = entity_hash[old_hx][old_hy];
-    auto it = std::find(old_bucket.begin(), old_bucket.end(), index);
-    if (it != old_bucket.end()) {
-      old_bucket.erase(it);
-    }
-    entity_hash[new_hx][new_hy].push_back(index);
-  }
-}
-
-void add_entity_to_hash(int index, double x, double y) {
-  int hx = hash_coord(x);
-  int hy = hash_coord(y);
-  entity_hash[hx][hy].push_back(index);
-}
-
-void remove_entity_from_hash(int index, double x, double y) {
-  int hx = hash_coord(x);
-  int hy = hash_coord(y);
-  auto& bucket = entity_hash[hx][hy];
-  auto it = std::find(bucket.begin(), bucket.end(), index);
-  if (it != bucket.end()) {
-    bucket.erase(it);
-  }
-}
-
-void query_visible_entities(double cx, double cy, double half_w, double half_h, vector<int>& results) {
-  results.clear();
-  int min_hx = hash_coord(cx - half_w);
-  int max_hx = hash_coord(cx + half_w);
-  int min_hy = hash_coord(cy - half_h);
-  int max_hy = hash_coord(cy + half_h);
-  for (int hx = min_hx; hx <= max_hx; hx++) {
-    for (int hy = min_hy; hy <= max_hy; hy++) {
-      if (hx < 0 || hx >= HASH_SIZE || hy < 0 || hy >= HASH_SIZE) continue;
-      for (int idx : entity_hash[hx][hy]) {
-        if (shiti[idx].type > 0 &&
-            shiti[idx].gx >= cx - half_w && shiti[idx].gx <= cx + half_w &&
-            shiti[idx].gy >= cy - half_h && shiti[idx].gy <= cy + half_h) {
-          results.push_back(idx);
-        }
-      }
-    }
-  }
-}
-
-void query_nearby_entities(double x, double y, double range, vector<int>& results) {
-  results.clear();
-  int hx = hash_coord(x);
-  int hy = hash_coord(y);
-  int range_cells = (int)(range / HASH_CELL) + 1;
-  
-  for (int dhx = -range_cells; dhx <= range_cells; dhx++) {
-    for (int dhy = -range_cells; dhy <= range_cells; dhy++) {
-      int chx = hx + dhx;
-      int chy = hy + dhy;
-      if (chx < 0 || chx >= HASH_SIZE || chy < 0 || chy >= HASH_SIZE) continue;
-      for (int idx : entity_hash[chx][chy]) {
-        double dx = shiti[idx].gx - x;
-        double dy = shiti[idx].gy - y;
-        if (dx*dx + dy*dy <= range*range) {
-          results.push_back(idx);
-        }
-      }
-    }
-  }
-}
-
-void clear_entity_hash() {
-  for (int i = 0; i < HASH_SIZE; i++) {
-    for (int j = 0; j < HASH_SIZE; j++) {
-      entity_hash[i][j].clear();
-    }
-  }
-}
 void Setpos(float x, float y) {
   COORD pos;
   pos.X = To_int(x) * 2 + 1, pos.Y = To_int(y);
@@ -381,14 +140,6 @@ void Setpos2(float x, float y) {
   pos.X = To_int(x) + 1, pos.Y = To_int(y);
   SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
-
-void wait_key_release(int vk1, int vk2 = 0) {
-  while ((GetAsyncKeyState(vk1) & 0x8000) ||
-         (vk2 != 0 && (GetAsyncKeyState(vk2) & 0x8000))) {
-    Sleep(1);
-  }
-}
-
 void Color(int a) {
   if (a == 0 || a == 8 || a == -8)
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
@@ -577,146 +328,6 @@ POINT GetMousePos() {
 boomthings bz[1000];
 int KK;
 boomthings zc[1000];
-
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 60
-wchar_t back_buffer[SCREEN_HEIGHT][SCREEN_WIDTH * 2 + 1];
-WORD color_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
-int current_x = 0, current_y = 0;
-WORD current_color = 0x07;
-
-void init_buffer() {
-  memset(back_buffer, L' ', sizeof(back_buffer));
-  memset(color_buffer, 0x07, sizeof(color_buffer));
-}
-
-void Setpos_buf(int x, int y) {
-  current_x = x;
-  current_y = y;
-}
-
-void Color_buf(int color) {
-  if (color >= 0) current_color = color;
-  else current_color = color + 16;
-}
-
-void Print_buf(const wchar_t* str) {
-  for (int i = 0; str[i]; i++) {
-    if (current_x >= SCREEN_WIDTH) {
-      current_x = 0;
-      current_y++;
-    }
-    if (current_y < SCREEN_HEIGHT) {
-      back_buffer[current_y][current_x * 2] = str[i];
-      back_buffer[current_y][current_x * 2 + 1] = L' ';
-      color_buffer[current_y][current_x] = current_color;
-    }
-    current_x++;
-  }
-}
-
-void flush_buffer() {
-  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-  COORD bufferSize = {SCREEN_WIDTH * 2, SCREEN_HEIGHT};
-  COORD bufferCoord = {0, 0};
-  SMALL_RECT writeRegion = {0, 0, SCREEN_WIDTH * 2 - 1, SCREEN_HEIGHT - 1};
-  
-  CHAR_INFO *screenBuffer = new CHAR_INFO[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
-  for (int y = 0; y < SCREEN_HEIGHT; y++) {
-    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
-      screenBuffer[y * SCREEN_WIDTH * 2 + x].Char.UnicodeChar = back_buffer[y][x];
-      if (x % 2 == 0)
-        screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
-      else
-        screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
-    }
-  }
-  
-  WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
-  delete[] screenBuffer;
-}
-
-static wchar_t frame_chars[SCREEN_HEIGHT][SCREEN_WIDTH * 2];
-static WORD frame_attrs[SCREEN_HEIGHT][SCREEN_WIDTH];
-static int frame_cx = 0, frame_cy = 0;
-static WORD frame_color = 0x07;
-static bool frame_dirty = false;
-
-void frame_clear() {
-  for (int y = 0; y < SCREEN_HEIGHT; y++) {
-    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
-      frame_chars[y][x] = L' ';
-    }
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-      frame_attrs[y][x] = 0x07;
-    }
-  }
-  frame_dirty = false;
-}
-
-void frame_set_color(int c) {
-  if (c >= 0)
-    frame_color = (WORD)c;
-  else
-    frame_color = (WORD)(c + 16);
-}
-
-void frame_set_pos(int x, int y) {
-  frame_cx = x * 2;
-  frame_cy = y;
-}
-
-void frame_draw_char(wchar_t ch) {
-  if (frame_cx < 0 || frame_cx >= SCREEN_WIDTH * 2 || frame_cy < 0 || frame_cy >= SCREEN_HEIGHT)
-    return;
-  frame_chars[frame_cy][frame_cx] = ch;
-  frame_attrs[frame_cy][frame_cx / 2] = frame_color;
-  frame_cx++;
-  frame_dirty = true;
-}
-
-void frame_draw_str(const char* s) {
-  for (int i = 0; s[i]; i++) {
-    frame_draw_char((wchar_t)(unsigned char)s[i]);
-  }
-}
-
-void frame_draw_str_w(const wchar_t* s) {
-  for (int i = 0; s[i]; i++) {
-    frame_draw_char(s[i]);
-  }
-}
-
-void frame_printf(const char* fmt, ...) {
-  char buf[64];
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-  frame_draw_str(buf);
-}
-
-void frame_present() {
-  if (!frame_dirty)
-    return;
-  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-  COORD bufferSize = {SCREEN_WIDTH * 2, SCREEN_HEIGHT};
-  COORD bufferCoord = {0, 0};
-  SMALL_RECT writeRegion = {0, 0, SCREEN_WIDTH * 2 - 1, SCREEN_HEIGHT - 1};
-  
-  CHAR_INFO *screenBuffer = new CHAR_INFO[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
-  for (int y = 0; y < SCREEN_HEIGHT; y++) {
-    for (int x = 0; x < SCREEN_WIDTH * 2; x++) {
-      screenBuffer[y * SCREEN_WIDTH * 2 + x].Char.UnicodeChar = frame_chars[y][x];
-      screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = frame_attrs[y][x / 2];
-    }
-  }
-  
-  WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
-  delete[] screenBuffer;
-  frame_dirty = false;
-}
-
 void Clear() {
   if (weidu == 2)
     return;
@@ -1161,106 +772,86 @@ void noodle_cave_nether(int i, int j) {
 }
 int night = 0, will_night = 0, will_light = 0;
 int now_time = 0;
-struct LightPos {
-  int x, y, level;
-};
-
+void dfs(int i, int j, int lt, int v) {
+  if (i < 0 || i > 5000 || j < 0 || j > 1000 || lt <= 0)
+    return;
+  if (blocktouch[s[i][j]] == true)
+    v = 3;
+  else
+    v = 1;
+  light[i][j] = lt;
+  if (lt - v > light[i + 1][j])
+    dfs(i + 1, j, lt - v, v);
+  if (lt - v > light[i - 1][j])
+    dfs(i - 1, j, lt - v, v);
+  if (lt - v > light[i][j + 1])
+    dfs(i, j + 1, lt - v, v);
+  if (lt - v > light[i][j - 1])
+    dfs(i, j - 1, lt - v, v);
+}
 void setlight() {
   if (gamemode == 0) {
-    std::fill(&light[0][0], &light[0][0] + sizeof(light) / sizeof(int), 15);
+    memset(light, 15, sizeof(light));
     return;
   }
   memset(light, 0, sizeof(light));
-  
-  vector<LightPos> queue;
-  int queue_head = 0;
-  
   if (beibao[cho][0] == 16)
     light[int(x + 0.5)][int(y + 0.5)] = 20;
-  
   if (weidu == 2) {
     for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000) continue;
+      if (i < 0 || i > 5000)
+        continue;
       for (int j = 0; j <= 1000; j++) {
         if ((s[i][j] == 0 || s[i][j] == 11) && light[i][j] <= 8)
           light[i][j] = 8;
       }
     }
   }
-  
   if (night == 1 && weidu != 2) {
     for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000) continue;
+      if (i < 0 || i > 5000)
+        continue;
       if ((s[i][0] == 0 || s[i][0] == 11) && light[i][0] < 4)
         light[i][0] = 4;
     }
     for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000) continue;
-      for (int j = 1; j <= 1000; j++) {
-        if ((s[i][j] == 0 || s[i][j] == 11) && light[i][j] < 4 && light[i][j - 1] == 4)
+      if (i < 0 || i > 5000)
+        continue;
+      for (int j = 0; j <= 1000; j++) {
+        if ((s[i][j] == 0 || s[i][j] == 11) && light[i][j] < 4 &&
+            light[i][j - 1] == 4) {
           light[i][j] = 4;
+        }
       }
     }
   } else {
     for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000) continue;
+      if (i < 0 || i > 5000)
+        continue;
       if (s[i][0] == 0 || s[i][0] == 11)
         light[i][0] = 20;
     }
     for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-      if (i < 0 || i > 5000) continue;
+      if (i < 0 || i > 5000)
+        continue;
       for (int j = 0; j <= 1000; j++) {
-        if (j > 0 && (s[i][j] == 0 || s[i][j] == 11) && light[i][j - 1] == 20)
+        if (j > 0 && (s[i][j] == 0 || s[i][j] == 11) && light[i][j - 1] == 20) {
           light[i][j] = 20;
+        }
       }
     }
   }
-  
   for (int i = int(x - 149.5); i <= int(x + 150.5); i++) {
-    if (i < 0 || i > 5000) continue;
+    if (i < 0 || i > 5000)
+      continue;
     for (int j = int(y - 199.5); j <= int(y + 200.5); j++) {
-      if (j < 0 || j > 1000) continue;
+      if (j < 0 || j > 1000)
+        continue;
       if ((s[i][j] == 16 || (s[i][j] >= 32 && s[i][j] <= 34))) {
-        queue.push_back({i, j, 19});
-        light[i][j] = 19;
-      } else if (light[i][j] > 0) {
-        queue.push_back({i, j, light[i][j]});
-      }
-    }
-  }
-  
-  int dirs[4][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
-  
-  while (queue_head < queue.size()) {
-    LightPos lp = queue[queue_head++];
-    
-    int cx = lp.x;
-    int cy = lp.y;
-    int cl = lp.level;
-    
-    if (cl <= 1) continue;
-    
-    for (int d = 0; d < 4; d++) {
-      int nx = cx + dirs[d][0];
-      int ny = cy + dirs[d][1];
-      
-      if (nx < 0 || nx > 5000 || ny < 0 || ny > 1000) continue;
-      
-      int block = s[nx][ny];
-      int new_level = cl - 1;
-      
-      if (block != 0 && block != 11) {
-        if (block == 15 || block == 18 || block == 37)
-          new_level -= 2;
-        else if (block == 22 || block == 55)
-          new_level -= 1;
-        else
-          new_level -= 2;
-      }
-      
-      if (new_level > 0 && new_level > light[nx][ny]) {
-        light[nx][ny] = new_level;
-        queue.push_back({nx, ny, new_level});
+        dfs(i, j, 19, 1);
+      } else {
+        if (light[i][j] > 0)
+          dfs(i, j, light[i][j], 1);
       }
     }
   }
@@ -1367,7 +958,6 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0) {
       boss2hp = 689;
     shiti[l].sd = 200, shiti[l].AI = 3;
   }
-  add_entity_to_hash(l, tx, ty);
 }
 void MAP_nether() {
   HideCursor();
@@ -1489,8 +1079,6 @@ void MAP_nether() {
 
 void spawn_chest(int xxx, int yyy);
 void MAP() {
-  box.clear();
-  boxlen = 0;
   memset(boimes, 0, sizeof(boimes));
   memset(boimes2, 0, sizeof(boimes2));
   for (int i = 0; i <= 5000; i++)
@@ -1798,17 +1386,6 @@ void MAP() {
   Clear_formap();
   MAP_nether();
   sky();
-  
-  for (int i = 0; i <= 5000; i++) {
-    for (int j = 0; j <= 1000; j++) {
-      int cx = get_chunk_x(i);
-      int cy = get_chunk_y(j);
-      int lx = get_local_x(i);
-      int ly = get_local_y(j);
-      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
-      chunk_data[cx][cy].loaded = true;
-    }
-  }
 }
 
 void swap_map() {
@@ -1822,11 +1399,6 @@ void swap_map() {
     }
   }
   swap(shiti, shiti2);
-  clear_entity_hash();
-  for (int i = 0; i <= 249; i++) {
-    if (shiti[i].type > 0)
-      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
-  }
   setlight();
   memset(painting, -1, sizeof(painting));
   x = mpx, y = mpy;
@@ -1880,344 +1452,327 @@ void getcolor() {
 void pr_mouse() {
   if (light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
     if (co != 0)
-      frame_set_color(0), co = 0;
-    frame_draw_str("[]");
+      Color(0), co = 0;
+    printf("[]");
   } else if (s[dx][dy] == 11) {
     if (weidu == 1) {
       if (co != -6 && night == 0)
-        frame_set_color(-6), co = -6;
+        Color(-6), co = -6;
       else if (co != -23 && night == 1)
-        frame_set_color(-23), co = -23;
+        Color(-23), co = -23;
       else if (co != -29 && night == 2)
-        frame_set_color(-29), co = -29;
+        Color(-29), co = -29;
       else if (co != -31 && night == 3)
-        frame_set_color(-31), co = -31;
-      frame_draw_str("[]");
+        Color(-31), co = -31;
+      printf("[]");
     } else {
       if (co != -33)
-        frame_set_color(-33), co = -33;
-      frame_draw_str("[]");
+        Color(-33), co = -33;
+      printf("[]");
     }
   } else if (s[dx][dy] == 0) {
     if (co != 0)
-      frame_set_color(0), co = 0;
-    frame_draw_str("[]");
+      Color(0), co = 0;
+    printf("[]");
   } else if (s[dx][dy] == 1) {
     if (co != -7)
-      frame_set_color(-7), co = -7;
-    frame_draw_str("[]");
+      Color(-7), co = -7;
+    printf("[]");
   } else if (s[dx][dy] == 3) {
     if (co != 7)
-      frame_set_color(7), co = 7;
-    frame_draw_str("[]");
+      Color(7), co = 7;
+    printf("[]");
   } else if (s[dx][dy] == 4) {
     if (co != 8)
-      frame_set_color(8), co = 8;
-    frame_draw_str("[]");
+      Color(8), co = 8;
+    printf("[]");
   } else if (s[dx][dy] == 2) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("[]");
+      Color(-5), co = -5;
+    printf("[]");
   } else if (s[dx][dy] == 5) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("[]");
+      Color(-12), co = -12;
+    printf("[]");
   } else if (s[dx][dy] == 9) {
     if (co != -15)
-      frame_set_color(-15), co = -15;
-    frame_draw_str("{}");
+      Color(-15), co = -15;
+    printf("{}");
   } else if (s[dx][dy] == 12) {
     if (co != 11)
-      frame_set_color(11), co = 11;
-    frame_draw_str("[]");
+      Color(11), co = 11;
+    printf("[]");
   } else if (s[dx][dy] == 19 || s[dx][dy] == 20 || s[dx][dy] == 21 ||
              s[dx][dy] == 22) {
     if (co != -21)
-      frame_set_color(-21), co = -21;
-    frame_draw_str("[]");
+      Color(-21), co = -21;
+    printf("[]");
   } else if (s[dx][dy] == 36) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("[]");
+      Color(3), co = 3;
+    printf("[]");
   } else if (s[dx][dy] == 38) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("{}");
+      Color(3), co = 3;
+    printf("{}");
   } else if (s[dx][dy] == 39) {
     if (co != -32)
-      frame_set_color(-32), co = -32;
-    frame_draw_str("[]");
+      Color(-32), co = -32;
+    printf("[]");
   } else if (s[dx][dy] == 32 || s[dx][dy] == 33 || s[dx][dy] == 34) {
     if (co != -4)
-      frame_set_color(-4), co = -4;
-    frame_draw_str("[]");
+      Color(-4), co = -4;
+    printf("[]");
   } else if (s[dx][dy] == 23) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("[]");
+      Color(-12), co = -12;
+    printf("[]");
   } else if (s[dx][dy] == 16) {
     if (co != -1)
-      frame_set_color(-1), co = -1;
+      Color(-1), co = -1;
     if (s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11) {
       if (!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
-        frame_draw_str("/<");
+        printf("/<");
       else
-        frame_draw_str(">\\");
+        printf(">\\");
     } else
-      frame_draw_str("I<");
+      printf("I<");
   } else if (s[dx][dy] == 40) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("{}");
+      Color(-5), co = -5;
+    printf("{}");
   }
 }
 void Updateblock(bool ismap) {
   if (ismap && !ep[dx][dy]) {
     if (co != 0)
-      frame_set_color(0), co = 0;
-    frame_draw_str("  ");
+      Color(0), co = 0;
+    printf("  ");
     return;
   }
   if (s[dx][dy] == 11 || (s[dx][dy] == 0 && boimes2[dx] == 2)) {
     if (weidu == 1) {
       if (light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
         if (co != 0)
-          frame_set_color(0), co = 0;
+          Color(0), co = 0;
       } else if ((co != -6 && night == 0) ||
                  (s[dx][dy] == 0 && boimes2[dx] == 2))
-        frame_set_color(-6), co = -6;
+        Color(-6), co = -6;
       else if (co != -23 && night == 1)
-        frame_set_color(-23), co = -23;
+        Color(-23), co = -23;
       else if (co != -29 && night == 2)
-        frame_set_color(-29), co = -29;
+        Color(-29), co = -29;
       else if (co != -31 && night == 3)
-        frame_set_color(-31), co = -31;
-      frame_draw_str("  ");
+        Color(-31), co = -31;
+      printf("  ");
     } else {
       if (co != -33)
-        frame_set_color(-33), co = -33;
-      frame_draw_str("  ");
+        Color(-33), co = -33;
+      printf("  ");
     }
   } else if (s[dx][dy] == 0) {
     if (light[dx][dy] > 0 || abs(jl(dx - To_int(x), dy - To_int(y))) < 4) {
       if (weidu == 1) {
         if (co != -1)
-          frame_set_color(-1), co = -1;
+          Color(-1), co = -1;
       } else {
         if (co != -33)
-          frame_set_color(-33), co = -33;
+          Color(-33), co = -33;
       }
-      frame_draw_str("  ");
+      printf("  ");
     } else {
       if (weidu == 1) {
         if (co != 0)
-          frame_set_color(0), co = 0;
+          Color(0), co = 0;
       } else {
         if (co != -3)
-          frame_set_color(-3), co = -3;
+          Color(-3), co = -3;
       }
-      frame_draw_str("  ");
+      printf("  ");
     }
   } else if (light[dx][dy] <= 0 &&
              abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
     if (co != 0)
-      frame_set_color(0), co = 0;
-    frame_draw_str("  ");
+      Color(0), co = 0;
+    printf("  ");
   } else if (s[dx][dy] == 1) {
     if (co != -7)
-      frame_set_color(-7), co = -7;
-    frame_draw_str("  ");
+      Color(-7), co = -7;
+    printf("  ");
   } else if (s[dx][dy] == 3) {
     if (co != 7)
-      frame_set_color(7), co = 7;
-    frame_draw_str("##");
+      Color(7), co = 7;
+    printf("##");
   } else if (s[dx][dy] == 4) {
     if (co != 8)
-      frame_set_color(8), co = 8;
-    frame_draw_str("##");
+      Color(8), co = 8;
+    printf("##");
   } else if (s[dx][dy] == 2) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("  ");
+      Color(-5), co = -5;
+    printf("  ");
   } else if (s[dx][dy] == 5) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("  ");
+      Color(-12), co = -12;
+    printf("  ");
   } else if (s[dx][dy] == 9) {
     if (co != -15)
-      frame_set_color(-15), co = -15;
-    frame_draw_str("<>");
+      Color(-15), co = -15;
+    printf("<>");
   } else if (s[dx][dy] == 12) {
     if (co != 11)
-      frame_set_color(11), co = 11;
-    frame_draw_str("##");
+      Color(11), co = 11;
+    printf("##");
   } else if (s[dx][dy] == 19 || s[dx][dy] == 20 || s[dx][dy] == 21 ||
              s[dx][dy] == 22) {
     if (co != -21)
-      frame_set_color(-21), co = -21;
-    frame_draw_str("  ");
+      Color(-21), co = -21;
+    printf("  ");
   } else if (s[dx][dy] == 36) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("##");
+      Color(3), co = 3;
+    printf("##");
   } else if (s[dx][dy] == 38) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("@@");
+      Color(3), co = 3;
+    printf("@@");
   } else if (s[dx][dy] == 39) {
     if (co != -32)
-      frame_set_color(-32), co = -32;
-    frame_draw_str("  ");
+      Color(-32), co = -32;
+    printf("  ");
   } else if (s[dx][dy] == 32 || s[dx][dy] == 33 || s[dx][dy] == 34) {
     if (co != -4)
-      frame_set_color(-4), co = -4;
-    frame_draw_str("  ");
+      Color(-4), co = -4;
+    printf("  ");
   } else if (s[dx][dy] == 23) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("  ");
+      Color(-12), co = -12;
+    printf("  ");
   } else if (s[dx][dy] == 16) {
     if (co != -1)
-      frame_set_color(-1), co = -1;
+      Color(-1), co = -1;
     if (s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11) {
       if (!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
-        frame_draw_str("/ ");
+        printf("/ ");
       else
-        frame_draw_str(" \\");
+        printf(" \\");
     } else
-      frame_draw_str("I ");
+      printf("I ");
   } else if (s[dx][dy] == 40) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("--");
+      Color(-5), co = -5;
+    printf("--");
   } else if (s[dx][dy] == 53) {
     if (co != -1)
-      frame_set_color(-1), co = -1;
-    frame_draw_str("  ");
+      Color(-1), co = -1;
+    printf("  ");
   } else if (s[dx][dy] == 54) {
     if (co != -36)
-      frame_set_color(-36), co = -36;
-    frame_draw_str("  ");
+      Color(-36), co = -36;
+    printf("  ");
   }
 }
 void Ubformap(int pt, bool ex) {
   if (!ex) {
     if (co != 0)
-      frame_set_color(0), co = 0;
-    frame_draw_str("  ");
+      Color(0), co = 0;
+    printf("  ");
   } else if (pt == 11) {
     if (weidu == 1) {
       if (co != -6 && night == 0)
-        frame_set_color(-6), co = -6;
+        Color(-6), co = -6;
       else if (co != -23 && night == 1)
-        frame_set_color(-23), co = -23;
+        Color(-23), co = -23;
       else if (co != -29 && night == 2)
-        frame_set_color(-29), co = -29;
+        Color(-29), co = -29;
       else if (co != -31 && night == 3)
-        frame_set_color(-31), co = -31;
-      frame_draw_str("  ");
+        Color(-31), co = -31;
+      printf("  ");
     } else {
       if (co != -33)
-        frame_set_color(-33), co = -33;
-      frame_draw_str("  ");
+        Color(-33), co = -33;
+      printf("  ");
     }
   } else if (pt == 0) {
     if (weidu == 1) {
       if (co != -1)
-        frame_set_color(-1), co = -1;
+        Color(-1), co = -1;
     } else {
       if (co != -33)
-        frame_set_color(-33), co = -33;
+        Color(-33), co = -33;
     }
-    frame_draw_str("  ");
+    printf("  ");
   } else if (pt == 1) {
     if (co != -7)
-      frame_set_color(-7), co = -7;
-    frame_draw_str("  ");
+      Color(-7), co = -7;
+    printf("  ");
   } else if (pt == 3) {
     if (co != 7)
-      frame_set_color(7), co = 7;
-    frame_draw_str("##");
+      Color(7), co = 7;
+    printf("##");
   } else if (pt == 4) {
     if (co != 8)
-      frame_set_color(8), co = 8;
-    frame_draw_str("##");
+      Color(8), co = 8;
+    printf("##");
   } else if (pt == 2) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("  ");
+      Color(-5), co = -5;
+    printf("  ");
   } else if (pt == 5) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("  ");
+      Color(-12), co = -12;
+    printf("  ");
   } else if (pt == 9) {
     if (co != -15)
-      frame_set_color(-15), co = -15;
-    frame_draw_str("<>");
+      Color(-15), co = -15;
+    printf("<>");
   } else if (pt == 12) {
     if (co != 11)
-      frame_set_color(11), co = 11;
-    frame_draw_str("##");
+      Color(11), co = 11;
+    printf("##");
   } else if (pt == 19 || pt == 20 || pt == 21 || pt == 22) {
     if (co != -21)
-      frame_set_color(-21), co = -21;
-    frame_draw_str("  ");
+      Color(-21), co = -21;
+    printf("  ");
   } else if (pt == 36) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("##");
+      Color(3), co = 3;
+    printf("##");
   } else if (pt == 38) {
     if (co != 3)
-      frame_set_color(3), co = 3;
-    frame_draw_str("@@");
+      Color(3), co = 3;
+    printf("@@");
   } else if (pt == 39) {
     if (co != -32)
-      frame_set_color(-32), co = -32;
-    frame_draw_str("  ");
+      Color(-32), co = -32;
+    printf("  ");
   } else if (pt == 32 || pt == 33 || pt == 34) {
     if (co != -4)
-      frame_set_color(-4), co = -4;
-    frame_draw_str("  ");
+      Color(-4), co = -4;
+    printf("  ");
   } else if (pt == 23) {
     if (co != -12)
-      frame_set_color(-12), co = -12;
-    frame_draw_str("  ");
+      Color(-12), co = -12;
+    printf("  ");
   } else if (pt == 16) {
     if (co != -1)
-      frame_set_color(-1), co = -1;
-    frame_draw_str("I ");
+      Color(-1), co = -1;
+    printf("I ");
   } else if (pt == 40) {
     if (co != -5)
-      frame_set_color(-5), co = -5;
-    frame_draw_str("--");
+      Color(-5), co = -5;
+    printf("--");
   } else
-    frame_draw_str("--");
+    printf("--");
 }
 bool pr = false;
 void Print() {
   co = 0;
-  frame_clear();
-  frame_set_color(0);
-  
-  // 视锥剔除：一次性查询屏幕范围内的所有实体，避免每个单元格单独查询空间哈希
-  vector<int> visible_entities;
-  query_visible_entities(jx, jy, printx * 0.5 + 2, printy * 0.5 + 2, visible_entities);
-  static int entity_at[102][102];
-  for (int j = 0; j <= printy; j++)
-    for (int i = 0; i <= printx; i++)
-      entity_at[i][j] = -1;
-  for (int idx : visible_entities) {
-    int ex = world_to_screen_x(shiti[idx].gx);
-    int ey = world_to_screen_y(shiti[idx].gy);
-    if (ex >= 0 && ex <= printx && ey >= 0 && ey <= printy)
-      entity_at[ex][ey] = idx;
-  }
-  
+  Color(0);
   for (int j = 0; j <= printy; j++) {
     for (int i = 0; i <= printx; i++) {
-      frame_set_pos(i, j);
-      dx = int(screen_to_world_x(i) + 0.5);
-      dy = int(screen_to_world_y(j) + 0.5);
+      dx = int(jx + i - printx * 0.5 + 0.5);
+      dy = int(jy + j - printy * 0.5 + 0.5);
       if ((light[dx][dy] > 0 ||
            (abs(jl(dx - To_int(x), dy - To_int(y))) < 4)) &&
           ep[dx][dy] == 0)
@@ -2226,31 +1781,33 @@ void Print() {
         if (i >= 15 && i <= ((bosshp * 1.0 / 25) + 15) && j == 7) {
           painting[i][j][0] = 17;
           painting[i][j][1] = 17;
-          co = -4, frame_set_color(-4);
+          Setpos(i, j);
+          co = -4, Color(-4);
           if (i == 25) {
             if (bosshp >= 100)
-              frame_printf("%d", bosshp / 10);
+              printf("%d", bosshp / 10);
             else
-              frame_printf("%d", bosshp);
+              printf("%d", bosshp);
           } else if (i == 26 && bosshp >= 100)
-            frame_printf("%d ", bosshp % 10);
+            printf("%d ", bosshp % 10);
           else
-            frame_draw_str("  ");
+            printf("  ");
           continue;
         }
         if (i > ((bosshp * 1.0 / 25) + 15) && i <= 35 && j == 7) {
           painting[i][j][0] = 17;
           painting[i][j][1] = 17;
-          co = 0, frame_set_color(0);
+          Setpos(i, j);
+          co = 0, Color(0);
           if (i == 25) {
             if (bosshp >= 100)
-              frame_printf("%d", bosshp / 10);
+              printf("%d", bosshp / 10);
             else
-              frame_printf("%d", bosshp);
+              printf("%d", bosshp);
           } else if (i == 26 && bosshp >= 100)
-            frame_printf("%d ", bosshp % 10);
+            printf("%d ", bosshp % 10);
           else
-            frame_draw_str("  ");
+            printf("  ");
           continue;
         }
       }
@@ -2261,16 +1818,17 @@ void Print() {
             continue;
           painting[i][j][0] = 21;
           painting[i][j][1] = 21;
-          co = -4, frame_set_color(-4);
+          Setpos(i, j);
+          co = -4, Color(-4);
           if (i == 25) {
             if (boss2hp >= 100)
-              frame_printf("%d", ((int)(boss2hp)) / 10);
+              printf("%d", ((int)(boss2hp)) / 10);
             else
-              frame_printf("%d", int(boss2hp));
+              printf("%d", int(boss2hp));
           } else if (i == 26 && boss2hp >= 100)
-            frame_printf("%d ", ((int)(boss2hp)) % 10);
+            printf("%d ", ((int)(boss2hp)) % 10);
           else
-            frame_draw_str("  ");
+            printf("  ");
           continue;
         }
         if (i > ((boss2hp * 1.0 / 32) + 15) && i <= 35 && j == 7) {
@@ -2279,16 +1837,17 @@ void Print() {
             continue;
           painting[i][j][0] = 20;
           painting[i][j][1] = 20;
-          co = 0, frame_set_color(0);
+          Setpos(i, j);
+          co = 0, Color(0);
           if (i == 25) {
             if (boss2hp >= 100)
-              frame_printf("%d", ((int)(boss2hp)) / 10);
+              printf("%d", ((int)(boss2hp)) / 10);
             else
-              frame_printf("%d", int(boss2hp));
+              printf("%d", int(boss2hp));
           } else if (i == 26 && boss2hp >= 100)
-            frame_printf("%d ", ((int)(boss2hp)) % 10);
+            printf("%d ", ((int)(boss2hp)) % 10);
           else
-            frame_draw_str("  ");
+            printf("  ");
           continue;
         }
       }
@@ -2297,57 +1856,63 @@ void Print() {
           if (To_int(bz[k].x) == dx && To_int(bz[k].y) == dy) {
             painting[i][j][0] = 17;
             painting[i][j][1] = 17;
-            frame_set_color(bz[k].color), co = bz[k].color;
-            frame_draw_str("  ");
+            Setpos(i, j);
+            Color(bz[k].color), co = bz[k].color;
+            printf("  ");
             pr = true;
             break;
           }
         }
       }
-      int k = entity_at[i][j];
-      if (k >= 0) {
+      for (int k = 0; k <= 100; k++) {
         if (shiti[k].type > 0) {
-          if (!(light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4))) {
+          if (light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4))
+            continue;
+          if (To_int(shiti[k].gx) == dx && To_int(shiti[k].gy) == dy) {
             painting[i][j][0] = 17;
             painting[i][j][1] = 17;
-            frame_set_color(1), co = 1;
+            Setpos(i, j);
+            Color(1), co = 1;
             if (shiti[k].type == 1)
-              frame_draw_str("ZZ");
+              printf("ZZ");
             else if (shiti[k].type == 2) {
               if (shiti[k].CD == 0)
-                frame_set_color(2), co = 2;
+                Color(2), co = 2;
               else
-                frame_set_color(0), co = 0;
-              frame_draw_str("CR");
+                Color(0), co = 0;
+              printf("CR");
             } else if (shiti[k].type == 3) {
-              frame_set_color(0), co = 0;
-              frame_draw_str("SK");
+              Color(0), co = 0;
+              printf("SK");
             } else if (shiti[k].type == 4) {
+              // getcolor();
               if (shiti[k].nbt == 1)
-                frame_set_color(3), co = 3;
+                Color(3), co = 3;
               else
-                frame_set_color(0), co = 0;
+                Color(0), co = 0;
               if (shiti[k].spgx > 0)
-                frame_draw_str("->");
+                printf("->");
               else
-                frame_draw_str("<-");
+                printf("<-");
+
             } else if (shiti[k].type == 5) {
-              frame_set_color(0), co = 0;
-              frame_draw_str("OI");
+              Color(0), co = 0;
+              printf("OI");
             } else if (shiti[k].type == 6) {
-              frame_set_color(0), co = 0;
-              frame_draw_str("SP");
+              Color(0), co = 0;
+              printf("SP");
             } else if (shiti[k].type == 7) {
-              frame_set_color(0), co = 0;
-              frame_draw_str("ZP");
+              Color(0), co = 0;
+              printf("ZP");
             } else if (shiti[k].type == 8) {
               if (shiti[k].gongjitick > 600 && shiti[k].gongjitick < 900)
-                frame_set_color(12), co = 12;
+                Color(12), co = 12;
               else
-                frame_set_color(0), co = 0;
-              frame_printf("%d", int(shiti[k].maxHP + 0.5));
+                Color(0), co = 0;
+              printf("%d", int(shiti[k].maxHP + 0.5));
             }
             pr = true;
+            break;
           }
         }
       }
@@ -2358,17 +1923,21 @@ void Print() {
       if (dx == int(x + 0.5) && dy == int(y + 0.5)) {
         painting[i][j][0] = 12;
         painting[i][j][1] = 12;
-        frame_set_color(1), co = 1;
-        frame_draw_str("{}");
+        Setpos(i, j);
+        Color(1), co = 1;
+        printf("{}");
       } else if (dx == int(mpx + 0.5) && dy == int(mpy + 0.5)) {
         painting[i][j][0] = 12;
         painting[i][j][1] = 12;
-        frame_set_color(co);
+        Setpos(i, j);
+        Color(co);
         pr_mouse();
       } else if ((abs(jl(dx - To_int(x), dy - To_int(y))) < 4) &&
                  light[dx][dy] <= 0) {
-        if (painting[i][j][0] != s[dx][dy] ||
+        if (/*lx!=To_int(x)||ly!=To_int(y))&&*/ painting[i][j][0] !=
+                s[dx][dy] ||
             (painting[i][j][1] > 0) != (light[dx][dy] > 0)) {
+          Setpos(i, j);
           Updateblock(0);
         }
         painting[i][j][0] = s[dx][dy];
@@ -2377,11 +1946,12 @@ void Print() {
                  (painting[i][j][1] > 0) != (light[dx][dy] > 0)) {
         painting[i][j][0] = s[dx][dy];
         painting[i][j][1] = light[dx][dy];
+        Setpos(i, j);
         Updateblock(0);
       }
     }
+    Setpos(0, j);
   }
-  frame_present();
 }
 LARGE_INTEGER frequency;
 LARGE_INTEGER lastTime;
@@ -2411,8 +1981,7 @@ int sdprint[100][60][2];
 int sf;
 void printformap() {
   co = 0;
-  frame_clear();
-  frame_set_color(0);
+  Color(0);
   int aaa[60];
   int spt = 0;
   int tmax = 0, exed = 0;
@@ -2446,23 +2015,23 @@ void printformap() {
         continue;
       if (i == printx - 1 && j == 3)
         continue;
-      frame_set_pos(i, j);
       if (((painting[i][j][0] != sdprint[i][j][0]) && sdprint[i][j][1]) ||
           ((painting[i][j][1] == 1) != (sdprint[i][j][1] == 1))) {
         painting[i][j][0] = sdprint[i][j][0];
         painting[i][j][1] = sdprint[i][j][1];
+        Setpos(i, j);
         Ubformap(sdprint[i][j][0], sdprint[i][j][1]);
       }
     }
+    Setpos(0, j);
   }
-  frame_present();
 }
 void openmap() {
 
   double rx = jx, ry = jy;
   double jjx = jx, jjy = jy;
   POINT p;
-  std::fill(&light[0][0], &light[0][0] + sizeof(light) / sizeof(int), 15);
+  memset(light, 15, sizeof(light));
   // memset(ep,1,sizeof(ep));
   sf = 1;
   while (1) {
@@ -2481,19 +2050,22 @@ void openmap() {
       mpy = To_int(p.y - 14);
       int mprx, mpry;
       if (GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-        wait_key_release('M', VK_ESCAPE);
+        while (GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+          continue;
         jx = rx, jy = ry;
         break;
       }
       if (KEY_DOWN(VK_LBUTTON)) {
         if ((mpx == 24 || mpx == 23) && mpy == -12) {
-          wait_key_release(VK_LBUTTON);
+          while (KEY_DOWN(VK_LBUTTON))
+            continue;
           if (sf < 25)
             sf++;
           memset(sdprint, 0, sizeof(sdprint));
         }
         if ((mpx == 24 || mpx == 23) && mpy == -10) {
-          wait_key_release(VK_LBUTTON);
+          while (KEY_DOWN(VK_LBUTTON))
+            continue;
           if (sf > 1)
             sf--;
           memset(sdprint, 0, sizeof(sdprint));
@@ -2523,363 +2095,10 @@ void openmap() {
       mprx = mpx;
       mpry = mpy;
     }
-    Sleep(1);
   }
 }
-const char BIN_MAGIC[] = "2DMCBIN";
-const int BIN_VERSION = 1;
-
-bool save_binary(const char* filename) {
-  FILE* fp = fopen(filename, "wb");
-  if (!fp) return false;
-  
-  fwrite(BIN_MAGIC, 1, 7, fp);
-  fwrite(&BIN_VERSION, sizeof(int), 1, fp);
-  
-  size_t buf_size = 5001 * 1001 * sizeof(int) * 3 + 
-                    101 * 2 * sizeof(int) + 
-                    5005 * 2 * sizeof(short) + 
-                    6 * sizeof(int) + 
-                    sizeof(double) * 6 + sizeof(int) * 3 +
-                    500 * sizeof(guaiwu) * 2 +
-                    5001 * 5001 * sizeof(bool) +
-                    sizeof(int) + 1000 * (2 * sizeof(unsigned short) + 27 * sizeof(unsigned short)) +
-                    sizeof(double) + 5000 * 2 * sizeof(int);
-  
-  unsigned char* buf = new unsigned char[buf_size];
-  unsigned char* ptr = buf;
-  
-  fwrite(s, sizeof(int), 5001 * 1001, fp);
-  fwrite(s2, sizeof(int), 5001 * 1001, fp);
-  fwrite(beibao, sizeof(int), 101 * 2, fp);
-  fwrite(&weidu, sizeof(int), 1, fp);
-  fwrite(&x, sizeof(double), 1, fp);
-  fwrite(&y, sizeof(double), 1, fp);
-  fwrite(&back_x, sizeof(int), 1, fp);
-  fwrite(&back_y, sizeof(int), 1, fp);
-  fwrite(&life, sizeof(double), 1, fp);
-  fwrite(&now_time, sizeof(int), 1, fp);
-  fwrite(&night, sizeof(int), 1, fp);
-  fwrite(&will_night, sizeof(int), 1, fp);
-  fwrite(&will_light, sizeof(int), 1, fp);
-  fwrite(shiti, sizeof(guaiwu), 500, fp);
-  fwrite(shiti2, sizeof(guaiwu), 500, fp);
-  fwrite(wear, sizeof(int), 6, fp);
-  fwrite(&ed, sizeof(int), 1, fp);
-  fwrite(ep, sizeof(bool), 5001 * 5001, fp);
-  
-  int box_count = box.size();
-  fwrite(&box_count, sizeof(int), 1, fp);
-  for (int i = 0; i < box_count; i++) {
-    fwrite(&box[i].bx, sizeof(unsigned short), 1, fp);
-    fwrite(&box[i].by, sizeof(unsigned short), 1, fp);
-    fwrite(box[i].things, sizeof(unsigned short), 27, fp);
-  }
-  
-  fwrite(&boss2hp, sizeof(double), 1, fp);
-  fwrite(boimes, sizeof(short), 5000, fp);
-  fwrite(boimes2, sizeof(short), 5000, fp);
-  
-  fclose(fp);
-  return true;
-}
-
-bool load_binary(const char* filename) {
-  FILE* fp = fopen(filename, "rb");
-  if (!fp) return false;
-  
-  char magic[7];
-  fread(magic, 1, 7, fp);
-  if (memcmp(magic, BIN_MAGIC, 7) != 0) {
-    fclose(fp);
-    return false;
-  }
-  
-  int version;
-  fread(&version, sizeof(int), 1, fp);
-  
-  fread(s, sizeof(int), 5001 * 1001, fp);
-  fread(s2, sizeof(int), 5001 * 1001, fp);
-  fread(beibao, sizeof(int), 101 * 2, fp);
-  fread(&weidu, sizeof(int), 1, fp);
-  fread(&x, sizeof(double), 1, fp);
-  fread(&y, sizeof(double), 1, fp);
-  fread(&back_x, sizeof(int), 1, fp);
-  fread(&back_y, sizeof(int), 1, fp);
-  fread(&life, sizeof(double), 1, fp);
-  fread(&now_time, sizeof(int), 1, fp);
-  fread(&night, sizeof(int), 1, fp);
-  fread(&will_night, sizeof(int), 1, fp);
-  fread(&will_light, sizeof(int), 1, fp);
-  fread(shiti, sizeof(guaiwu), 500, fp);
-  fread(shiti2, sizeof(guaiwu), 500, fp);
-  fread(wear, sizeof(int), 6, fp);
-  fread(&ed, sizeof(int), 1, fp);
-  fread(ep, sizeof(bool), 5001 * 5001, fp);
-  
-  int box_count;
-  fread(&box_count, sizeof(int), 1, fp);
-  box.clear();
-  boxlen = box_count;
-  for (int i = 0; i < box_count; i++) {
-    unsigned short bx, by;
-    unsigned short things[27];
-    fread(&bx, sizeof(unsigned short), 1, fp);
-    fread(&by, sizeof(unsigned short), 1, fp);
-    fread(things, sizeof(unsigned short), 27, fp);
-    box.push_back({{0}, bx, by});
-    memcpy(box.back().things, things, sizeof(things));
-  }
-  
-  fread(&boss2hp, sizeof(double), 1, fp);
-  fread(boimes, sizeof(short), 5000, fp);
-  fread(boimes2, sizeof(short), 5000, fp);
-  
-  fclose(fp);
-  
-  clear_entity_hash();
-  for (int i = 0; i <= 249; i++) {
-    if (shiti[i].type > 0)
-      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
-  }
-  setlight();
-  return true;
-}
-
-const char CHUNK_BIN_MAGIC[] = "2DMCV2";
-const int CHUNK_BIN_VERSION = 1;
-
-void sync_chunks_from_s();
-void sync_s_from_chunks();
-bool save_chunk_file(int cx, int cy, const char* dir);
-bool load_chunk_file(int cx, int cy, const char* dir);
-
-bool save_binary_v2(const char* filename) {
-  char dir[256];
-  strcpy(dir, filename);
-  char* dot = strrchr(dir, '.');
-  if (dot) *dot = '\0';
-  strcat(dir, "_chunks");
-#ifdef _WIN32
-  CreateDirectoryA(dir, NULL);
-#else
-  mkdir(dir, 0755);
-#endif
-  
-  sync_chunks_from_s();
-  
-  FILE* fp = fopen(filename, "wb");
-  if (!fp) return false;
-  
-  fwrite(CHUNK_BIN_MAGIC, 1, 6, fp);
-  fwrite(&CHUNK_BIN_VERSION, sizeof(int), 1, fp);
-  
-  fwrite(beibao, sizeof(int), 101 * 2, fp);
-  fwrite(&weidu, sizeof(int), 1, fp);
-  fwrite(&x, sizeof(double), 1, fp);
-  fwrite(&y, sizeof(double), 1, fp);
-  fwrite(&back_x, sizeof(int), 1, fp);
-  fwrite(&back_y, sizeof(int), 1, fp);
-  fwrite(&life, sizeof(double), 1, fp);
-  fwrite(&now_time, sizeof(int), 1, fp);
-  fwrite(&night, sizeof(int), 1, fp);
-  fwrite(&will_night, sizeof(int), 1, fp);
-  fwrite(&will_light, sizeof(int), 1, fp);
-  fwrite(shiti, sizeof(guaiwu), 500, fp);
-  fwrite(shiti2, sizeof(guaiwu), 500, fp);
-  fwrite(wear, sizeof(int), 6, fp);
-  fwrite(&ed, sizeof(int), 1, fp);
-  fwrite(ep, sizeof(bool), 5001 * 5001, fp);
-  
-  int box_count = box.size();
-  fwrite(&box_count, sizeof(int), 1, fp);
-  for (int i = 0; i < box_count; i++) {
-    fwrite(&box[i].bx, sizeof(unsigned short), 1, fp);
-    fwrite(&box[i].by, sizeof(unsigned short), 1, fp);
-    fwrite(box[i].things, sizeof(unsigned short), 27, fp);
-  }
-  
-  fwrite(&boss2hp, sizeof(double), 1, fp);
-  fwrite(boimes, sizeof(short), 5000, fp);
-  fwrite(boimes2, sizeof(short), 5000, fp);
-  
-  int modified_count = 0;
-  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
-    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++)
-      if (chunk_data[cx][cy].loaded && chunk_data[cx][cy].modified)
-        modified_count++;
-  fwrite(&modified_count, sizeof(int), 1, fp);
-  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
-    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++)
-      if (chunk_data[cx][cy].loaded && chunk_data[cx][cy].modified)
-        save_chunk_file(cx, cy, dir);
-  
-  fclose(fp);
-  return true;
-}
-
-bool load_binary_v2(const char* filename) {
-  FILE* fp = fopen(filename, "rb");
-  if (!fp) return false;
-  
-  char magic[6];
-  fread(magic, 1, 6, fp);
-  if (memcmp(magic, CHUNK_BIN_MAGIC, 6) != 0) {
-    fclose(fp);
-    return false;
-  }
-  
-  int version;
-  fread(&version, sizeof(int), 1, fp);
-  
-  char dir[256];
-  strcpy(dir, filename);
-  char* dot = strrchr(dir, '.');
-  if (dot) *dot = '\0';
-  strcat(dir, "_chunks");
-  
-  fread(beibao, sizeof(int), 101 * 2, fp);
-  fread(&weidu, sizeof(int), 1, fp);
-  fread(&x, sizeof(double), 1, fp);
-  fread(&y, sizeof(double), 1, fp);
-  fread(&back_x, sizeof(int), 1, fp);
-  fread(&back_y, sizeof(int), 1, fp);
-  fread(&life, sizeof(double), 1, fp);
-  fread(&now_time, sizeof(int), 1, fp);
-  fread(&night, sizeof(int), 1, fp);
-  fread(&will_night, sizeof(int), 1, fp);
-  fread(&will_light, sizeof(int), 1, fp);
-  fread(shiti, sizeof(guaiwu), 500, fp);
-  fread(shiti2, sizeof(guaiwu), 500, fp);
-  fread(wear, sizeof(int), 6, fp);
-  fread(&ed, sizeof(int), 1, fp);
-  fread(ep, sizeof(bool), 5001 * 5001, fp);
-  
-  int box_count;
-  fread(&box_count, sizeof(int), 1, fp);
-  box.clear();
-  boxlen = box_count;
-  for (int i = 0; i < box_count; i++) {
-    unsigned short bx, by;
-    unsigned short things[27];
-    fread(&bx, sizeof(unsigned short), 1, fp);
-    fread(&by, sizeof(unsigned short), 1, fp);
-    fread(things, sizeof(unsigned short), 27, fp);
-    box.push_back({{0}, bx, by});
-    memcpy(box.back().things, things, sizeof(things));
-  }
-  
-  fread(&boss2hp, sizeof(double), 1, fp);
-  fread(boimes, sizeof(short), 5000, fp);
-  fread(boimes2, sizeof(short), 5000, fp);
-  
-  int modified_count;
-  fread(&modified_count, sizeof(int), 1, fp);
-  
-  memset(s, 0, sizeof(s));
-  memset(light, 0, sizeof(light));
-  for (int cx = 0; cx < CHUNK_X_COUNT; cx++)
-    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++) {
-      chunk_data[cx][cy].loaded = false;
-      chunk_data[cx][cy].modified = false;
-      chunk_data[cx][cy].dirty = true;
-    }
-  
-  for (int i = 0; i < modified_count; i++) {
-    int tcx, tcy;
-    fread(&tcx, sizeof(int), 1, fp);
-    fread(&tcy, sizeof(int), 1, fp);
-    load_chunk_file(tcx, tcy, dir);
-  }
-  sync_s_from_chunks();
-  
-  fclose(fp);
-  
-  clear_entity_hash();
-  for (int i = 0; i <= 249; i++) {
-    if (shiti[i].type > 0)
-      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
-  }
-  setlight();
-  return true;
-}
-
-bool save_chunk_file(int cx, int cy, const char* dir) {
-  if (!chunk_data[cx][cy].loaded || !chunk_data[cx][cy].modified)
-    return true;
-  char path[128];
-  sprintf(path, "%s/c_%d_%d.chunk", dir, cx, cy);
-  FILE* fp = fopen(path, "wb");
-  if (!fp) return false;
-  fwrite(&cx, sizeof(int), 1, fp);
-  fwrite(&cy, sizeof(int), 1, fp);
-  fwrite(chunk_data[cx][cy].blocks, sizeof(int), CHUNK_SIZE * CHUNK_SIZE, fp);
-  fwrite(chunk_data[cx][cy].light, sizeof(unsigned char), CHUNK_SIZE * CHUNK_SIZE, fp);
-  fclose(fp);
-  chunk_data[cx][cy].modified = false;
-  return true;
-}
-
-bool load_chunk_file(int cx, int cy, const char* dir) {
-  char path[128];
-  sprintf(path, "%s/c_%d_%d.chunk", dir, cx, cy);
-  FILE* fp = fopen(path, "rb");
-  if (!fp) return false;
-  int rx, ry;
-  fread(&rx, sizeof(int), 1, fp);
-  fread(&ry, sizeof(int), 1, fp);
-  if (rx != cx || ry != cy) {
-    fclose(fp);
-    return false;
-  }
-  fread(chunk_data[cx][cy].blocks, sizeof(int), CHUNK_SIZE * CHUNK_SIZE, fp);
-  fread(chunk_data[cx][cy].light, sizeof(unsigned char), CHUNK_SIZE * CHUNK_SIZE, fp);
-  chunk_data[cx][cy].loaded = true;
-  chunk_data[cx][cy].modified = false;
-  chunk_data[cx][cy].dirty = true;
-  fclose(fp);
-  return true;
-}
-
-void sync_chunks_from_s() {
-  for (int i = 0; i <= 5000; i++) {
-    for (int j = 0; j <= 1000; j++) {
-      int cx = get_chunk_x(i);
-      int cy = get_chunk_y(j);
-      int lx = get_local_x(i);
-      int ly = get_local_y(j);
-      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
-      chunk_data[cx][cy].light[lx][ly] = (unsigned char)light[i][j];
-      chunk_data[cx][cy].loaded = true;
-    }
-  }
-}
-
-void sync_s_from_chunks() {
-  for (int cx = 0; cx < CHUNK_X_COUNT; cx++) {
-    for (int cy = 0; cy < CHUNK_Y_COUNT; cy++) {
-      if (!chunk_data[cx][cy].loaded) continue;
-      for (int lx = 0; lx < CHUNK_SIZE; lx++) {
-        for (int ly = 0; ly < CHUNK_SIZE; ly++) {
-          int wx = cx * CHUNK_SIZE + lx;
-          int wy = cy * CHUNK_SIZE + ly;
-          if (wx > 5000 || wy > 1000) continue;
-          s[wx][wy] = chunk_data[cx][cy].blocks[lx][ly];
-          light[wx][wy] = chunk_data[cx][cy].light[lx][ly];
-        }
-      }
-    }
-  }
-}
-
 int r;
 void save(string nam) {
-  string bin_name = nam + ".bin";
-  if (save_binary_v2(bin_name.c_str()))
-    return;
-  if (save_binary(bin_name.c_str()))
-    return;
-  
   int block_math = 0;
   int last_block = s[0][0];
   nam += ".txt";
@@ -3164,12 +2383,6 @@ void spawn_chest(int xxx, int yyy) {
   fill_box_loot(idx);
 }
 bool read(string nam) {
-  string bin_name = nam + ".bin";
-  if (load_binary_v2(bin_name.c_str()))
-    return true;
-  if (load_binary(bin_name.c_str()))
-    return true;
-  
   int rd_c = 0, ZHI = 0;
   unsigned short sx, sy;
   int rd = 0;
@@ -3331,14 +2544,12 @@ bool read(string nam) {
     ZHI = 0;
     rd_c = 0;
   }
-  box.clear();
-  boxlen = 0;
   fscanf(fp, " %d", &boxlen);
   for (int i = 0; i < boxlen; i++) {
     fscanf(fp, " %hu %hu", &sx, &sy);
     box.push_back({{0}, sx, sy});
     for (int j = 0; j <= 24; j++) {
-      fscanf(fp, " %hu", &box.back().things[j]);
+      fscanf(fp, " %hu", &box[i].things[j]);
     }
   }
   if (fscanf(fp, " %lf", &boss2hp) == 0)
@@ -3347,11 +2558,6 @@ bool read(string nam) {
     fscanf(fp, " %d %d", &boimes[i], &boimes2[i]);
   }
   fclose(fp);
-  clear_entity_hash();
-  for (int i = 0; i <= 249; i++) {
-    if (shiti[i].type > 0)
-      add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
-  }
   setlight();
   return true;
 }
@@ -3701,8 +2907,6 @@ void InToGet() {
         x += y;
         std::cout << y;
       }
-    } else {
-      Sleep(1);
     }
   }
   //	std::cout<<"\n"<<x<<"\n";
@@ -3787,215 +2991,87 @@ void InToGet() {
   //	GetIn=0;
   return;
 }
-string g_cmd_input;
-HWND g_hEdit;
-void execute_command(const string& cmd);
-
-LRESULT CALLBACK CmdWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-  switch (msg) {
-    case WM_COMMAND:
-      if (LOWORD(wParam) == 1001 && HIWORD(wParam) == EN_CHANGE) {
-        char buf[256];
-        GetWindowTextA(g_hEdit, buf, sizeof(buf));
-      }
-      break;
-    case WM_KEYDOWN:
-      if (wParam == VK_ESCAPE) {
-        g_cmd_input = "";
-        DestroyWindow(hWnd);
-        return 0;
-      }
-      break;
-    case WM_CLOSE:
-      g_cmd_input = "";
-      DestroyWindow(hWnd);
-      return 0;
-    case WM_DESTROY:
-      PostQuitMessage(0);
-      return 0;
-  }
-  return DefWindowProcA(hWnd, msg, wParam, lParam);
-}
-
-LRESULT CALLBACK EditWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-  switch (msg) {
-    case WM_KEYDOWN:
-      if (wParam == VK_RETURN) {
-        char buf[256];
-        GetWindowTextA(hWnd, buf, sizeof(buf));
-        g_cmd_input = buf;
-        DestroyWindow(GetParent(hWnd));
-        return 0;
-      } else if (wParam == VK_ESCAPE) {
-        g_cmd_input = "";
-        DestroyWindow(GetParent(hWnd));
-        return 0;
-      }
-      break;
-  }
-  return CallWindowProcA((WNDPROC)GetWindowLongPtrA(hWnd, GWLP_USERDATA), hWnd, msg, wParam, lParam);
-}
-
 void getin() {
   GetIn = -4;
-  g_cmd_input = "";
-  
-  HINSTANCE hInst = GetModuleHandleA(NULL);
-  WNDCLASSEXA wc = {0};
-  wc.cbSize = sizeof(WNDCLASSEXA);
-  wc.lpfnWndProc = CmdWndProc;
-  wc.hInstance = hInst;
-  wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
-  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  wc.lpszClassName = "2DMC_CmdWndClass";
-  RegisterClassExA(&wc);
-  
-  HWND hWnd = CreateWindowExA(
-    WS_EX_TOPMOST | WS_EX_CLIENTEDGE,
-    "2DMC_CmdWndClass",
-    "2DMC Command",
-    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-    100, 100, 420, 100,
-    NULL, NULL, hInst, NULL
-  );
-  
-  g_hEdit = CreateWindowExA(
-    0,
-    "EDIT",
-    "",
-    WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_BORDER,
-    10, 15, 380, 25,
-    hWnd, (HMENU)1001, hInst, NULL
-  );
-  
-  SetWindowLongPtrA(g_hEdit, GWLP_USERDATA, (LONG_PTR)GetWindowLongPtrA(g_hEdit, GWLP_WNDPROC));
-  SetWindowLongPtrA(g_hEdit, GWLP_WNDPROC, (LONG_PTR)EditWndProc);
-  
-  SetFocus(g_hEdit);
-  
-  MSG msg;
-  while (GetMessageA(&msg, NULL, 0, 0)) {
-    TranslateMessage(&msg);
-    DispatchMessageA(&msg);
-  }
-  
-  UnregisterClassA("2DMC_CmdWndClass", hInst);
-  
-  if (!g_cmd_input.empty()) {
-    execute_command(g_cmd_input);
-  }
-  SetClean();
-}
-
-void execute_command(const string& cmd) {
-  stringstream ss(cmd);
-  string cmd_name;
-  ss >> cmd_name;
-  
-  if (cmd_name == "help" || cmd_name == "/help") {
-    Setpos(0, 28);
-    cout << "--------------------------------------------------------------------"
-            "-----------\n";
-    cout << " | /help              - 显示帮助信息                                |\n";
-    cout << " | /give <item> <num> - 获得物品（如: /give diamond 10）            |\n";
-    cout << " | /heal              - 恢复全部生命                                |\n";
-    cout << " | /life <num>        - 设置生命（0-20）                            |\n";
-    cout << " | /kill              - 自杀（重生到出生点）                        |\n";
-    cout << " | /gamemode          - 切换创造/生存模式                           |\n";
-    cout << " | /clear             - 清空背包                                   |\n";
-    cout << " | /time <num>        - 设置时间（0-40000）                         |\n";
-    cout << " | /tp <x> <y>        - 传送到指定位置                             |\n";
-    cout << " -------------------------------------------------------------------"
-            "------------";
-    Sleep(3000);
-  } else if (cmd_name == "heal" || cmd_name == "/heal") {
-    life = 20;
-    Setpos(1, 29);
-    cout << " 生命已恢复                                                    ";
-  } else if (cmd_name == "life" || cmd_name == "/life") {
-    int w = 0;
-    ss >> w;
-    if (w >= 0 && w <= 20) {
-      life = w;
+  Setpos(0, 28);
+  cout << "--------------------------------------------------------------------"
+          "-----------\n";
+  cout << " |                                                                  "
+          "           |\n";
+  cout << " -------------------------------------------------------------------"
+          "------------";
+  Setpos(1, 29);
+  while (_kbhit()) _getch();
+  string nx;
+  while (1) {
+    nx.clear();
+    char ny = 0;
+    while (ny != (char)(32) && ny != '\r') {
+      ny = _getch();
+      if (ny == '/') {
+        SetClean();
+        return;
+      }
+      if (ny == (char)(32) || ny == '\r') break;
+      if (nx.size() < 8) {
+        nx += ny;
+        cout << ny;
+      }
+    }
+    if (nx == "set") {
+      InToSet();
       Setpos(1, 29);
-      cout << " 生命已设置为 " << w << "                                     ";
+      std::cout << " 已完成                                          ";
+      return;
+    } else if (nx == "get") {
+      InToGet();
+      Setpos(1, 29);
+      std::cout << " 已完成                                          ";
+      return;
+    } else if (nx == "tp") {
+      int h = 0, w = 0;
+      char t = 0;
+      while (t != (char)(32) && t != '\r') {
+        t = _getch();
+        if (t == '/') return;
+        if (t >= '0' && t <= '9') {
+          w = (t - '0') + w * 10;
+          cout << t;
+        }
+      }
+      if (t == '\r') {
+        Setpos(1, 29);
+        std::cout << " 错误位置                                          ";
+        return;
+      }
+      cout << " ";
+      t = 0;
+      while (t != '\r') {
+        t = _getch();
+        if (t == '/') return;
+        if (t >= '0' && t <= '9') {
+          h = (t - '0') + h * 10;
+          cout << t;
+        }
+      }
+      if (w <= 5000 && h <= 1000) {
+        x = w, y = (1000 - h);
+        Setpos(1, 29);
+        std::cout << " 已完成                                          ";
+        shuaxin();
+        return;
+      } else {
+        Setpos(1, 29);
+        std::cout << " 错误位置                                          ";
+        return;
+      }
     } else {
       Setpos(1, 29);
-      cout << " 错误: 生命必须在0-20之间                                      ";
-    }
-  } else if (cmd_name == "kill" || cmd_name == "/kill") {
-    life = 0;
-    Start();
-    spx = 0;
-    spy = 0;
-    jump = 0;
-    shuaxin();
-    Setpos(1, 29);
-    cout << " 你死了，已重生到出生点                                       ";
-  } else if (cmd_name == "gamemode" || cmd_name == "/gamemode") {
-    gamemode = 1 - gamemode;
-    Setpos(1, 29);
-    cout << " 游戏模式已切换为 " << (gamemode == 1 ? "创造" : "生存") << "             ";
-  } else if (cmd_name == "clear" || cmd_name == "/clear") {
-    memset(beibao, 0, sizeof(beibao));
-    Setpos(1, 29);
-    cout << " 背包已清空                                                    ";
-  } else if (cmd_name == "give" || cmd_name == "/give") {
-    string item_name;
-    int amount = 1;
-    ss >> item_name >> amount;
-    if (amount <= 0 || amount > 64) {
-      Setpos(1, 29);
-      cout << " 错误: 数量必须在1-64之间                                      ";
+      cout << " 不正确的指令                                            ";
       return;
     }
-    auto it = thing.find(item_name);
-    if (it == thing.end()) {
-      Setpos(1, 29);
-      cout << " 错误: 未知物品: " << item_name << "                          ";
-      return;
-    }
-    int item_id = it->second;
-    int slot = getbeibao(item_id);
-    if (slot > 0) {
-      beibao[slot][0] = item_id;
-      beibao[slot][1] += amount;
-      if (beibao[slot][1] > 64) beibao[slot][1] = 64;
-      Setpos(1, 29);
-      cout << " 已获得 " << amount << " " << test[item_id] << "              ";
-    } else {
-      Setpos(1, 29);
-      cout << " 错误: 背包已满                                                ";
-    }
-  } else if (cmd_name == "time" || cmd_name == "/time") {
-    int w = 0;
-    ss >> w;
-    if (w >= 0 && w <= 40000) {
-      now_time = w;
-      night = (w >= 20000) ? 1 : 0;
-      Setpos(1, 29);
-      cout << " 时间已设置为 " << w << "                                     ";
-    } else {
-      Setpos(1, 29);
-      cout << " 错误: 时间必须在0-40000之间                                  ";
-    }
-  } else if (cmd_name == "tp" || cmd_name == "/tp") {
-    int w = 0, h = 0;
-    ss >> w >> h;
-    if (w >= 0 && w <= 5000 && h >= 0 && h <= 1000) {
-      x = w;
-      y = (1000 - h);
-      shuaxin();
-      Setpos(1, 29);
-      cout << " 已传送到 (" << w << ", " << h << ")                          ";
-    } else {
-      Setpos(1, 29);
-      cout << " 错误: 位置无效                                                ";
-    }
-  } else {
-    Setpos(1, 29);
-    cout << " 未知命令: " << cmd_name << "，输入 /help 查看帮助             ";
   }
+  Setpos(0, 28);
 }
 short getnew[5001][1001];
 int TT;
@@ -4209,7 +3285,6 @@ void make_jian(int tx, int ty, int stx, int sty, int nbt_) {
   shiti[l].randomtick = 0, shiti[l].direction = 0;
   shiti[l].sd = 0;
   shiti[l].AI = 2;
-  add_entity_to_hash(l, tx, ty);
 }
 int QQQQ = 0;
 void try_make_st() {
@@ -4256,7 +3331,6 @@ void st_kill(int l) {
       }
     }
   }
-  remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
   // shiti[l].HP = 0, shiti[l].hurt = 0, shiti[l].type = 0, shiti[l].gx = 0,
   // shiti[l].gy = 0, shiti[l].spgx = 0, shiti[l].spgy = 0;
   shiti[l] = {0};
@@ -4283,7 +3357,6 @@ void st_kill_fall(int l) {
   if (shiti[l].type == 6) {
     thing_fall(rand() % 2 + 1, 42);
   }
-  remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
   // shiti[l].HP = 0, shiti[l].hurt = 0, shiti[l].type = 0, shiti[l].gx = 0,
   // shiti[l].gy = 0, shiti[l].spgx = 0, shiti[l].spgy = 0;
   shiti[l] = {0};
@@ -4294,8 +3367,6 @@ void st_move() {
     playerCD--;
   for (l = 0; l <= 100; l++) {
     if (shiti[l].type > 0) {
-      double old_gx = shiti[l].gx;
-      double old_gy = shiti[l].gy;
       if (shiti[l].AI == 1) {
         gj = 0;
         if (KEY_DOWN(VK_LBUTTON) &&
@@ -4310,9 +3381,7 @@ void st_move() {
                                      playerCD = gongjicd;
             if (shiti[l].type == 7) {
               shiti[l].ch = 1;
-              vector<int> nearby_zombies;
-              query_nearby_entities(x, y, shiti[l].sd, nearby_zombies);
-              for (int i : nearby_zombies)
+              for (int i = 0; i <= 100; i++)
                 if (shiti[i].type == 7 &&
                     jl(abs(shiti[i].gx - x), abs(shiti[i].gy - y)) <
                         shiti[l].sd)
@@ -4349,7 +3418,6 @@ void st_move() {
               Clear();
             }
             if (shiti[l].HP <= 0) {
-              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill_fall(l);
               continue;
             }
@@ -4360,12 +3428,10 @@ void st_move() {
               shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
               shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
               shiti[l].gy < 0 || shiti[l].gx > 5000 || shiti[l].gy > 1000) {
-            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
             st_kill(l);
             continue;
           }
         } else if (shiti[l].HP < 0) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
         }
         if (shiti[l].CD > 0)
@@ -4542,7 +3608,6 @@ void st_move() {
                 jump = 0;
                 shuaxin();
               }
-              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill(l);
               continue;
             }
@@ -4659,20 +3724,16 @@ void st_move() {
         if (shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
             shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
             shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > 5000 ||
-            shiti[l].gy > 1000) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+            shiti[l].gy > 1000)
           st_kill(l);
-        }
         shiti[l].randomtick++;
         if (shiti[l].randomtick > 1200) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
         }
         shiti[l].spgx *= 0.995;
         shiti[l].gx += shiti[l].spgx * 0.03;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -4687,7 +3748,6 @@ void st_move() {
             jump = 0;
             shuaxin();
           }
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -4698,8 +3758,7 @@ void st_move() {
                   abs(shiti[LL].gy - shiti[l].gy) < 1) {
                 shiti[LL].spgy = -6,
                 shiti[LL].spgx = ((shiti[l].spgx > 0) * 2 - 1) * 0.5;
-                shiti[LL].HP -= 4, update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
- st_kill(l);
+                shiti[LL].HP -= 4, st_kill(l);
                 continue;
               }
             }
@@ -4708,7 +3767,6 @@ void st_move() {
         shiti[l].gx += shiti[l].spgx * 0.03;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -4717,7 +3775,6 @@ void st_move() {
         shiti[l].spgy *= 0.98;
         if (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
             true) {
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -4732,7 +3789,6 @@ void st_move() {
             jump = 0;
             shuaxin();
           }
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           continue;
         }
@@ -4741,7 +3797,6 @@ void st_move() {
         if (shiti[l].HP <= 0) {
           boss2hp -= shiti[l].direction;
           int xxxx = shiti[l].gx, yyyy = shiti[l].gy, nbtt = shiti[l].nbt - 1;
-          update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
           if (nbtt >= 1) {
             if (nbtt >= 0)
@@ -4786,7 +3841,6 @@ void st_move() {
               }
               int xxxx = shiti[l].gx, yyyy = shiti[l].gy,
                   nbtt = shiti[l].nbt - 1;
-              update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill(l);
               if (nbtt >= 1) {
                 if (nbtt >= 0)
@@ -4853,7 +3907,6 @@ void st_move() {
           wudi = 45;
         }
       }
-      update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
     }
   }
   if (!checkhp)
@@ -5094,7 +4147,8 @@ void movethings(int upd) {
   if (wear_slot > 0 && wear[wear_slot] != 0) {
     if (KEY_DOWN(VK_LBUTTON)) {
       int wear_item = wear[wear_slot];
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
       while (!(KEY_DOWN(VK_LBUTTON))) {
         POINT p = GetMousePos();
         mpx = To_int(p.x / 2 - 26);
@@ -5116,7 +4170,8 @@ void movethings(int upd) {
           craft_update(upd);
         }
       }
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
     }
   }
 
@@ -5137,7 +4192,8 @@ void movethings(int upd) {
         AN = 0;
       if (KEY_DOWN(VK_LBUTTON) && beibao[c_thing][1] != 0) {
         cc = c_thing;
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         while (!(KEY_DOWN(VK_LBUTTON))) {
           POINT p = GetMousePos();
           mpx = To_int(p.x / 2 - 26);
@@ -5216,7 +4272,8 @@ void movethings(int upd) {
           }
         }
       }
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
     }
   }
   if (upda) {
@@ -5296,7 +4353,8 @@ void moveinbox() {
         if ((c_thing > 0 && beibao[c_thing][1] != 0) ||
             (c_thing < -4 && box[open_].things[(29 + c_thing)] >= 1000)) {
           cc = c_thing;
-          wait_key_release(VK_LBUTTON);
+          while (KEY_DOWN(VK_LBUTTON))
+            continue;
           while (!(KEY_DOWN(VK_LBUTTON))) {
             POINT p = GetMousePos();
             mpx = To_int(p.x / 2 - 24);
@@ -5393,7 +4451,8 @@ void moveinbox() {
           }
         }
       }
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
       POINT p = GetMousePos();
       mpx = To_int(p.x / 2 - 24);
       mpy = To_int(p.y - 17);
@@ -5416,7 +4475,8 @@ void zz(int Y, int need1, int type1, int need2, int type2, int get, int sl,
   if (mpy == Y && mpx < -9) {
     if (KEY_DOWN(VK_LBUTTON)) {
       Setpos(5, Y + 13), cout << " ->";
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
       for (int i = 1; i <= 100; i++) {
         ls[i][0] = beibao[i][0];
         ls[i][1] = beibao[i][1];
@@ -5445,7 +4505,8 @@ void zz2(int Y, int need1, int type1, int get, int sl, int upd) {
   if (mpy == Y && mpx < -9) {
     if (KEY_DOWN(VK_LBUTTON)) {
       Setpos(5, Y + 13), cout << " ->";
-      wait_key_release(VK_LBUTTON);
+      while (KEY_DOWN(VK_LBUTTON))
+        continue;
       for (int i = 1; i <= 100; i++) {
         ls[i][0] = beibao[i][0];
         ls[i][1] = beibao[i][1];
@@ -5498,7 +4559,8 @@ void openbox() {
   AN = 0;
   while (1) {
     if (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-      wait_key_release('E', VK_ESCAPE);
+      while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+        continue;
       memset(painting, 114, sizeof(painting));
       break;
     }
@@ -5520,7 +4582,6 @@ void craft_2() {
       anx = 0;
     movethings(2);
     zz(-5, 1, 3, 1, 4, 13, 1, 2);
-    Sleep(1);
   }
   setlight();
   memset(painting, 114, sizeof(painting));
@@ -5530,7 +4591,8 @@ void craft_1() {
   AN = 0;
   while (1) {
     if (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE)) {
-      wait_key_release('E', VK_ESCAPE);
+      while (GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+        continue;
       page = 1;
       break;
     } else
@@ -5543,7 +4605,8 @@ void craft_1() {
       if (mpy == -5 && mpx < -9) {
         if (KEY_DOWN(VK_LBUTTON)) {
           Setpos(5, 8), cout << " ->";
-          wait_key_release(VK_LBUTTON);
+          while (KEY_DOWN(VK_LBUTTON))
+            continue;
           int U = getbeibao_2(2);
           if (U > 0) {
             beibao[U][1]--;
@@ -5589,7 +4652,8 @@ void craft_1() {
     if (mpy == 10 && mpx < -9) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(5, 23), cout << "->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         page = 1 - page;
         for (int i = 8; i <= 22; i++)
           Setpos(5, i), cout << "                        ";
@@ -5601,7 +4665,6 @@ void craft_1() {
         Setpos(5, 23), cout << "->";
     } else
       Setpos(5, 23), cout << "   ";
-    Sleep(1);
   }
 }
 void SwitchMode() {
@@ -5677,7 +4740,8 @@ void SET() {
     if (mpy == 0 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 14), cout << " ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         if (setfps == 1)
           setfps = 2;
         else if (setfps == 2)
@@ -5692,7 +4756,8 @@ void SET() {
     if (mpy == 7 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 21), cout << " ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         save(zzz);
         run = false;
         return;
@@ -5703,7 +4768,8 @@ void SET() {
     if (mpy == -4 && mpx > 2 && mpx < 8) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(30, 9), cout << "  ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         if (printx < 90)
           printx += 2;
         update_set();
@@ -5714,7 +4780,8 @@ void SET() {
     if (mpy == -3 && mpx > 2 && mpx < 8) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(30, 10), cout << "  ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         if (printy < 46)
           printy += 2;
         update_set();
@@ -5726,7 +4793,8 @@ void SET() {
     if (mpy == -4 && mpx > 8 && mpx < 16) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(33, 9), cout << "  ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         if (printx > 20)
           printx -= 2;
         update_set();
@@ -5737,7 +4805,8 @@ void SET() {
     if (mpy == -3 && mpx > 8 && mpx < 16) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(33, 10), cout << "  ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         if (printy > 20)
           printy -= 2;
         update_set();
@@ -5748,7 +4817,8 @@ void SET() {
     if (mpy == 3 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 17), cout << " ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         sun = (sun == 0 ? 1 : 0);
         update_set();
       } else
@@ -5758,7 +4828,8 @@ void SET() {
     if (mpy == 5 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 19), cout << " ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         ed = (ed == 8000 ? 6000 : (ed == 6000 ? 4000 : 8000));
         update_set();
       } else
@@ -5768,14 +4839,14 @@ void SET() {
     if (mpy == -1 && mpx > -4 && mpx < 4) {
       if (KEY_DOWN(VK_LBUTTON)) {
         Setpos(18, 12), cout << " ->";
-        wait_key_release(VK_LBUTTON);
+        while (KEY_DOWN(VK_LBUTTON))
+          continue;
         CanGet = (CanGet == 0 ? 1 : 0);
         update_set();
       } else
         Setpos(18, 12), cout << "-> ";
     } else
       Setpos(18, 12), cout << "   ";
-    Sleep(1);
   }
 }
 void cls() {
@@ -5829,7 +4900,7 @@ void SetWindowSize(int cols, int lines) {
   MoveWindow(console, r.left, r.top, cols * 8, lines * 16, TRUE);
 }
 void did() {
-  for (int x = 0; x < 60; x++) {
+  for (int x = 0; x < 37; x++) {
     thing.insert({name[x], x});
   }
 }
@@ -5866,7 +4937,8 @@ void delete_world() {
     if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
       Setpos(22, 3);
       cout << "                      ";
-      wait_key_release(VK_ESCAPE);
+      while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        continue;
       return;
     }
     POINT p = GetMousePos();
@@ -5878,7 +4950,8 @@ void delete_world() {
       if (mpy >= i * 2 - 8 && mpy <= i * 2 - 7) {
         Color(10);
         if (KEY_DOWN(VK_LBUTTON)) {
-          wait_key_release(VK_LBUTTON);
+          while (KEY_DOWN(VK_LBUTTON))
+            continue;
           abcde = true;
           delete_savelist(saves[i]);
           read_savelist();
@@ -5891,7 +4964,6 @@ void delete_world() {
       if (!abcde)
         cout << saves[i];
     }
-    Sleep(1);
   }
 }
 void make_newworld() {
@@ -5912,7 +4984,8 @@ void make_newworld() {
   while (1) {
     if (clock() - Clocknum >= 15) {
       if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-        wait_key_release(VK_ESCAPE);
+        while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+          continue;
         break;
       }
       brtick++;
@@ -5968,7 +5041,6 @@ void make_newworld() {
         cout << "  ----------";
       }
     }
-    Sleep(1);
   }
 }
 void game_loop() {
@@ -6072,7 +5144,8 @@ void game_loop() {
           Print();
         }
         if ((GetAsyncKeyState('E') & 0x8000) && GetIn == 1) {
-          wait_key_release('E');
+          while (GetAsyncKeyState('E') & 0x8000)
+            continue;
           craft_1();
           setlight();
           hujia_update();
@@ -6080,13 +5153,15 @@ void game_loop() {
         } else
           anx = 0;
         if ((GetAsyncKeyState('M')) && GetIn == 1) {
-          wait_key_release('M');
+          while (GetAsyncKeyState('M'))
+            continue;
           openmap();
           setlight();
         } else
           anx = 0;
         if (GetAsyncKeyState('I') & 0x8000) {
-          wait_key_release('I');
+          while (GetAsyncKeyState('I') & 0x8000)
+            Sleep(1);
           gamemode = 1 - gamemode;
         }
 
@@ -6415,7 +5490,6 @@ void game_loop() {
               save_zidong.detach();
       }*/
     }
-    Sleep(1);
   }
 }
 int main() {
@@ -6458,7 +5532,6 @@ int main() {
     }
     SetConsoleMode(hInput, mode);
     InitFPSCounter();
-    init_buffer();
     srand((unsigned)time(NULL));
     HideCursor();
     bool willclear = true;
@@ -6550,7 +5623,8 @@ int main() {
             while (1) {
               if (clock() - Clocknum >= 15) {
                 if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-                  wait_key_release(VK_ESCAPE);
+                  while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                    continue;
                   willclear = 1;
                   break;
                 }
@@ -6572,24 +5646,24 @@ int main() {
                   cout << "  ----------";
                   if (KEY_DOWN(VK_LBUTTON)) {
                     willclear = true;
-                    wait_key_release(VK_LBUTTON);
+                    while (KEY_DOWN(VK_LBUTTON))
+                      continue;
                     oi = 1 - oi;
                   }
                 } else {
-                    if (oi)
-                      Color(9);
-                    else
-                      Color(10);
-                    Setpos(23, 23);
-                    cout << "  ----------";
-                    Setpos(23, 24);
-                    cout << " |  OI风暴  |";
-                    Setpos(23, 25);
-                    cout << "  ----------";
-                  }
-                  Sleep(1);
+                  if (oi)
+                    Color(9);
+                  else
+                    Color(10);
+                  Setpos(23, 23);
+                  cout << "  ----------";
+                  Setpos(23, 24);
+                  cout << " |  OI风暴  |";
+                  Setpos(23, 25);
+                  cout << "  ----------";
                 }
               }
+            }
           }
         } else {
           Color(0);
@@ -6611,11 +5685,13 @@ int main() {
 
           if (KEY_DOWN(VK_LBUTTON)) {
             willclear = true;
-            wait_key_release(VK_LBUTTON);
+            while (KEY_DOWN(VK_LBUTTON))
+              continue;
             while (1) {
               if (clock() - Clocknum >= 15) {
                 if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-                  wait_key_release(VK_ESCAPE);
+                  while (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                    continue;
                   break;
                 }
                 Color(0);
@@ -6722,7 +5798,6 @@ int main() {
                   Setpos(28, 29);
                   cout << "  ----------";
                 }
-                Sleep(1);
               }
             }
             willclear = true;
@@ -6749,15 +5824,12 @@ int main() {
           cout << "  ----------";
         }
       }
-      Sleep(1);
     }
     save(zzz);
     return 0;
-  } catch (const std::exception& e) {
-    cout << "error: " << e.what();
-    exit(1);
   } catch (...) {
-    cout << "error: unknown exception";
+    cout << "error";
     exit(1);
   }
 }
+
