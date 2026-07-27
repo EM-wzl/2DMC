@@ -3,5 +3,11 @@
 *.7z
 *.txt
 *.png
+.uploads/
+as_chunks/
+2DMC-launch-video/
 *.bin
 savelist.txt
+video/
+2DMC_记忆导出.md
+记忆.md

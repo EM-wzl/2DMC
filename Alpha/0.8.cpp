@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -188,9 +188,9 @@ int blocklv[101] = {0, 2, 1,  2,  3,  1,  0,  0,  0,  2,  114, 0, 4, 0, 0,
 					0, 0, 4,  2,  0,  0,  1,  1,  5};
 string test[150] = {
     " \b空气",       " \b圆石",       " \b原木",       " \b煤炭",
-    " \b粗铁",       " \b泥土",       " \b木棍",       " \b木稿",
-    " \b石稿",       " \b熔炉",       " \b基岩",       " \b天空",
-    " \b钻石",       " \b铁锭",       " \b铁稿",       " \b钻石稿",
+    " \b粗铁",       " \b泥土",       " \b木棍",       " \b木镐",
+    " \b石镐",       " \b熔炉",       " \b基岩",       " \b天空",
+    " \b钻石",       " \b铁锭",       " \b铁镐",       " \b钻石镐",
     " \b火把",       " \b石剑",       " \b石斧",       "  \b静态水19",
     " \b流动水3/4,", " \b流动水2/4,", " \b流动水1/4,", " \b树叶",
     " \b回血药水",   " \b桶",         " \b水桶",       " \b铁胸甲",
@@ -234,8 +234,8 @@ vector<Box_> box;
 struct guaiwu {
   double HP, hurt, gx, gy, spgy, spgx, randomtick, direction, sd, gongjitick,tox,toy,
       maxHP;
-  int type, jp, CD, AI, nbt;
-  bool ch,isnotouch,islife2;
+  int type, jp, CD, AI, nbt,chv;
+  bool ch,isnotouch,islife2,issd;
 };
 struct boomthings {
   int x, y, color;
@@ -514,19 +514,6 @@ void HideCursor() {
   CONSOLE_CURSOR_INFO cursor_info = {1, 0};
   SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor_info);
 }
-/*POINT p;
-CONSOLE_FONT_INFO consoleCurrentFont;
-HWND h=GetForegroundWindow();
-HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-POINT GetMousePos(){
-        POINT p;
-        GetCursorPos(&p);
-        ScreenToClient(h,&p);
-        GetCurrentConsoleFont(hOutput, FALSE, &consoleCurrentFont);
-        p.x/=consoleCurrentFont.dwFontSize.X;
-        p.y/=consoleCurrentFont.dwFontSize.Y;
-        return p;
-}*/
 POINT GetMousePos() {
   POINT p;
   GetCursorPos(&p);
@@ -1033,81 +1020,72 @@ void make_skycave(int i) {
   }
 }
 short stru[1001][201];
-const short maxlenth=10;
+short maxlenth=10;
 const char struc[10][10][10]=
 {
-{{1,1,1,1,1},
-{67,-1,-1,-1,-1},
-{2,-1,-1,-1,-1},
-{2,-1,-1,-1,-1},
-{1,1,1,1,1},},
+{{0,0,0,0,0},
+{-1,-1,67,-1,-1},
+{-1,-1,2,-1,-1},
+{-1,-1,2,-1,-1},
+{-2,-2,-2,-2,-2},},
+//s_w
+{{0,0,0,0,0},
+{-1,-1,-1,-1,-1},
+{-1,-1,-1,-1,-1},
+{-1,-1,-1,-1,-1},
+{-2,-2,-2,-2,-2},},
+//s
+{{0,0,0,0,0},
+{0,0,0,-1,-1},
+{0,0,-1,-1,-1},
+{0,-1,-1,-1,-1},
+{0,66,66,66,66},},
+//"/"
+{{-1,-1,-1,-1,-2},
+{-1,-1,-1,-2,0},
+{-1,-1,-2,0,0},
+{-1,-2,0,0,0},
+{-2,0,0,0,0},},
 
-{{1,1,1,1,1},
-{-1,-1,-1,-1,67},
-{-1,-1,-1,-1,2},
-{-1,-1,-1,-1,2},
-{1,1,1,1,1},},
+{{0,0,0,0,0},
+{-1,-1,0,0,0},
+{-1,-1,-1,0,0},
+{-1,-1,-1,-1,0},
+{66,66,66,66,0},},
+//"\"
+{{-2,-1,-1,-1,-1},
+{0,-2,-1,-1,-1},
+{0,0,-2,-1,-1},
+{0,0,0,-2,-1},
+{0,0,0,0,-2},},
 
-{{1,1,1,1,1},
+{{0,0,0,0,0},
 {-1,-1,-1,-1,-1},
 {-1,-1,-1,-1,-1},
 {-1,-1,-1,-1,-1},
-{66,66,66,66,66},
-{1,-1,-1,-1,-1},
-{1,1,-1,-1,-1},
-{1,1,1,-1,-1},
-{1,1,1,1,-1},
-},
-
-{
-{1,1,1,1,1},
+{66,66,66,66,66},},
+{{-1,-1,-1,-1,-1},
 {-1,-1,-1,-1,-1},
 {-1,-1,-1,-1,-1},
 {-1,-1,-1,-1,-1},
-{66,66,66,66,66},
-{-1,-1,-1,-1,1},
-{-1,-1,-1,1,1},
-{-1,-1,1,1,1},
-{-1,1,1,1,1},},
-
-{{1,1,1,1,1},
-{-1,-1,-1,-1,-1},
-{-1,-1,-1,-1,-1},
-{-1,-1,-1,-1,-1},
-{66,66,66,66,66},
-{-1,-1,-1,-1,1},
-{-1,-1,-1,1,1},
-{-1,-1,1,1,1},
-{-1,1,1,1,1}
-},
-
-{
-{1,1,1,1,1},
-{-1,-1,-1,-1,-1},
-{-1,-1,-1,-1,-1},
-{-1,-1,-1,-1,-1},
-{66,66,66,66,66},
-{1,-1,-1,-1,-1},
-{1,1,-1,-1,-1},
-{1,1,1,-1,-1},
-{1,1,1,1,-1},},
+{-2,-2,-2,-2,-2},},
 };
 void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr);
 void make_straight(bool isl,short leng,short i,short j)
 {
 	if(leng> maxlenth)return;
 	if(stru[i][j]!=0)return;
-	stru[i][j]=1+isl;
+	stru[i][j]=1;
 	if(isl==0){
 	if(rand()%3==0){
-	if(rand()%2==0)make_up_down(rand()%2,leng+1,i+1,j+1,1,isl);
-	else make_up_down(rand()%2,leng+1,i+1,j-1,0,isl);}
+	if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
+	else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);}
 	else make_straight(isl,leng+1,i+1,j);
 	}
 	if(isl==1){
 	if(rand()%3==0){
-	if(rand()%2==0)make_up_down(rand()%2,leng+1,i-1,j+1,1,isl);
-	else make_up_down(rand()%2,leng+1,i-1,j-1,0,isl);}
+	if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
+	else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);}
 	else make_straight(isl,leng+1,i-1,j);
 	}
 }
@@ -1115,55 +1093,83 @@ void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr)
 {
 	if(leng> maxlenth)return;
 	if(stru[i][j]!=0)return;
-	if(tlr==1)stru[i][j]=3+isu;
-	else stru[i][j]=5+isu;
+	if(tlr==1){
+	if(isu){
+	if(isl)stru[i][j]=4;
+	else stru[i][j]=6;
+	if(stru[i][j-1]==0)stru[i][j-1]=3;
+	}
+	else {
+	if(isl)stru[i][j]=5;
+	else stru[i][j]=3;
+	if(stru[i][j+1]==0)stru[i][j+1]=6;
+	}
+	}
+	else {
+	if(isu){
+	if(isl)stru[i][j]=4;
+	else stru[i][j]=6;
+	if(stru[i][j-1]==0)stru[i][j-1]=5;
+	}
+	else {
+	if(isl)stru[i][j]=5;
+	else stru[i][j]=3;
+	if(stru[i][j+1]==0)stru[i][j+1]=4;
+	}
+	}
+	if(isl==2)stru[i][j]=7+isu;
 	if(isl==0){
-	if(rand()%3==0){
-	if(rand()%2==0)make_up_down(rand()%2,leng+1,i+1,j+1,1,isl);
-	else make_up_down(rand()%2,leng+1,i+1,j-1,0,isl);}
-	else make_straight(isl,leng+1,i+1,j);
-	}
-	if(isl==1){
-	if(rand()%3==0){
-	if(rand()%2==0)make_up_down(rand()%2,leng+1,i-1,j+1,1,isl);
-	else make_up_down(rand()%2,leng+1,i-1,j-1,0,isl);}
-	else make_straight(isl,leng+1,i-1,j);
-	}
-	if(isl==2){
-	if(rand()%3==0){
-	if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
-	else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);}
-	else make_straight(isl,leng+1,i-1,j);
 	if(rand()%3==0){
 	if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
 	else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);}
-	else make_straight(isl,leng+1,i+1,j);
+	make_straight(isl,leng+1,i+1,j);
+	}
+	if(isl==1){
+	if(rand()%3==0){
+	if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
+	else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);}
+	make_straight(isl,leng+1,i-1,j);
+	}
+	if(isl==2){
+	make_straight(isl,leng+1,i-1,j);
+	make_straight(isl,leng+1,i+1,j);
 	}
 	
 }
 void make_mineshaft()
 {
 	memset(stru,0,sizeof(stru));
-	int ei;
-	for(int i=1;i<=500;i++){
-	make_straight(rand()%2,0,rand()%975+12,rand()%150+40);
-	make_straight(rand()%2,0,rand()%975+12,rand()%150+40);
+	for(int i=1;i<=250;i++){
+	int ddx=rand()%975+12,ddy=rand()%150+40;
+	maxlenth=15+rand()%16;
+	make_straight(1,0,ddx,ddy);
+	make_straight(0,0,ddx+1,ddy);
 	}
 	for(int jj=1;jj<=190;jj++)
 	{
 		for(int ii=10;ii<=990;ii++)
 	{
-		if(stru[ii][jj]==4||stru[ii][jj]==6)ei=5;
-		else ei=0;
+		if(stru[ii][jj]==1){
+			if(rand()%5<2){
+			if(blocktouch[s[ii*5+2][jj*5]]==1);
+			else {int ddy=5;stru[ii][jj]=2;
+			while(blocktouch[s[ii*5+2][jj*5+ddy]]==0)s[ii*5+2][jj*5+ddy]=2,ddy++;
+			}
+			}
+			else stru[ii][jj]=2;
+		}
+		
 		for(int j=0;j<=4;j++)
 		{
 		for(int i=0;i<=8;i++)
 		{
+			int ddx=ii*5+j,ddy=jj*5+i;
 			if(stru[ii][jj]>0){
 			if(struc[stru[ii][jj]-1][i][j]==0)continue;
-			if(struc[stru[ii][jj]-1][i][j]==-1){s[ii*5+j][jj*5+i-ei]=0;
+			if(struc[stru[ii][jj]-1][i][j]==-2){if(blocktouch[s[ddx][ddy]]==0)s[ddx][ddy]=67;continue;}
+			if(struc[stru[ii][jj]-1][i][j]==-1){if(blocktouch[s[ddx][ddy]]==1||(s[ddx][ddy]>=19&&s[ddx][ddy]<=22)||(s[ddx][ddy]>=32&&s[ddx][ddy]<=34))s[ddx][ddy]=0;
 			continue;}
-			s[ii*5+j][jj*5+i-ei]=struc[stru[ii][jj]-1][i][j];
+			s[ddx][ddy]=struc[stru[ii][jj]-1][i][j];
 			}
 		}
 		}
@@ -1272,43 +1278,26 @@ void setlight() {
             if((s[i][j]==0||s[i][j]==11)&&light[i][j]<=8)light[i][j]=8;
         }
     }}
-    if (night == 1&&weidu!=2)
+    int now_light=20;
+    if(night>0)now_light=7;
+    if(night==2)now_light+=(20000-now_time)/153;
+    if(night==3)now_light+=(now_time-38000)/153;
+    if(weidu!=2){
+    for (int i = int(x-149.5); i <= int(x+150.5); i++)
     {
+        	if(i<0||i>5000)continue;
+            if ((s[i][0] == 0 || s[i][0] == 11)&&light[i][0]<now_light)light[i][0] = now_light;}
         for (int i = int(x-149.5); i <= int(x+150.5); i++)
         {
         	if(i<0||i>5000)continue;
-            if ((s[i][0] == 0 || s[i][0] == 11)&&light[i][0]<7)light[i][0] = 7;}
-        for (int i = int(x-149.5); i <= int(x+150.5); i++)
-        {
-        	if(i<0||i>5000)continue;
-            for (int j = 0; j <= 1000; j++)
+            for (int j = 1; j <= 1000; j++)
             {
-                if ((s[i][j] == 0 || s[i][j] == 11)&&light[i][j]<7 && light[i][j - 1] == 7)
+                if ((s[i][j] == 0 || s[i][j] == 11)&&light[i][j]<now_light && light[i][j - 1] == now_light)
                 {
-                    light[i][j] = 7;
+                    light[i][j] = now_light;
                 }
             }
-        }
-    }
-    else
-    {
-        for (int i = int(x-149.5); i <= int(x+150.5); i++)
-        {
-        	if(i<0||i>5000)continue;
-            if (s[i][0] == 0 || s[i][0] == 11)light[i][0] = 20;
-        }
-        for (int i = int(x-149.5); i <= int(x+150.5); i++)
-        {
-        	if(i<0||i>5000)continue;
-            for (int j = 0; j <= 1000; j++)
-            {
-                if (j > 0 && (s[i][j] == 0 || s[i][j] == 11) && light[i][j - 1] == 20)
-                {
-                    light[i][j] = 20;
-                }
-            }
-        }
-    }
+    }}
     for (int i = int(x-149.5); i <= int(x+150.5); i++)
     {
     	if(i<0||i>5000)continue;
@@ -1345,6 +1334,15 @@ void sky() {
     }
   }
   setlight();
+}
+void air_(){
+  for (int i = 0; i <= printx+1; i++) {
+    for (int j = 0; j <= printy+1; j++) {
+      if (painting[i][j][0] == 0) {
+        painting[i][j][0] = 114;
+      }
+    }
+  }
 }
 void atime() {
   if (sun == 0)
@@ -1533,19 +1531,6 @@ void MAP_nether() {
       tall = a;
     }
   }
-  /*for (int i = 5; i <= 4995; i++)
-  {
-      Setpos(1, 1);
-      printf("\b%.1lf%%", now * 1.0 / 10);
-      for (int j = 995; j >= 70; j--)
-      {
-          st(3, i, j, rand() % (300 - int(j * 0.15)), 2);
-          st(4, i, j, rand() % (600 - int(j * 0.3)), 3);
-          st(5, i, j, rand() %900, 2);
-          if (j > 250)st(12, i, j, rand() % (1000 - int(j * 0.5)), 5);
-      }
-  }
-  */
   Setpos(21, 13);
   cout << " 正在创建下界...   ";
   for (int i = 5; i <= 4995; i++) {
@@ -1637,28 +1622,7 @@ void MAP() {
   Setpos(21, 13);
   cout << "  正在生成主世界...";
   for (int i = 0; i <= 5000; i++) {
-    // if (rand() % 15 == 0)tall++;
-    // if (rand() % 15 == 1)tall--;
     tall = 1000 - zs[i];
-    /*if(water<=0)
-    {
-            if (rand() % 120 == 0)water = 10+rand()%15,wmax=water,wh=tall+1;
-    }
-    else if(water>wmax/2){
-            tall+=rand()%2+1;
-            water--;
-    }
-    else {
-            tall-=rand()%2+1;
-            if(!(tall+1>wh&&water==1))water--;
-    }
-    if (moun <= 0)
-    {
-        if (rand() % 150 == 0&&water<=0)moun = 14;
-    }
-    else if (moun > 7)tall -= rand() % 2 + 1, moun--;
-    else if (moun <= 7)tall += rand() % 2 + 1, moun--;
-    if (tall < 0)tall = 0;*/
     if (i == 2500)
       back_x = 2500, back_y = tall, x = 2500, y = tall;
     for (int j = 1000; j >= tall + 1; j--) {
@@ -1875,7 +1839,7 @@ void MAP() {
     		else make_lake(i,1);
 		}
     }
-  
+  make_mineshaft();
   for (int i = 10; i <= 4990; i++) {
     for (int j = 200; j <= 950; j++) {
       if (rand() % 12000 == 0) {
@@ -1887,7 +1851,6 @@ void MAP() {
       spawn_chest(i, ry);
     }
   }
-  make_mineshaft();
   Clear_formap();
   MAP_nether();
   sky();
@@ -2066,13 +2029,13 @@ void Updateblock(bool ismap) {
     printf("  ");
     return;
   }
-  if (s[dx][dy] == 11 || (s[dx][dy] == 0 && boimes2[dx] == 2)) {
+  if (s[dx][dy] == 11 || (s[dx][dy] == 0 && boimes2[To_int(x)] == 2)) {
     if (weidu == 1) {
       if (light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4) {
         if (co != 0)
           Color(0), co = 0;
       } else if ((co != -6 && night == 0) ||
-                 (s[dx][dy] == 0 && boimes2[dx] == 2))
+                 (s[dx][dy] == 0 && boimes2[To_int(x)] == 2))
         Color(-6), co = -6;
       else if (co != -23 && night == 1)
         Color(-23), co = -23;
@@ -2321,9 +2284,12 @@ void Ubformap(int pt, bool ex) {
   }
 }
 bool pr = false;
+short last_boi;
 void Print() {
   co = 0;
   Color(0);
+  if(boimes2[To_int(x)]!=last_boi)air_();
+  last_boi=boimes2[To_int(x)];
   vector<int> nearby_entities;
   for (int j = 0; j <= printy; j++) {
     for (int i = 0; i <= printx; i++) {
@@ -2497,7 +2463,7 @@ void Print() {
         pr_mouse();}
       } else if ((abs(jl(dx - To_int(x), dy - To_int(y))) < 4) &&
                  light[dx][dy] <= 0) {
-        if (/*lx!=To_int(x)||ly!=To_int(y))&&*/ painting[i][j][0] !=
+        if ( painting[i][j][0] !=
                 s[dx][dy] ||
             (painting[i][j][1] > 0) != (light[dx][dy] > 0)) {
           Setpos(i, j);
@@ -3557,7 +3523,6 @@ void InToTime() {
   }
   if (yes) {
     now_time = TheTime;
-    //		GetIn=0;
     return;
   }
   if (x == "save ") {
@@ -3578,7 +3543,6 @@ void InToTime() {
       wait = w;
       SetClean();
     }
-    //		GetIn=0;
     return;
   } else {
     Setpos(1, 29);
@@ -3592,7 +3556,6 @@ void InToSet() {
   while (y != (char)(32)) {
     y = _getch();
     if (y == '/') {
-      //			GetIn=0;
       return;
     }
     x += y;
@@ -3611,11 +3574,9 @@ void InToSet() {
     life = w;
     SetLife = 1;
     SetClean();
-    //		GetIn=0;
     return;
   } else if (x == "time ") {
     InToTime();
-    //		GetIn=0;
     return;
   } else {
     Setpos(1, 29);
@@ -3640,10 +3601,8 @@ void InToGet() {
       Sleep(1);
     }
   }
-  //	std::cout<<"\n"<<x<<"\n";
   for (unsigned int r = 0; r < (x.size()); r++) {
     char a = x[r];
-    //		std::cout<<a;
     if (a == (char)(32)) {
       t.clear();
       Setpos(1, 29);
@@ -3654,7 +3613,6 @@ void InToGet() {
     } else {
       t += a;
       z = 0;
-      //			std::cout<<t<<"  ";
 
       if (thing.find(t) == thing.end()) {
         Setpos(1, 29);
@@ -3663,17 +3621,12 @@ void InToGet() {
       if (thing.find(t) != thing.end()) {
         u = thing.find(t)->second;
         z = 0;
-        //				char z=x[13];
         r += 2;
-        //				std::cout<<z<<x[r];
-        //				std::cout<<"no";
         is = 1;
-        //				std::cout<<is;
         t.clear();
         a = x[r];
         while (a != (char)(32)) {
           if (a >= '0' && a <= '9') {
-            //						std::cout<<a;
             w = (a - '0') + w * 10;
             r++;
             a = x[r];
@@ -3683,28 +3636,15 @@ void InToGet() {
         z = 0;
         r += 2;
         a = x[r];
-        //				std::cout<<"yes";
         while (a != '/') {
           if (a >= '0' && a <= '9') {
-            //						std::cout<<a;
             h = (a - '0') + h * 10;
-            //						std::cout<<"
-            //"<<(a-'0')<<" "<<h<<" ";
             r++;
             a = x[r];
           }
         }
-        //				cout<<"oh";
-        //				std::cout<<" "<<h<<" ";
-        //				cout<<it->second;
-        //				cout<<" "<<u;
-        //				cout<<" "<<w;
-        //				Sleep(1000000);
         if (h < 26 && h > 0 && u != -1) {
           beibao[h][0] = (u + 1), beibao[h][1] = w;
-          //					cout<<"11111";
-          //					cout<<u;
-          //					Sleep(100000);
           return;
         } else {
           Setpos(1, 29);
@@ -3713,13 +3653,8 @@ void InToGet() {
           return;
         }
       }
-      //			else{
-      //				Setpos(1,29);
-      //				std::cout<<" 不正确的指令 "<<t; 				return;
-      //			}
     }
   }
-  //	GetIn=0;
   return;
 }
 string g_cmd_input;
@@ -4270,6 +4205,7 @@ void st_move() {
             	shiti[l].HP -= gongji;
 				if(shiti[l].type!=5)shiti[l].spgy = -6, gj = 1;}}
             	playerCD = gongjicd;
+            shiti[l].chv=900,shiti[l].issd=1;
             if (shiti[l].type == 7) {
               shiti[l].ch = 1;
               vector<int> nearby_zombies;
@@ -4451,20 +4387,44 @@ void st_move() {
             shiti[l].spgy = 0.01;
           }
         }
-        if ((jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) < shiti[l].sd ||
-             shiti[l].HP < 20) &&
+        if(tick%5==0&&!shiti[l].issd){
+        double total=25,px,py;
+		for(double ddx=0,ddy=total;ddx<=total&&!shiti[l].issd;ddx++){
+		ddy=total-ddx;
+		for(int i=1;i<=4&&!shiti[l].issd;i++){
+		px=shiti[l].gx,py=shiti[l].gy;
+		for(double LL=0;LL<=shiti[l].sd;LL+=0.25)
+		{
+			if(i==1)px+=ddx/100,py+=ddy/100;
+			else if(i==2)px+=-ddx/100,py+=ddy/100;
+			else if(i==3)px+=ddx/100,py+=-ddy/100;
+			else px+=-ddx/100,py+=-ddy/100;
+			if(blocktouch[s[To_int(px)][To_int(py)]]==1)break;
+			if(abs(px-x)<0.5&&abs(py-y)<0.5){
+			shiti[l].chv=600;
+			shiti[l].issd=1;
+			break;}
+		}
+		}
+		}}
+		if(shiti[l].chv>0)shiti[l].chv--;
+		else shiti[l].issd=0;
+		if(shiti[l].type==5)shiti[l].issd=1,shiti[l].chv=300;
+        if ((shiti[l].chv>0) &&
             (shiti[l].type != 7 || shiti[l].ch == 1)) {
             if (shiti[l].gx > x)
               shiti[l].spgx -= 0.007, dire = 1;
             else
               shiti[l].spgx += 0.007, dire = 0;
-          
+            shiti[l].direction =1;
         } else {
-          shiti[l].spgx += 0.0025 * shiti[l].direction;
-          shiti[l].randomtick++;
+          shiti[l].spgx += 0.004 * shiti[l].direction;
+          if(shiti[l].direction==0)shiti[l].randomtick+=2;
+		  shiti[l].randomtick++;
           if (shiti[l].randomtick > 300) {
             shiti[l].randomtick = 0;
-            shiti[l].direction = rand() % 3 - 1;
+            if(shiti[l].direction!=0)shiti[l].direction =0;
+            else shiti[l].direction = (rand() % 2)*2-1;
           }
         }
         if (gj == 1)
@@ -4509,17 +4469,16 @@ void st_move() {
             (shiti[l].type == 7 && shiti[l].ch == 1)) {
           touch_atk(l,shiti[l].hurt,0.75);
         } else if (shiti[l].type == 2) {
-          if (abs(x - shiti[l].gx) < 8 && abs(y - shiti[l].gy) < 8) {
+          if (abs(x - shiti[l].gx) < 8 && abs(y - shiti[l].gy) < 8&&shiti[l].chv>0) {
             if (shiti[l].CD < 0)
               shiti[l].CD--, shiti[l].spgx = 0;
             if (shiti[l].CD < -100) {
               if (wudi == 0) {
                 if (jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy)) <= 8)
-                  life -= (8 - jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy))) *
-                          0.05 * shiti[l].hurt * jianshang;
-                wudi = 45;
+                  damage((5 - jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy))) *
+                          4 * jianshang);
               }
-              boom_add(int(shiti[l].gx + 0.5), int(shiti[l].gy + 0.5), -4);
+              boom_add(To_int(shiti[l].gx),To_int(shiti[l].gy), -4);
               Clear();
               for (int LL = 0; LL < 500; LL++) {
                 if (shiti[LL].type > 0) {
@@ -4529,14 +4488,6 @@ void st_move() {
                                             abs(shiti[l].gy - shiti[LL].gy))) *
                                     0.1 * shiti[l].hurt;
                 }
-              }
-              if (life <= 0) {
-                Start();
-                life = 20;
-                spx = 0;
-                spy = 0;
-                jump = 0;
-                shuaxin();
               }
               update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
               st_kill(l);
@@ -4550,21 +4501,23 @@ void st_move() {
             shiti[l].CD = 0;
         } else if (shiti[l].type == 3) {
           if (jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) <
-                  shiti[l].sd * 1.25 ||
-              shiti[l].HP < 20) {
+                  shiti[l].sd * 1.25&&shiti[l].chv>0) {
             shiti[l].CD--;
-            shiti[l].spgx = 0;
+            if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y))<=8)shiti[l].spgx = ((x<shiti[l].gx)*2-1)*0.05;
+            else if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y))<=10)shiti[l].spgx = 0;
             if (shiti[l].CD <=
                 -120 + (shiti[l].sd * 2.5 -
                         jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y) * 3))) {
               shiti[l].CD = 0;
-              if (abs(shiti[l].gy - y) < 3)
-                make_jian(shiti[l].gx, shiti[l].gy - 1,
-                          (x - shiti[l].gx) + ((x > shiti[l].gx) * 2 - 1) * 5,
-                          (y - shiti[l].gy) * 5 - 1, 0);
-              else
-                make_jian(shiti[l].gx, shiti[l].gy - 1, (x - shiti[l].gx) * 1.2,
-                          (y - shiti[l].gy) * 4.5 - 1, 0);
+              double ttx,tty,total,px,py;
+              ttx=abs(x-shiti[l].gx);
+              tty=abs(y-shiti[l].gy);
+              total=ttx+tty+0.001;
+              px=ttx/total;
+              py=tty/total;
+              if(x-shiti[l].gx<0)px*=-1;
+              if(y-shiti[l].gy<0)py*=-1;
+              make_jian(shiti[l].gx,shiti[l].gy-0.75,30*px,50*py,0);
             }
           }
         } else if (shiti[l].type == 5) {
@@ -4587,7 +4540,7 @@ void st_move() {
               double ttx,tty,total,px,py;
               ttx=abs(x-shiti[l].gx);
               tty=abs(y-shiti[l].gy);
-              total=ttx+tty;
+              total=ttx+tty+0.001;
               px=ttx/total;
               py=tty/total;
               if(x-shiti[l].gx<0)px*=-1;
@@ -5015,9 +4968,9 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0) {
     Setpos(6, 8);
     cout << "  1原木->2木棍";
     Setpos(6, 9);
-    cout << "  2木棍+3原木->木稿";
+    cout << "  2木棍+3原木->木镐";
     Setpos(6, 10);
-    cout << "  2木棍+5圆石->石稿";
+    cout << "  2木棍+5圆石->石镐";
     Setpos(6, 11);
     cout << "  20圆石+5煤炭->熔炉";
     Setpos(6, 12);
@@ -5108,7 +5061,7 @@ else if (num == 4) {
     Setpos(6, 8);
     cout << "  1原木->4木板";
     Setpos(6, 9);
-    cout << "  木板->4木平台";
+    cout << "  木板->2木平台";
 Setpos(6, 24);
     cout << "  上一页";
   }
@@ -6248,7 +6201,6 @@ void game_loop() {
         slow_update++;
         if (slow_update > 60)
           slow_update = 0, setlight();
-
         bosshp = 0;
         tick++;
         if (tick >= 20)
@@ -6459,11 +6411,18 @@ void game_loop() {
                 make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 3);}
 				}
 				else{
+				double ttx=abs(x-mpx);
+    			double tty=abs(y-mpy);
+				double total=ttx+tty+0.001;
+    			double px=ttx/total;
+    			double py=tty/total;
+    			if(mpx-x<0)px*=-1;
+    			if(mpy-y<0)py*=-1;
 				beibao[U][1]--;
                 if (beibao[U][0] == 44 || beibao[U][0] == 45)
-                  make_jian(x, y, (mpx - x), (mpy - y) * 4.5 - 1, 2);
+                  make_jian(x, y-0.75, 30*px, 50*py, 2);
                 else
-                  make_jian(x, y, (mpx - x), (mpy - y) * 4.5 - 1, 3);}
+                  make_jian(x, y-0.75, 30*px, 50*py, 3);}
               }
             }
           }
@@ -6689,7 +6648,6 @@ int main() {
   try {
     did();
     SetConsoleToFullscreen();
-    // SetFileReadOnly("save.txt", false);
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     if (hInput == INVALID_HANDLE_VALUE) {
       std::cerr << " 无法获取输入句柄\n";
