@@ -23,15 +23,18 @@
 #define KEY_DOWN(VK_NONAME) ((GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
 #pragma GCC optimize(2)
 using namespace std;
-short s[5001][1001];
-short s2[5001][1001];
-short light[5001][1001];
+// 世界尺寸：修改这两个常量即可改变世界大小
+const int WORLD_WIDTH = 10000;
+const int WORLD_HEIGHT = 1001;
+short s[WORLD_WIDTH][WORLD_HEIGHT];
+short s2[WORLD_WIDTH][WORLD_HEIGHT];
+short light[WORLD_WIDTH][WORLD_HEIGHT];
 int painting[102][102][2];
-bool ep[5001][5001];
+bool ep[WORLD_WIDTH][WORLD_HEIGHT];
 
 #define CHUNK_SIZE 32
-#define CHUNK_X_COUNT 157
-#define CHUNK_Y_COUNT 32
+const int CHUNK_X_COUNT = (WORLD_WIDTH + CHUNK_SIZE - 1) / CHUNK_SIZE;
+const int CHUNK_Y_COUNT = (WORLD_HEIGHT + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
 struct Chunk {
   int blocks[CHUNK_SIZE][CHUNK_SIZE];
@@ -51,7 +54,7 @@ inline int get_local_x(int x) { return x % CHUNK_SIZE; }
 inline int get_local_y(int y) { return y % CHUNK_SIZE; }
 
 inline int get_block(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return 0;
   int cx = get_chunk_x(x);
   int cy = get_chunk_y(y);
   int lx = get_local_x(x);
@@ -60,7 +63,7 @@ inline int get_block(int x, int y) {
 }
 
 inline void set_block(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return;
   int cx = get_chunk_x(x);
   int cy = get_chunk_y(y);
   int lx = get_local_x(x);
@@ -70,32 +73,32 @@ inline void set_block(int x, int y, int val) {
 }
 
 inline int get_s2(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 0;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return 0;
   return s2[x][y];
 }
 
 inline void set_s2(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return;
   s2[x][y] = val;
 }
 
 inline int get_light(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return 15;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return 15;
   return light[x][y];
 }
 
 inline void set_light(int x, int y, int val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 1000) return;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return;
   light[x][y] = val;
 }
 
 inline bool get_ep(int x, int y) {
-  if (x < 0 || x > 5000 || y < 0 || y > 5000) return false;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return false;
   return ep[x][y];
 }
 
 inline void set_ep(int x, int y, bool val) {
-  if (x < 0 || x > 5000 || y < 0 || y > 5000) return;
+  if (x < 0 || x >= WORLD_WIDTH || y < 0 || y >= WORLD_HEIGHT) return;
   ep[x][y] = val;
 }
 
@@ -217,14 +220,14 @@ string test[150] = {
 string stname[150] ={ " 僵尸"," 箭"," 骷髅"," 苦力怕"," OI"," 蜘蛛"," 僵尸猪灵"," 递归"," 世界吞噬者-头部"," 世界吞噬者-体节"," 世界吞噬者-尾部"
 };
 int beibao[101][2];
-short boimes[5005];
-short boimes2[5005];
+short boimes[WORLD_WIDTH + 5];
+short boimes2[WORLD_WIDTH + 5];
 int wear[6], fbnq[12] = {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 int l_beibao[30][2]={{0,0},{1,0}};
 short page = 1;
 int printx = 50, printy = 30, boxlen = 0;
 int print_set,st_num=300;
-bool run = 1, can = 0, start = 0, yes = 0, SetLife = 0, CanGet = 1, oi = false,f3,key_d_Y,
+bool run = 1, can = 0, start = 0, yes = 0, SetLife = 0, CanGet = 1, oi = false,f3=1,key_d_Y,
      checkhp = 0,bag;
 int l, bosshp = 0, slow_update = 0, eat = 0, weidu = 1, savetick = 0,special_effect=1,rl=0,boss3hp = 0;
 int gamemode = 1;
@@ -255,8 +258,8 @@ int To_int(double a) { return int(a + 0.5); }
 float Abs(float a) { return (a >= 0) ? a : -a; }
 float Min(float a, float b) { return (a <= b) ? a : b; }
 
-#define HASH_SIZE 160
 #define HASH_CELL 32
+const int HASH_SIZE = (WORLD_WIDTH / HASH_CELL) + 2;
 vector<int> entity_hash[HASH_SIZE][HASH_SIZE];
 
 inline int hash_coord(double x) {
@@ -609,7 +612,7 @@ void Clear() {
   if (weidu == 2)
     return;
   for (int i = int(x - 99.5); i <= int(x + 100.5); i++) {
-    if (i < 0 || i > 5000)
+    if (i < 0 || i >= WORLD_WIDTH)
       continue;
     for (int j = 0; j <= 180; j++) {
       if (s[i][j] == 0)
@@ -618,7 +621,7 @@ void Clear() {
   }
 }
 void Clear_formap() {
-  for (int i = 0; i <= 5000; i++) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
     for (int j = 0; j <= 180; j++) {
       if (s[i][j] == 0)
         s[i][j] = 11;
@@ -699,7 +702,7 @@ void boom_loop() {
   }
   Clear();
 }
-short noise_result[5001][1001];
+short noise_result[WORLD_WIDTH][WORLD_HEIGHT];
 double fade(double td)
 {
 	return 6 * td*td*td*td*td - 15 * td*td*td*td + 10 * td*td*td;
@@ -708,9 +711,10 @@ struct grads
 {
 	double nx,ny;
 };
-grads noise_g[1001][201];
+const int NOISE_GX = WORLD_WIDTH / 10 + 10;
+grads noise_g[NOISE_GX][201];
 grads grad[10]={{1,1},{1,0},{0,1},{-1,-1},{-1,0},{-1,-1},{0,-1},{1,-1}};
-const int x_len=5000,y_len=1000;
+const int x_len=WORLD_WIDTH-1,y_len=WORLD_HEIGHT-1;
 void spawn_dots(short steplen,short eff)
 {
 	srand(time(NULL));
@@ -775,15 +779,15 @@ void spawn_noise_cave()
 	spawn_dots(10,1);
 	fill_noise(10);
 }
-short zs[5005];
-double zs_ls[5005];
+short zs[WORLD_WIDTH + 5];
+double zs_ls[WORLD_WIDTH + 5];
 void perlin(const int pl, const int rad) {
-  const int muc = 5000 / pl + 2;
+  const int muc = x_len / pl + 2;
   short cz[muc];
   for (int i = 0; i <= muc; i++) {
     cz[i]=rand()%(rad);
   }
-  for (int i = 0; i <= 5000; i++) {
+  for (int i = 0; i <= x_len; i++) {
   	int dpl=i/pl;double di=i*1.0/pl;
   	double commit0=cz[dpl]*(di-dpl);
 	double commit1=cz[dpl+1]*(di-(dpl+1));
@@ -799,7 +803,7 @@ float Cosine_Interpolate(float a, float b, float x) {
 }
 void perlin_2(const double pl, const int rad, const int startt, const int endd,
               const int plu = 0) {
-  const int muc = 5000 / pl + 2;
+  const int muc = x_len / pl + 2;
   short cz[muc];
   for (int i = 0; i <= muc; i++) {
     cz[i] = rand() % (rad)+plu;
@@ -810,7 +814,7 @@ void perlin_2(const double pl, const int rad, const int startt, const int endd,
   }
   for (int i = startt / ((int)(pl)) * ((int)(pl)) - (int)(pl);
        i <= endd / ((int)(pl)) * ((int)(pl)); i++) {
-    if (i < 0 || i > 5000)
+    if (i < 0 || i > x_len)
       continue;
     zs_ls[i] += Cosine_Interpolate(cz[i / ((int)(pl))], cz[i / ((int)(pl)) + 1],
                                    (i - i / ((int)(pl)) * ((int)(pl))) / pl) +
@@ -818,12 +822,12 @@ void perlin_2(const double pl, const int rad, const int startt, const int endd,
   };
 }
 void result() {
-  for (int i = 0; i <= 5000; i++) {
+  for (int i = 0; i <= x_len; i++) {
     zs[i] = (short)(zs_ls[i] + 0.5);
   }
 }
 void stt(int i, int j, int step) {
-  if (i < 0 || j < 0 || i > 5000 || j > 1000 || step > 8)
+  if (i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
     return;
   s[i][j] = 53;
   if (rand() % 4 == 0)
@@ -844,7 +848,7 @@ void stt(int i, int j, int step) {
     stt(i - 1, j - 1, step + 1);
 }
 void Make_water(int i, int j, int step) {
-  if (i < 0 || j < 0 || i > 5000 || j > 1000 || step > 8)
+  if (i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
     return;
   if (s[i][j] != 19)
     s[i][j] = 19;
@@ -866,7 +870,7 @@ void Make_water(int i, int j, int step) {
     Make_water(i - 1, j - 1, step + 1);
 }
 void Make_lava(int i, int j, int step) {
-  if (i < 0 || j < 0 || i > 5000 || j > 1000 || step > 8)
+  if (i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
     return;
   s[i][j] = 32;
   if (rand() % 4 == 0)
@@ -894,8 +898,8 @@ void noodle_cave(int i, int j) {
     bool dir = rand() % 2;
     for (int uu = 0; uu <= deep_; uu++) {
       for (int kk = 0; kk <= wei_; kk++) {
-        if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ > 5000 ||
-            j + uu > 999)
+        if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+            j + uu > WORLD_HEIGHT - 2)
           return;
         s[i + kk + move_][j + uu] = 0;
       }
@@ -918,14 +922,14 @@ void noodle_cave(int i, int j) {
     int len_ = rand() % 60 + 20;
     int wei_ = rand() % 4 + 1;
     for (int kk = 1; kk <= wei_ / 2; kk++) {
-      if (i - 1 < 0 || j + kk < 0 || i - 1 > 5000 || j + kk + move_ > 999)
+      if (i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
         return;
       s[i - 1][j + kk] = 0;
     }
     for (int uu = 0; uu <= len_; uu++) {
       for (int kk = 0; kk <= wei_; kk++) {
-        if (i + uu < 0 || j + kk + move_ < 0 || i + uu > 5000 ||
-            j + kk + move_ > 999)
+        if (i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+            j + kk + move_ > WORLD_HEIGHT - 2)
           return;
         s[i + uu][j + kk + move_] = 0;
       }
@@ -939,7 +943,7 @@ void noodle_cave(int i, int j) {
         wei_--;
     }
     for (int kk = 1; kk <= wei_ / 2; kk++) {
-      if (i - 1 < 0 || j + kk < 0 || i - 1 > 5000 || j + kk + move_ > 999)
+      if (i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
         return;
       s[i - 1][j + kk + move_] = 0;
     }
@@ -962,16 +966,16 @@ void Make_deep(int i) {
   for (int uu = 0; uu <= deep_+1; uu++) {
   	if(uu==deep_+1){
   	for (int kk = int(wei_/4.0+0.5); kk <= int(wei_/4.0*3.0+0.5); kk++) {
-      if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ > 5000 ||
-          j + uu > 999)
+      if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+          j + uu > WORLD_HEIGHT - 2)
         return;
       s[i + kk + move_][j + uu] = 0;
     }
 	}
 	else{
     for (int kk = 0; kk <= wei_; kk++) {
-      if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ > 5000 ||
-          j + uu > 999)
+      if (i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+          j + uu > WORLD_HEIGHT - 2)
         return;
       s[i + kk + move_][j + uu] = 0;
     }}
@@ -1000,8 +1004,8 @@ void make_skycave(int i) {
   bool dir = rand() % 2;
   for (int uu = 0; uu <= deep_; uu++) {
     for (int kk = 0; kk <= wei_; kk++) {
-      if (i + uu < 0 || j + kk + move_ < 0 || i + uu > 1000 ||
-          j + kk + move_ > 1000)
+      if (i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+          j + kk + move_ >= WORLD_HEIGHT)
         return;
       s[i + kk + move_][j + uu] = 0;
     }
@@ -1021,7 +1025,8 @@ void make_skycave(int i) {
       wei_--;
   }
 }
-short stru[1001][201];
+const int STRU_GX = WORLD_WIDTH / 5 + 20;
+short stru[STRU_GX][201];
 short maxlenth=10;
 const char struc[10][10][10]=
 {
@@ -1142,14 +1147,14 @@ void make_mineshaft()
 {
 	memset(stru,0,sizeof(stru));
 	for(int i=1;i<=250;i++){
-	int ddx=rand()%975+12,ddy=rand()%150+40;
+	int ddx=rand()%(WORLD_WIDTH/5-50)+25,ddy=rand()%150+40;
 	maxlenth=15+rand()%16;
 	make_straight(1,0,ddx,ddy);
 	make_straight(0,0,ddx+1,ddy);
 	}
-	for(int jj=1;jj<=190;jj++)
+	for(int jj=1;jj<=(WORLD_HEIGHT-1)/5-10;jj++)
 	{
-		for(int ii=10;ii<=990;ii++)
+		for(int ii=10;ii<=(WORLD_WIDTH-1)/5-2;ii++)
 	{
 		if(stru[ii][jj]==1){
 			if(rand()%5<2){
@@ -1190,7 +1195,7 @@ void make_lake(int i,bool isunder)
 	if(isunder==0){
 	for (int uu = i-7,kk; uu <= i+wei_-7; uu++) {
 	kk=50;
-	while (kk < 999) {
+	while (kk < WORLD_HEIGHT - 2) {
     kk++;
     if ((s[uu][kk] >= 19 && s[uu][kk] <= 23)){
 		return;}
@@ -1234,8 +1239,8 @@ void noodle_cave_nether(int i, int j) {
   int wei_ = rand() % 6 + 4;
   for (int uu = 0; uu <= len_; uu++) {
     for (int kk = 0; kk <= wei_; kk++) {
-      if (i + uu < 0 || j + kk + move_ < 0 || i + uu > 1000 ||
-          j + kk + move_ > 1000)
+      if (i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+          j + kk + move_ >= WORLD_HEIGHT)
         return;
       s2[i + uu][j + kk + move_] = 39;
       if (rand() % 100 == 0)
@@ -1258,7 +1263,7 @@ struct LightPos {
 };
 void dfs(int i, int j, int lt, int v)
 {
-    if (i < 0 || i > 5000 || j < 0 || j > 1000 || lt <= 0) return;
+    if (i < 0 || i >= WORLD_WIDTH || j < 0 || j >= WORLD_HEIGHT || lt <= 0) return;
     if (blocktouch[s[i][j]] == true)v = 3;
     else v = 1;
     light[i][j] = lt;
@@ -1274,8 +1279,8 @@ void setlight() {
     if(weidu==2)
     {for (int i = int(x-149.5); i <= int(x+150.5); i++)
     {
-    	if(i<0||i>5000)continue;
-        for (int j = 0; j <= 1000; j++)
+    	if(i<0||i>=WORLD_WIDTH)continue;
+        for (int j = 0; j < WORLD_HEIGHT; j++)
         {
             if((s[i][j]==0||s[i][j]==11)&&light[i][j]<=8)light[i][j]=8;
         }
@@ -1287,12 +1292,12 @@ void setlight() {
     if(weidu!=2){
     for (int i = int(x-149.5); i <= int(x+150.5); i++)
     {
-        	if(i<0||i>5000)continue;
+        	if(i<0||i>=WORLD_WIDTH)continue;
             if ((s[i][0] == 0 || s[i][0] == 11)&&light[i][0]<now_light)light[i][0] = now_light;}
         for (int i = int(x-149.5); i <= int(x+150.5); i++)
         {
-        	if(i<0||i>5000)continue;
-            for (int j = 1; j <= 1000; j++)
+        	if(i<0||i>=WORLD_WIDTH)continue;
+            for (int j = 1; j < WORLD_HEIGHT; j++)
             {
                 if ((s[i][j] == 0 || s[i][j] == 11)&&light[i][j]<now_light && light[i][j - 1] == now_light)
                 {
@@ -1302,10 +1307,10 @@ void setlight() {
     }}
     for (int i = int(x-149.5); i <= int(x+150.5); i++)
     {
-    	if(i<0||i>5000)continue;
+    	if(i<0||i>=WORLD_WIDTH)continue;
         for (int j = int(y-199.5); j <= int(y+200.5); j++)
         {
-        	if(j<0||j>1000)continue;
+        	if(j<0||j>=WORLD_HEIGHT)continue;
             if ((s[i][j] == 16||(s[i][j]>=32&&s[i][j]<=34)))
             {
                 dfs(i, j, 19, 1);
@@ -1465,7 +1470,7 @@ void MAP_nether() {
   int wmax = 0, wh = 0;
   tall = 900;
   memset(s2, 0, sizeof(s2));
-  for (int i = 0; i <= 5000; i++) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
     if (rand() % 15 == 0)
       tall++;
     if (rand() % 15 == 1)
@@ -1490,7 +1495,7 @@ void MAP_nether() {
       tall += rand() % 2 + 1, moun--;
     if (tall < 0)
       tall = 0;
-    for (int j = 1000; j >= tall + 1; j--) {
+    for (int j = WORLD_HEIGHT - 1; j >= tall + 1; j--) {
       s2[i][j] = 39;
     }
     if (water > 0) {
@@ -1498,7 +1503,7 @@ void MAP_nether() {
         s2[i][j] = 32;
       }
     }
-    if (rand() % 15 == 2 && water <= 0) {
+    if (rand() % 15 == 2 && water <= 0 && i >= 2 && i < WORLD_WIDTH - 2) {
       a = tall;
       s2[i][tall] = 2;
       tall--;
@@ -1543,27 +1548,27 @@ void MAP_nether() {
   Setpos(21, 13);
   cout << " 正在创建下界...   ";
   spawn_noise_nether();
-  for (int i = 5; i <= 4995; i++) {
+  for (int i = 5; i <= WORLD_WIDTH - 6; i++) {
     Setpos(35, 16);
-    for (int j = 1; j <= int(now * 1.0 / 500); j++) {
+    for (int j = 1; j <= int(now * 10.0 / (WORLD_WIDTH - 10)); j++) {
       printf("#");
     }
     Setpos(25, 18);
-    printf("%.1lf%%", now * 1.0 / 50);
+    printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));
     now++;
-    for (int j = 995; j >= 0; j--) {
+    for (int j = WORLD_HEIGHT - 6; j >= 0; j--) {
     	if(noise_result[i][j]<-15){
     	if(rand()%100==0)s2[i][j]=32;
 		else s2[i][j]=39;
 		}
     }
   }
-	for (int i = 5; i <= 4995; i++) {
-    for (int j = 995; j >= 0; j--) {
+	for (int i = 5; i <= WORLD_WIDTH - 6; i++) {
+    for (int j = WORLD_HEIGHT - 6; j >= 0; j--) {
     	if (rand() % 300 == 0)
         st_nether(63,i, j,3);
     }
-    for (int j = 999; j >= 900; j--) {
+    for (int j = WORLD_HEIGHT - 2; j >= 900; j--) {
     	if (rand() % 1000 == 0){
         s2[i][j]=69;
 		if(rand()%5<2)s2[i+rand()%3-1][j+rand()%3-1]=69;
@@ -1580,10 +1585,10 @@ void MAP() {
   boxlen = 0;
   memset(boimes, 0, sizeof(boimes));
   memset(boimes2, 0, sizeof(boimes2));
-  for (int i = 0; i <= 5000; i++)
+  for (int i = 0; i < WORLD_WIDTH; i++)
     boimes[i] = 0;
   int a, mouns[17], mouns2[17], ran, js_ = 0, js_2 = 0;
-  for (int i = 50; i <= 4700; i++) {
+  for (int i = 50; i <= WORLD_WIDTH - 301; i++) {
     if (rand() % 700 == 0) {
       ran = rand() % 300 + 100;
       for (int j = i - 25; j < i + ran; j++)
@@ -1593,7 +1598,7 @@ void MAP() {
       i += ran;
     }
   }
-  for (int i = 50; i <= 4700; i++) {
+  for (int i = 50; i <= WORLD_WIDTH - 301; i++) {
     if (rand() % 700 == 0) {
       ran = rand() % 300 + 100;
       for (int j = i - 25; j < i + ran; j++)
@@ -1607,7 +1612,7 @@ void MAP() {
   memset(ep, 0, sizeof(ep));
   memset(shiti, 0, sizeof(shiti));
   memset(shiti2, 0, sizeof(shiti2));
-  for (int i = 0; i <= 5000; i++)
+  for (int i = 0; i < WORLD_WIDTH; i++)
     zs_ls[i] = 785;
   perlin(200, 60);
   perlin(100, 30);
@@ -1621,7 +1626,7 @@ void MAP() {
   }
   result();
   if (oi)
-    make_st(5, 500, 8, 2515, 100);
+    make_st(5, 500, 8, WORLD_WIDTH / 2, 100);
   // if(oi)make_st(8,89,6,10,150,10);
   HideCursor();
   Clear_2();
@@ -1638,11 +1643,11 @@ void MAP() {
   Setpos(21, 13);
   cout << "  正在生成主世界...";
   spawn_noise_cave();
-  for (int i = 0; i <= 5000; i++) {
-    tall = 1000 - zs[i];
-    if (i == 2500)
-      back_x = 2500, back_y = tall, x = 2500, y = tall;
-    for (int j = 1000; j >= tall + 1; j--) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
+    tall = WORLD_HEIGHT - 1 - zs[i];
+    if (i == WORLD_WIDTH / 2)
+      back_x = WORLD_WIDTH / 2, back_y = tall, x = WORLD_WIDTH / 2, y = tall;
+    for (int j = WORLD_HEIGHT - 1; j >= tall + 1; j--) {
       int dirt = 5, store = 1;
       if (boimes2[i] == 2)
         store = 54, dirt = 53;
@@ -1672,7 +1677,7 @@ void MAP() {
           store = 54, dirt = 53;
       }
       s[i][j] = store;
-      if (j == 1000)
+      if (j == WORLD_HEIGHT - 1)
         s[i][j] = 10;
       if (boimes[i] == 1 && tall < 100)
         continue;
@@ -1699,7 +1704,7 @@ void MAP() {
       for (int j = tall + 1; j >= 160; j--)
         s[i][j] = 19;
     }
-    else if (rand() % 15 == 2 && water <= 0 && i > 2 && i < 4998 &&
+    else if (rand() % 15 == 2 && water <= 0 && i > 2 && i < WORLD_WIDTH - 2 &&
              (!(boimes[i] == 1 && tall < 100))) {
       if (boimes2[i] == 0) {
         a = tall;
@@ -1781,7 +1786,7 @@ void MAP() {
       }
     }
   }
-  for (int i = 5; i <= 4995; i++) {
+  for (int i = 5; i <= WORLD_WIDTH - 6; i++) {
     for (int j = 995; j >= 125; j--) {
       if (rand() % 450 == 0)
         st(3, i, j, 2);
@@ -1822,12 +1827,12 @@ void MAP() {
   Setpos(39, 16);
   cout << "  |";
   int df = 0;
-  for (int i = 5; i <= 4995; i++) {
-    if (df != int(now * 1.0 / 100))
-      Setpos2(int(now * 1.0 / 100) + 22, 16), printf("#");
-    df = int(now * 1.0 / 100);
+  for (int i = 5; i <= WORLD_WIDTH - 6; i++) {
+    if (df != int(now * 50.0 / (WORLD_WIDTH - 10)))
+      Setpos2(int(now * 50.0 / (WORLD_WIDTH - 10)) + 22, 16), printf("#");
+    df = int(now * 50.0 / (WORLD_WIDTH - 10));
     Setpos(25, 18);
-    printf("%.1lf%%", now * 1.0 / 50);
+    printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));
     now++;
     if (rand() % 200 == 0) {
       Make_deep(i);
@@ -1845,7 +1850,7 @@ void MAP() {
         noodle_cave(i, j);
     }
   }
-  for (int i = 20; i <= 4980; i++) {
+  for (int i = 20; i <= WORLD_WIDTH - 21; i++) {
        if (rand() % 10 == 0) {
       		if (rand() % 10 == 0) {
       		make_lake(i,0);
@@ -1854,7 +1859,7 @@ void MAP() {
 		}
     }
   make_mineshaft();
-  for (int i = 10; i <= 4990; i++) {
+  for (int i = 10; i <= WORLD_WIDTH - 11; i++) {
     for (int j = 200; j <= 950; j++) {
       if (rand() % 12000 == 0) {
         spawn_chest(i, j);
@@ -1869,8 +1874,8 @@ void MAP() {
   MAP_nether();
   sky();
   
-  for (int i = 0; i <= 5000; i++) {
-    for (int j = 0; j <= 1000; j++) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
+    for (int j = 0; j < WORLD_HEIGHT; j++) {
       int cx = get_chunk_x(i);
       int cy = get_chunk_y(j);
       int lx = get_local_x(i);
@@ -1886,8 +1891,8 @@ void swap_map(bool ismakedoor=1) {
     weidu = 2;
   else
     weidu = 1;
-  for (int i = 0; i <= 5000; i++) {
-    for (int j = 0; j <= 1000; j++) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
+    for (int j = 0; j < WORLD_HEIGHT; j++) {
       swap(s[i][j], s2[i][j]);
     }
   }
@@ -2634,18 +2639,18 @@ void openmap() {
           jx = 25;
         if (jy < 15)
           jy = 15;
-        if (jx > 4975 - sf * printx)
-          jx = 4975 - sf * printx;
-        if (jy > 985 - sf * printy)
-          jy = 985 - sf * printy;
+        if (jx > WORLD_WIDTH - 26 - sf * printx)
+          jx = WORLD_WIDTH - 26 - sf * printx;
+        if (jy > WORLD_HEIGHT - 16 - sf * printy)
+          jy = WORLD_HEIGHT - 16 - sf * printy;
         if (jjx < 25)
           jjx = 25;
         if (jjy < 15)
           jjy = 15;
-        if (jjx > 4975 - sf * printx)
-          jjx = 4975 - sf * printx;
-        if (jjy > 985 - sf * printy)
-          jjy = 985 - sf * printy;
+        if (jjx > WORLD_WIDTH - 26 - sf * printx)
+          jjx = WORLD_WIDTH - 26 - sf * printx;
+        if (jjy > WORLD_HEIGHT - 16 - sf * printy)
+          jjy = WORLD_HEIGHT - 16 - sf * printy;
       }
       printformap();
       mprx = mpx;
@@ -2655,7 +2660,151 @@ void openmap() {
   }
 }
 const char BIN_MAGIC[] = "2DMCBIN";
-const int BIN_VERSION = 1;
+const int BIN_VERSION = 2;
+
+// 旧存档世界尺寸（用于v1二进制格式兼容）
+const int OLD_WORLD_W = 5001;
+const int OLD_WORLD_H = 1001;
+
+// 为扩展的区域生成地形（旧存档加载时，x从from_x到WORLD_WIDTH-1的新区域）
+void expand_world(int from_x) {
+  if (from_x >= WORLD_WIDTH) return;
+  int start_biome = from_x > 50 ? from_x : 50;
+
+  // 为新列生成生物群系
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    boimes[i] = 0;
+    boimes2[i] = 0;
+  }
+  for (int i = start_biome; i <= WORLD_WIDTH - 301; i++) {
+    if (rand() % 700 == 0) {
+      int ran = rand() % 300 + 100;
+      for (int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
+        boimes[j] = 1;
+      i += ran;
+    }
+  }
+  for (int i = start_biome; i <= WORLD_WIDTH - 301; i++) {
+    if (rand() % 700 == 0) {
+      int ran = rand() % 300 + 100;
+      for (int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
+        boimes2[j] = 2;
+      i += ran;
+    }
+  }
+
+  // 生成全范围高度图（perlin需要全范围）
+  for (int i = 0; i < WORLD_WIDTH; i++)
+    zs_ls[i] = 785;
+  perlin(200, 60);
+  perlin(100, 30);
+  perlin(50, 15);
+  perlin(25, 7);
+  perlin(12, 3);
+  result();
+
+  // 仅为新列生成主世界地形
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    tall = WORLD_HEIGHT - 1 - zs[i];
+    for (int j = WORLD_HEIGHT - 1; j >= tall + 1; j--) {
+      int dirt = 5, store = 1;
+      if (boimes2[i] == 2) store = 54, dirt = 53;
+      s[i][j] = store;
+      if (j == WORLD_HEIGHT - 1) s[i][j] = 10;
+      if (tall > 160 && tall <= 165) {
+        if (j <= 165) s[i][j] = dirt;
+      } else {
+        if (j <= tall + 6 && tall < 165) s[i][j] = dirt;
+      }
+    }
+    if (tall >= 160) {
+      for (int j = tall + 1; j >= 160; j--)
+        s[i][j] = 19;
+    }
+  }
+
+  // 新列放置矿石
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    for (int j = 995; j >= 125; j--) {
+      if (rand() % 450 == 0) st(3, i, j, 2);
+      if (j > 165 && rand() % (700 - int(j * 0.3)) == 0) st(4, i, j, 3);
+      if (boimes2[i] == 0 && rand() % 1000 == 0) st(5, i, j, 2);
+      if (j > 250 && rand() % (800 - int(j * 0.3)) == 0) st(62, i, j, 4);
+      if (j > 350 && rand() % (1000 - int(j * 0.5)) == 0) st(12, i, j, 5);
+    }
+  }
+
+  // 新列生成洞穴
+  spawn_noise_cave();
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    if (rand() % 200 == 0) Make_deep(i);
+    if (rand() % 200 == 0) make_skycave(i);
+    for (int j = 995; j >= 1030 - zs[i]; j--) {
+      if (noise_result[i][j] < -45) s[i][j] = 0;
+      if (rand() % 6000 == 0) Make_water(i, j, 0);
+      if (rand() % 8000 == 0) Make_lava(i, j, 0);
+      if (rand() % 4000 == 0) noodle_cave(i, j);
+    }
+  }
+
+  // 新列生成下界地形
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    int ntall = 900;
+    if (rand() % 15 == 0) ntall++;
+    if (rand() % 15 == 1) ntall--;
+    if (ntall < 0) ntall = 0;
+    for (int j = WORLD_HEIGHT - 1; j >= ntall + 1; j--)
+      s2[i][j] = 39;
+  }
+  spawn_noise_nether();
+  for (int i = (from_x > 5 ? from_x : 5); i <= WORLD_WIDTH - 6; i++) {
+    for (int j = WORLD_HEIGHT - 6; j >= 0; j--) {
+      if (noise_result[i][j] < -15) {
+        if (rand() % 100 == 0) s2[i][j] = 32;
+        else s2[i][j] = 39;
+      }
+    }
+    for (int j = WORLD_HEIGHT - 2; j >= 900; j--) {
+      if (rand() % 1000 == 0) {
+        s2[i][j] = 69;
+        if (rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
+        if (rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
+      }
+    }
+    for (int j = WORLD_HEIGHT - 6; j >= 0; j--) {
+      if (rand() % 300 == 0) st_nether(63, i, j, 3);
+    }
+  }
+
+  // 同步新区块的chunk数据
+  for (int i = from_x; i < WORLD_WIDTH; i++) {
+    for (int j = 0; j < WORLD_HEIGHT; j++) {
+      int cx = get_chunk_x(i);
+      int cy = get_chunk_y(j);
+      int lx = get_local_x(i);
+      int ly = get_local_y(j);
+      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
+      chunk_data[cx][cy].loaded = true;
+    }
+  }
+}
+
+// 通用2D数组读取：从文件读取sw×sh的数据，拷贝到cur_w×cur_h的数组中
+// 过大忽略，过小保留原值（由调用者后续生成）
+template<typename T>
+void fread_2d_compat(FILE* fp, T* arr, int cur_w, int cur_h, int sw, int sh) {
+  int copy_w = (sw < cur_w) ? sw : cur_w;
+  int copy_h = (sh < cur_h) ? sh : cur_h;
+  T* tmp = new T[sh];
+  for (int i = 0; i < sw; i++) {
+    if (sh > 0) fread(tmp, sizeof(T), sh, fp);
+    if (i < copy_w) {
+      for (int j = 0; j < copy_h; j++)
+        arr[i * cur_h + j] = tmp[j];
+    }
+  }
+  delete[] tmp;
+}
 
 bool save_binary(const char* filename) {
   FILE* fp = fopen(filename, "wb");
@@ -2663,9 +2812,11 @@ bool save_binary(const char* filename) {
 
   fwrite(BIN_MAGIC, 1, 7, fp);
   fwrite(&BIN_VERSION, sizeof(int), 1, fp);
+  fwrite(&WORLD_WIDTH, sizeof(int), 1, fp);
+  fwrite(&WORLD_HEIGHT, sizeof(int), 1, fp);
 
-  fwrite(s, sizeof(short), 5001 * 1001, fp);
-  fwrite(s2, sizeof(short), 5001 * 1001, fp);
+  fwrite(s, sizeof(short), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
+  fwrite(s2, sizeof(short), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
   fwrite(beibao, sizeof(int), 101 * 2, fp);
   fwrite(&weidu, sizeof(int), 1, fp);
   fwrite(&x, sizeof(double), 1, fp);
@@ -2681,7 +2832,7 @@ bool save_binary(const char* filename) {
   fwrite(shiti2, sizeof(guaiwu), 500, fp);
   fwrite(wear, sizeof(int), 6, fp);
   fwrite(&ed, sizeof(int), 1, fp);
-  fwrite(ep, sizeof(bool), 5001 * 5001, fp);
+  fwrite(ep, sizeof(bool), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
 
   int box_count = box.size();
   fwrite(&box_count, sizeof(int), 1, fp);
@@ -2692,8 +2843,8 @@ bool save_binary(const char* filename) {
   }
 
   fwrite(&boss2hp, sizeof(double), 1, fp);
-  fwrite(boimes, sizeof(short), 5005, fp);
-  fwrite(boimes2, sizeof(short), 5005, fp);
+  fwrite(boimes, sizeof(short), WORLD_WIDTH + 5, fp);
+  fwrite(boimes2, sizeof(short), WORLD_WIDTH + 5, fp);
   fclose(fp);
   return true;
 }
@@ -2715,9 +2866,28 @@ bool load_binary(const char* filename) {
   int version;
   fread(&version, sizeof(int), 1, fp);
 
-  fread(s, sizeof(short), 5001 * 1001, fp);
-  fread(s2, sizeof(short), 5001 * 1001, fp);
+  int saved_w, saved_h;
+  bool ep_bug = false;
+
+  if (version == 1) {
+    // 旧版格式：固定5001×1001，ep有bug（写了5001*5001而非5001*1001）
+    saved_w = OLD_WORLD_W;
+    saved_h = OLD_WORLD_H;
+    ep_bug = true;
+  } else {
+    // v2+：从文件头读取维度
+    fread(&saved_w, sizeof(int), 1, fp);
+    fread(&saved_h, sizeof(int), 1, fp);
+  }
+
+  // 读取地形数据（过大忽略，过小保留）
+  fread_2d_compat(fp, &s[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+  fread_2d_compat(fp, &s2[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+
   fread(beibao, sizeof(int), 101 * 2, fp);
+  for (int i = 0; i < 101; i++)
+    if (beibao[i][0] < 0 || beibao[i][0] > 75)
+      beibao[i][0] = 0, beibao[i][1] = 0;
   fread(&weidu, sizeof(int), 1, fp);
   fread(&x, sizeof(double), 1, fp);
   fread(&y, sizeof(double), 1, fp);
@@ -2732,7 +2902,31 @@ bool load_binary(const char* filename) {
   fread(shiti2, sizeof(guaiwu), 500, fp);
   fread(wear, sizeof(int), 6, fp);
   fread(&ed, sizeof(int), 1, fp);
-  fread(ep, sizeof(bool), 5001 * 5001, fp);
+
+  // 读取ep数据
+  if (ep_bug) {
+    // v1: ep被写成了 saved_w × saved_w（bug），实际有效数据只有 saved_w × saved_h
+    // 需要读取 saved_w*saved_w 个bool，但只取前 saved_w*saved_h 个
+    int ep_total = saved_w * saved_w;       // 文件中的总量
+    int ep_valid_rows = saved_w;            // 有效行数
+    int ep_valid_cols = saved_h;            // 有效列数
+    bool* tmp = new bool[ep_valid_cols];
+    for (int i = 0; i < ep_valid_rows; i++) {
+      fread(tmp, sizeof(bool), ep_valid_cols, fp);
+      if (i < WORLD_WIDTH) {
+        for (int j = 0; j < ep_valid_cols && j < WORLD_HEIGHT; j++)
+          ep[i][j] = tmp[j];
+      }
+    }
+    delete[] tmp;
+    // 跳过文件中ep的剩余垃圾数据
+    int ep_remaining = ep_total - ep_valid_rows * ep_valid_cols;
+    if (ep_remaining > 0)
+      fseek(fp, ep_remaining * sizeof(bool), SEEK_CUR);
+  } else {
+    // v2+: ep尺寸正确，直接用通用函数读取
+    fread_2d_compat(fp, &ep[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+  }
 
   int box_count;
   fread(&box_count, sizeof(int), 1, fp);
@@ -2746,13 +2940,41 @@ bool load_binary(const char* filename) {
     fread(things, sizeof(unsigned short), 27, fp);
     box.push_back({{0}, bx, by});
     memcpy(box.back().things, things, sizeof(things));
+    for (int j = 0; j < 27; j++)
+      if (box.back().things[j] % 1000 > 75)
+        box.back().things[j] = 0;
   }
 
   fread(&boss2hp, sizeof(double), 1, fp);
-  fread(boimes, sizeof(short), 5005, fp);
-  fread(boimes2, sizeof(short), 5005, fp);
+  // 读取boimes（旧格式固定5005，v2+为saved_w+5）
+  int boimes_count = (version == 1) ? 5005 : (saved_w + 5);
+  short* btmp = new short[boimes_count];
+  fread(btmp, sizeof(short), boimes_count, fp);
+  for (int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
+    boimes[i] = btmp[i];
+  fread(btmp, sizeof(short), boimes_count, fp);
+  for (int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
+    boimes2[i] = btmp[i];
+  delete[] btmp;
 
   fclose(fp);
+
+  // 如果存档世界比当前世界小，生成新区域地形
+  if (saved_w < WORLD_WIDTH) {
+    expand_world(saved_w);
+  }
+
+  // 同步chunk数据（旧区域）
+  for (int i = 0; i < saved_w && i < WORLD_WIDTH; i++) {
+    for (int j = 0; j < saved_h && j < WORLD_HEIGHT; j++) {
+      int cx = get_chunk_x(i);
+      int cy = get_chunk_y(j);
+      int lx = get_local_x(i);
+      int ly = get_local_y(j);
+      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
+      chunk_data[cx][cy].loaded = true;
+    }
+  }
 
   clear_entity_hash();
   for (int i = 0; i <= 249; i++) {
@@ -2780,8 +3002,8 @@ void save(string nam) {
   FILE *fp;
   fp = fopen(savename, "w");
   fprintf(fp, "%d\n", r);
-  for (int i = 0; i <= 1000; i++) {
-    for (int j = 0; j < 5001; j++) {
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    for (int j = 0; j < WORLD_WIDTH; j++) {
       if (s[j][i] != last_block) {
         if (block_math == 1)
           fprintf(fp, "%c", (char)(last_block + 58));
@@ -2790,13 +3012,13 @@ void save(string nam) {
         block_math = 0;
       }
       block_math++;
-      if (j == 5000) {
+      if (j == WORLD_WIDTH - 1) {
         fprintf(fp, "%d%c", block_math, (char)(s[j][i] + 58));
         fprintf(fp, "-1 ");
       }
       last_block = s[j][i];
     }
-    if (i < 1000) {
+    if (i < WORLD_HEIGHT - 1) {
       last_block = s[0][i + 1];
       block_math = 0;
     }
@@ -2804,8 +3026,8 @@ void save(string nam) {
   }
   block_math = 0;
   last_block = s2[0][0];
-  for (int i = 0; i <= 1000; i++) {
-    for (int j = 0; j < 5001; j++) {
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    for (int j = 0; j < WORLD_WIDTH; j++) {
       if (s2[j][i] != last_block) {
         if (block_math == 1)
           fprintf(fp, "%c", (char)(last_block + 58));
@@ -2814,13 +3036,13 @@ void save(string nam) {
         block_math = 0;
       }
       block_math++;
-      if (j == 5000) {
+      if (j == WORLD_WIDTH - 1) {
         fprintf(fp, "%d%c", block_math, (char)(s2[j][i] + 58));
         fprintf(fp, "-1 ");
       }
       last_block = s2[j][i];
     }
-    if (i < 1000) {
+    if (i < WORLD_HEIGHT - 1) {
       last_block = s2[0][i + 1];
       block_math = 0;
     }
@@ -2852,8 +3074,8 @@ void save(string nam) {
   fprintf(fp, " %d\n", ed);
   block_math = 0;
   last_block = ep[0][0];
-  for (int i = 0; i <= 1000; i++) {
-    for (int j = 0; j < 5001; j++) {
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    for (int j = 0; j < WORLD_WIDTH; j++) {
       if (ep[j][i] != last_block) {
         if (block_math == 1)
           fprintf(fp, "%c", (char)(last_block + 58));
@@ -2862,13 +3084,13 @@ void save(string nam) {
         block_math = 0;
       }
       block_math++;
-      if (j == 5000) {
+      if (j == WORLD_WIDTH - 1) {
         fprintf(fp, "%d%c", block_math, (char)(ep[j][i] + 58));
         fprintf(fp, "-1 ");
       }
       last_block = ep[j][i];
     }
-    if (i < 1000) {
+    if (i < WORLD_HEIGHT - 1) {
       last_block = ep[0][i + 1];
       block_math = 0;
     }
@@ -2882,7 +3104,7 @@ void save(string nam) {
     }
   }
   fprintf(fp, " %lf", boss2hp);
-  for (int i = 0; i < 5000; i++) {
+  for (int i = 0; i < WORLD_WIDTH; i++) {
     fprintf(fp, " %d %d", boimes[i], boimes2[i]);
   }
   fclose(fp);
@@ -3034,7 +3256,7 @@ void fill_box_loot(int idx) {
     add_box_item(idx, 43, 1 + rand() % 2);
 }
 bool can_place_chest(int xxx, int yyy) {
-  if (xxx <= 2 || xxx >= 4998 || yyy <= 5 || yyy >= 995)
+  if (xxx <= 2 || xxx >= WORLD_WIDTH - 2 || yyy <= 5 || yyy >= WORLD_HEIGHT - 6)
     return false;
   if (s[xxx][yyy] != 0)
     return false;
@@ -3076,44 +3298,38 @@ bool read(string nam) {
   fscanf(fp, " %d", &r);
   int cinx = 0;
   int aaa = 0;
-  for (int i = 0; i <= 1000; i++) {
-    while (rd_c < 5000) {
-      rd_c++;
-      if (fscanf(fp, "%d", &ZHI) == 0)
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    while (true) {
+      if (fscanf(fp, "%d", &ZHI) != 1)
         ZHI = 1;
       if (ZHI == -1)
         break;
       fscanf(fp, "%c", &rd);
       rd -= 58;
-      aaa = cinx;
-      for (int j = aaa; j < aaa + ZHI; j++) {
-        if (j > 5000 || j < 0)
-          break;
-        s[j][i] = rd;
+      for (int k = 0; k < ZHI; k++) {
+        if (cinx >= 0 && cinx < WORLD_WIDTH)
+          s[cinx][i] = rd;
+        cinx++;
       }
-      cinx += ZHI;
     }
     cinx = 0;
     rd = 0;
     ZHI = 0;
     rd_c = 0;
   }
-  for (int i = 0; i <= 1000; i++) {
-    while (rd_c < 5000) {
-      rd_c++;
-      if (fscanf(fp, "%d", &ZHI) == 0)
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    while (true) {
+      if (fscanf(fp, "%d", &ZHI) != 1)
         ZHI = 1;
       if (ZHI == -1)
         break;
       fscanf(fp, "%c", &rd);
       rd -= 58;
-      aaa = cinx;
-      for (int j = aaa; j < aaa + ZHI; j++) {
-        if (j > 5000 || j < 0)
-          break;
-        s2[j][i] = rd;
+      for (int k = 0; k < ZHI; k++) {
+        if (cinx >= 0 && cinx < WORLD_WIDTH)
+          s2[cinx][i] = rd;
+        cinx++;
       }
-      cinx += ZHI;
     }
     cinx = 0;
     rd = 0;
@@ -3124,6 +3340,9 @@ bool read(string nam) {
     fscanf(fp, " %d", &beibao[i][0]);
     fscanf(fp, " %d", &beibao[i][1]);
   }
+  for (int i = 0; i < 101; i++)
+    if (beibao[i][0] < 0 || beibao[i][0] > 75)
+      beibao[i][0] = 0, beibao[i][1] = 0;
   fscanf(fp, "%d ", &weidu);
   fscanf(fp, " %lf %lf %d %d %lf", &x, &y, &back_x, &back_y, &life);
   if (fscanf(fp, " %d %d %d %d", &now_time, &night, &will_night, &will_light) !=
@@ -3204,22 +3423,19 @@ bool read(string nam) {
     fscanf(fp, " %d", &wear[i]);
   }
   fscanf(fp, " %d", &ed);
-  for (int i = 0; i <= 1000; i++) {
-    while (rd_c < 5000) {
-      rd_c++;
-      if (fscanf(fp, "%d", &ZHI) == 0)
+  for (int i = 0; i < WORLD_HEIGHT; i++) {
+    while (true) {
+      if (fscanf(fp, "%d", &ZHI) != 1)
         ZHI = 1;
       if (ZHI == -1)
         break;
       fscanf(fp, "%c", &rd);
       rd -= 58;
-      aaa = cinx;
-      for (int j = aaa; j < aaa + ZHI; j++) {
-        if (j > 5000 || j < 0)
-          break;
-        ep[j][i] = rd;
+      for (int k = 0; k < ZHI; k++) {
+        if (cinx >= 0 && cinx < WORLD_WIDTH)
+          ep[cinx][i] = rd;
+        cinx++;
       }
-      cinx += ZHI;
     }
     cinx = 0;
     rd = 0;
@@ -3235,13 +3451,38 @@ bool read(string nam) {
     for (int j = 0; j <= 24; j++) {
       fscanf(fp, " %hu", &box.back().things[j]);
     }
+    for (int j = 0; j < 27; j++)
+      if (box.back().things[j] % 1000 > 75)
+        box.back().things[j] = 0;
   }
   if (fscanf(fp, " %lf", &boss2hp) == 0)
     boss2hp = 0;
-  for (int i = 0; i < 5000; i++) {
-    fscanf(fp, " %d %d", &boimes[i], &boimes2[i]);
+  int boimes_read = 0;
+  for (int i = 0; i < WORLD_WIDTH; i++) {
+    if (fscanf(fp, " %d %d", &boimes[i], &boimes2[i]) == 2)
+      boimes_read = i + 1;
+    else
+      break;
   }
   fclose(fp);
+
+  // 如果旧文本存档的世界比当前世界小，生成新区域地形
+  if (boimes_read > 0 && boimes_read < WORLD_WIDTH) {
+    expand_world(boimes_read);
+  }
+
+  // 同步chunk数据
+  for (int i = 0; i < WORLD_WIDTH; i++) {
+    for (int j = 0; j < WORLD_HEIGHT; j++) {
+      int cx = get_chunk_x(i);
+      int cy = get_chunk_y(j);
+      int lx = get_local_x(i);
+      int ly = get_local_y(j);
+      chunk_data[cx][cy].blocks[lx][ly] = s[i][j];
+      chunk_data[cx][cy].loaded = true;
+    }
+  }
+
   clear_entity_hash();
   for (int i = 0; i <= 249; i++) {
     if (shiti[i].type > 0)
@@ -3356,7 +3597,8 @@ void wajue(int sx, int sy) {
         if (del != -1) {
           box[del].bx = 5005, box[del].by = 0;
           for (int i = 0; i <= 24; i++) {
-            if (box[del].things[i] % 1000 == 0)
+            if (box[del].things[i] % 1000 == 0 ||
+                box[del].things[i] % 1000 > 75)
               continue;
             for (int j = 1; j <= box[del].things[i] / 1000; j++) {
               uu = getbeibao(box[del].things[i] % 1000);
@@ -3906,9 +4148,9 @@ void execute_command(const string& cmd) {
   } else if (cmd_name == "tp" || cmd_name == "/tp") {
     int w = 0, h = 0;
     ss >> w >> h;
-    if (w >= 0 && w <= 5000 && h >= 0 && h <= 1000) {
+    if (w >= 0 && w < WORLD_WIDTH && h >= 0 && h < WORLD_HEIGHT) {
       x = w;
-      y = (1000 - h);
+      y = (WORLD_HEIGHT - 1 - h);
       shuaxin();
       Setpos(1, 29);
       cout << " 已传送到 (" << w << ", " << h << ")                          ";
@@ -3921,7 +4163,7 @@ void execute_command(const string& cmd) {
     cout << " 未知命令: " << cmd_name << "，输入 /help 查看帮助             ";
   }
 }
-short getnew[5001][1001];
+short getnew[WORLD_WIDTH][WORLD_HEIGHT];
 int TT;
 void block_update() {
   TT++;
@@ -3930,7 +4172,7 @@ void block_update() {
     TT = 0;
     for (int i = To_int(x) - 120; i <= To_int(x) + 120; i++) {
       for (int j = To_int(y) - 80; j <= To_int(y) + 80; j++) {
-        if (i <= 0 || j <= 0 || i >= 5000 || j >= 1000)
+        if (i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
           continue;
         if (s[i][j] == 32) {
           if (s[i][j + 1] == 0 || s[i][j + 1] == 11) {
@@ -3997,7 +4239,7 @@ void block_update() {
 
   for (int i = To_int(x) - 120; i <= To_int(x) + 120; i++) {
     for (int j = To_int(y) - 80; j <= To_int(y) + 80; j++) {
-      if (i <= 0 || j <= 0 || i >= 5000 || j >= 1000)
+      if (i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
         continue;
       if (s[i][j] == 19) {
         if (s[i][j + 1] == 0 || s[i][j + 1] == 11) {
@@ -4106,7 +4348,7 @@ void block_update() {
   }
   for (int i = To_int(x) - 120; i <= To_int(x) + 120; i++) {
     for (int j = To_int(y) - 80; j <= To_int(y) + 80; j++) {
-      if (i <= 0 || j <= 0 || i >= 5000 || j >= 1000)
+      if (i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
         continue;
       if (getnew[i][j] > 3)
         s[i][j] = getnew[i][j];
@@ -4139,7 +4381,7 @@ int QQQQ = 0;
 void try_make_st() {
   for (int i = To_int(x) - 120; i <= To_int(x) + 120; i++) {
     for (int j = To_int(y) - 80; j <= To_int(y) + 80; j++) {
-      if (i <= 0 || j <= 0 || i >= 5000 || j >= 1000)
+      if (i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
         continue;
       if (i >= To_int(x) - 26 && j >= To_int(y) - 16 && i <= To_int(x) + 26 &&
           j <= To_int(y) + 16)
@@ -4329,7 +4571,7 @@ void st_move() {
           if (shiti[l].HP <= 0 || shiti[l].gx < To_int(x) - 120 ||
               shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
               shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
-              shiti[l].gy < 0 || shiti[l].gx > 5000 || shiti[l].gy > 1000) {
+              shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 || shiti[l].gy > WORLD_HEIGHT - 1) {
             update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
             st_kill(l);
             continue;
@@ -4735,8 +4977,8 @@ void st_move() {
       } else if (shiti[l].AI == 2) {
         if (shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
             shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
-            shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > 5000 ||
-            shiti[l].gy > 1000) {
+            shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 ||
+            shiti[l].gy > WORLD_HEIGHT - 1) {
           update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
           st_kill(l);
         }
@@ -5632,6 +5874,9 @@ void moveinbox() {
 }
 void SetConsoleToFullscreen() {
   HWND hwnd = GetConsoleWindow();
+  // 设置初始窗口标题
+  SetWindowTextW(hwnd, L"我的世界");
+  // 最大化窗口（Windows 会将其置于工作区左上角）
   ShowWindow(hwnd, SW_MAXIMIZE);
 }
 void zz(int Y, int need1, int type1, int need2, int type2, int get, int sl,
@@ -5939,7 +6184,10 @@ void SwitchMode() {
   mode &= ~ENABLE_QUICK_EDIT_MODE;
   SetConsoleMode(hStdin, mode);
 }
+void SetWindowSize(int cols, int lines);
 void update_set() {
+  // 调整窗口和缓冲区大小以适应当前渲染尺寸
+  SetWindowSize(printx + 5, printy + 5);
   Setpos(7, 5), Color(-7);
   printf("====================================================================="
          "====");
@@ -6187,10 +6435,13 @@ bool SetFileReadOnly(const std::string &filePath, bool readOnly) {
   return true;
 }
 void SetWindowSize(int cols, int lines) {
-  HWND console = GetConsoleWindow();
-  RECT r;
-  GetWindowRect(console, &r);
-  MoveWindow(console, r.left, r.top, cols * 8, lines * 16, TRUE);
+  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+  // 设置缓冲区大小，避免超出缓冲区时窗口滚动
+  COORD newSize = {(SHORT)(cols * 2 + 1), (SHORT)(lines + 1)};
+  SetConsoleScreenBufferSize(hConsole, newSize);
+  // 设置控制台窗口区域（不影响外部窗口大小，全屏时由SetConsoleToFullscreen控制）
+  SMALL_RECT winSize = {0, 0, (SHORT)(cols * 2), (SHORT)(lines)};
+  SetConsoleWindowInfo(hConsole, TRUE, &winSize);
 }
 void did() {
   for (int x = 0; x <= 74; x++) {
@@ -6390,20 +6641,22 @@ for(int i=1;i<=25;i++)
 	f3=1-f3,key_d_Y=0;
 	if(f3==0)printf("                     ");
 	}
-      if(f3)cout << " " << "x:" <<int(x-2500+0.5)<< " y:" << int(1000-y) << "          ";
+      if(f3)cout << " " << "x:" <<int(x-WORLD_WIDTH/2+0.5)<< " y:" << int(WORLD_HEIGHT-1-y) << "          ";
       l_life=life;
 }
 void game_loop() {
   fell = y;
+  // 初始化窗口大小以适应渲染尺寸
+  SetWindowSize(printx + 5, printy + 5);
   jx = x, jy = y;
   if (jx < 25)
     jx = 25;
   if (jy < 20)
     jy = 20;
-  if (jx > 1000)
-    jx = 1000;
-  if (jy > 985)
-    jy = 985;
+  if (jx > WORLD_WIDTH - 26)
+    jx = WORLD_WIDTH - 26;
+  if (jy > WORLD_HEIGHT - 16)
+    jy = WORLD_HEIGHT - 16;
   Clear();
   setlight();
   int bow = 0;
@@ -6809,17 +7062,21 @@ void game_loop() {
           x = 0;
         if (y < 0)
           y = 0;
-        if (x > 5000)
-          x = 5000;
-        if (y > 1000)
+        if (x > WORLD_WIDTH - 1)
+          x = WORLD_WIDTH - 1;
+        if (y > WORLD_HEIGHT - 1)
           gohome();
         if(special_effect==2){
-        jx += (x-jx)/10;
-        jy += (y-jy)/10;
+        if (abs(x - jx) < 0.5) jx = x;
+        else jx += (x-jx)/10;
+        if (abs(y - jy) < 0.5) jy = y;
+        else jy += (y-jy)/10;
         }
         else if(special_effect==3){
-        jx += (x-jx)/20;
-        jy += (y-jy)/20;
+        if (abs(x - jx) < 0.5) jx = x;
+        else jx += (x-jx)/20;
+        if (abs(y - jy) < 0.5) jy = y;
+        else jy += (y-jy)/20;
         }
 		else{
 		jx = x;
@@ -6828,10 +7085,10 @@ void game_loop() {
           jx = 25;
         if (jy < 15)
           jy = 15;
-        if (jx > 4975)
-          jx = 4975;
-        if (jy > 985)
-          jy = 985;
+        if (jx > WORLD_WIDTH - 26)
+          jx = WORLD_WIDTH - 26;
+        if (jy > WORLD_HEIGHT - 16)
+          jy = WORLD_HEIGHT - 16;
       }
       if (tick % 10 == 0)
         block_update();
@@ -6875,6 +7132,8 @@ int main() {
   
   try {
     did();
+    // 先设置缓冲区大小，再全屏，避免全屏后缓冲区过小
+    SetWindowSize(printx + 5, printy + 5);
     SetConsoleToFullscreen();
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
     if (hInput == INVALID_HANDLE_VALUE) {
@@ -6897,14 +7156,6 @@ int main() {
       return 1;
     }
     mode &= ~ENABLE_QUICK_EDIT_MODE;
-    HWND hwnd = GetConsoleWindow();
-    if (hwnd) {
-      HMENU hMenu = GetSystemMenu(hwnd, FALSE);
-      if (hMenu) {
-        RemoveMenu(hMenu, SC_CLOSE, MF_BYCOMMAND);
-        RemoveMenu(hMenu, 0, MF_BYPOSITION);
-      }
-    }
     SetConsoleMode(hInput, mode);
     InitFPSCounter();
     init_buffer();
@@ -6933,7 +7184,7 @@ int main() {
           cout << "   #     ####     ###    #   #  #####  #####  #   #  #   #  "
                   "#        #";
           Setpos(40, 12);
-          cout << "Beta 1.1";
+          cout << "Beta 1.2pre";
         };
         POINT p = GetMousePos();
         mpx = To_int(p.x / 2 - 26);
