@@ -211,7 +211,9 @@ string name[101] = {"air",
                     "netherite_helmet",
                     "netherite_chestplate",
                     "netherite_leggings",
-                    "netherite_boots"
+                    "netherite_boots",
+                    "wool",
+                    "mutton"
                    };
 map<string, int> thing;
 int blockwj[101] = {0,    200, 200, 400, 600, 100, 0,   0,  0,  200, -1, 0,
@@ -258,9 +260,10 @@ string test[150] =
     " \b下界镐"," \b下界剑"," \b下界斧"," \b蠕虫诱饵",
     " \b金镐"," \b金剑"," \b金斧",
     " \b金头盔"," \b金胸甲"," \b金护腿"," \b金靴子",
-    " \b下界头盔"," \b下界胸甲"," \b下界护腿"," \b下界靴子"
+    " \b下界头盔"," \b下界胸甲"," \b下界护腿"," \b下界靴子",
+    " \b羊毛"," \b羊肉"
 };
-string stname[150] = { " 僵尸"," 箭"," 骷髅"," 苦力怕"," OI"," 蜘蛛"," 僵尸猪灵"," 递归"," 世界吞噬者-头部"," 世界吞噬者-体节"," 世界吞噬者-尾部"
+string stname[150] = { " 僵尸"," 箭"," 骷髅"," 苦力怕"," OI"," 蜘蛛"," 僵尸猪灵"," 递归"," 世界吞噬者-头部"," 世界吞噬者-体节"," 世界吞噬者-尾部"," 羊"
                      };
 int beibao[101][2];
 short boimes[WORLD_WIDTH + 5];
@@ -495,6 +498,10 @@ void Color(int a)
                                 BACKGROUND_BLUE | FOREGROUND_INTENSITY |
                                 FOREGROUND_GREEN | FOREGROUND_BLUE |
                                 FOREGROUND_RED);
+    if(a == -9)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE);
     if(a == -11)
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
                                 FOREGROUND_INTENSITY | FOREGROUND_GREEN |
@@ -935,7 +942,10 @@ void result()
 {
     for(int i = 0; i <= x_len; i++)
     {
-        zs[i] = (short)(zs_ls[i] + 0.5);
+        int v = (int)(zs_ls[i] + 0.5);
+        if(v < 0) v = 0;
+        if(v > WORLD_HEIGHT - 50) v = WORLD_HEIGHT - 50;
+        zs[i] = (short)v;
     }
 }
 void stt(int i, int j, int step)
@@ -1674,7 +1684,7 @@ int water = 0,last_l;
 void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
 {
     l = 0;
-    while(shiti[l].type != 0 && l < 200)
+    while(shiti[l].type != 0 && l < 500)
         l++;
     if(iseof==1)shiti[l].conl= last_l,shiti[last_l].conr=l;
     if(iseof==2)shiti[l].conl= l,shiti[last_l].conr=l;
@@ -1698,6 +1708,8 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
         shiti[l].sd = 25, shiti[l].AI = 1;
     else if(typ == 7)
         shiti[l].sd = 35, shiti[l].AI = 1;
+    else if(typ == 12)
+        shiti[l].sd = 0, shiti[l].AI = 5;
     else if(typ == 8)
     {
         shiti[l].direction = shiti[l].HP;
@@ -1925,6 +1937,7 @@ void MAP()
     for(int i = 0; i < WORLD_WIDTH; i++)
     {
         tall = WORLD_HEIGHT - 1 - zs[i];
+        if(tall < 0) tall = 0;
         if(i == WORLD_WIDTH / 2)
             back_x = WORLD_WIDTH / 2, back_y = tall, x = WORLD_WIDTH / 2, y = tall;
         for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
@@ -2428,6 +2441,12 @@ void pr_mouse()
         }
         printf("[]");
     }
+    else if(s[dx][dy] == 87)
+    {
+        if(co != -9)
+            Color(-9), co = -9;
+        printf("++");
+    }
 }
 void Updateblock(bool ismap)
 {
@@ -2653,6 +2672,12 @@ void Updateblock(bool ismap)
         if(co != -44)Color(-44), co = -44;
         printf("##");
     }
+    else if(s[dx][dy] == 87)
+    {
+        if(co != 0)
+            Color(0), co = 0;
+        printf("++");
+    }
 }
 void Ubformap(int pt, bool ex)
 {
@@ -2805,6 +2830,12 @@ void Ubformap(int pt, bool ex)
             Color(8), co = 8;
         printf("&&");
     }
+    else if(pt == 87)
+    {
+        if(co != -9)
+            Color(-9), co = -9;
+        printf("++");
+    }
 }
 bool pr = false;
 short last_boi;
@@ -2947,7 +2978,7 @@ void Print()
                 {
                     if(light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4)&&(shiti[k].type!=5&&shiti[k].type<9))
                         continue;
-                    if((To_int(shiti[k].gx) == dx && To_int(shiti[k].gy) == dy)||(shiti[k].type >= 9&&abs(shiti[k].gy-dy)<=1.5&& abs(shiti[k].gx-dx)<=1.5))
+                    if((To_int(shiti[k].gx) == dx && To_int(shiti[k].gy) == dy)||((shiti[k].type >= 9 && shiti[k].type != 12)&&abs(shiti[k].gy-dy)<=1.5&& abs(shiti[k].gx-dx)<=1.5))
                     {
                         if(painting[i][j][0]!=1500+shiti[k].type*10+shiti[k].nbt)
                         {
@@ -2996,6 +3027,11 @@ void Print()
                             {
                                 Color(0), co = 0;
                                 printf("ZP");
+                            }
+                            else if(shiti[k].type == 12)
+                            {
+                                Color(-9), co = -9;
+                                printf("SH");
                             }
                             else if(shiti[k].type == 8)
                             {
@@ -4031,6 +4067,8 @@ bool read(string nam)
             shiti[i].sd = 200, shiti[i].AI = 1;
         if(shiti[i].type == 7)
             shiti[i].sd = 35, shiti[i].AI = 1;
+        if(shiti[i].type == 12)
+            shiti[i].sd = 0, shiti[i].AI = 5;
         if(shiti[i].type == 8)
         {
             shiti[i].direction = shiti[i].HP;
@@ -4067,6 +4105,8 @@ bool read(string nam)
             shiti2[i].sd = 200, shiti2[i].AI = 1;
         if(shiti2[i].type == 7)
             shiti2[i].sd = 35, shiti2[i].AI = 1;
+        if(shiti2[i].type == 12)
+            shiti2[i].sd = 0, shiti2[i].AI = 5;
         if(shiti2[i].type == 8)
         {
             shiti2[i].sd = 200, shiti2[i].AI = 3;
@@ -4386,7 +4426,7 @@ void block_(int xxx, int yyy)
     if(beibao[cho][0] == 6 || beibao[cho][0] == 7 || beibao[cho][0] == 8 ||
             beibao[cho][0] == 13 || beibao[cho][0] == 14 || beibao[cho][0] == 15 ||
             beibao[cho][0] == 18 || beibao[cho][0] == 17 || beibao[cho][0] == 25 ||
-            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||beibao[cho][0]>=70)
+            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||(beibao[cho][0]>=70&&beibao[cho][0]!=87))
         return;
     if((s[xxx + 1][yyy] == 0 || s[xxx + 1][yyy] == 11 ||
             (s[xxx + 1][yyy] >= 19 && s[xxx + 1][yyy] <= 22) ||
@@ -4862,6 +4902,7 @@ void execute_command(const string &cmd)
         cout << " | /clear             - 清空背包                                   |\n";
         cout << " | /time <num>        - 设置时间（0-40000）                         |\n";
         cout << " | /tp <x> <y>        - 传送到指定位置                             |\n";
+        cout << " | /summon <name> [n] - 召唤实体（如: /summon sheep 3）            |\n";
         cout << " -------------------------------------------------------------------"
              "------------";
         Sleep(3000);
@@ -4979,6 +5020,69 @@ void execute_command(const string &cmd)
             Setpos(1, 29);
             cout << " 错误: 位置无效                                                ";
         }
+    }
+    else if(cmd_name == "summon" || cmd_name == "/summon")
+    {
+        string name;
+        int amount = 1;
+        ss >> name >> amount;
+        if(amount <= 0 || amount > 50)
+        {
+            Setpos(1, 29);
+            cout << " 错误: 数量必须在1-50之间                                      ";
+            return;
+        }
+        // 实体名 -> type 映射
+        int typ = -1;
+        if(name == "zombie" || name == "僵尸") typ = 1;
+        else if(name == "skeleton" || name == "骷髅") typ = 3;
+        else if(name == "creeper" || name == "苦力怕") typ = 2;
+        else if(name == "spider" || name == "蜘蛛") typ = 6;
+        else if(name == "pigman" || name == "僵尸猪灵") typ = 7;
+        else if(name == "sheep" || name == "羊") typ = 12;
+        else if(name == "arrow" || name == "箭") typ = 4;
+        else if(name == "wither" || name == "凋灵") typ = 5;
+        if(typ < 0)
+        {
+            Setpos(1, 29);
+            cout << " 错误: 未知实体: " << name << "                              ";
+            return;
+        }
+        int cnt = 0;
+        for(int k = 0; k < amount; k++)
+        {
+            // 在玩家附近随机位置生成
+            int tx = To_int(x) + (rand() % 11 - 5);
+            int ty = To_int(y) + (rand() % 7 - 3);
+            if(tx <= 0 || ty <= 0 || tx >= WORLD_WIDTH - 1 || ty >= WORLD_HEIGHT - 1)
+                continue;
+            // 找一个空气位置
+            if(s[tx][ty] != 0 && s[tx][ty] != 11)
+            {
+                for(int dy = 1; dy <= 5 && ty - dy > 0; dy++)
+                {
+                    if(s[tx][ty - dy] == 0 || s[tx][ty - dy] == 11)
+                    {
+                        ty -= dy;
+                        break;
+                    }
+                }
+            }
+            if(s[tx][ty] == 0 || s[tx][ty] == 11)
+            {
+                if(typ == 1) make_st(1, 20, 4, tx, ty);
+                else if(typ == 2) make_st(2, 20, 50, tx, ty);
+                else if(typ == 3) make_st(3, 20, 3, tx, ty);
+                else if(typ == 4) make_st(4, 0, 0, tx, ty);
+                else if(typ == 5) make_st(5, 500, 8, tx, ty);
+                else if(typ == 6) make_st(6, 16, 3, tx, ty);
+                else if(typ == 7) make_st(7, 20, 6, tx, ty);
+                else if(typ == 12) make_st(12, 8, 0, tx, ty);
+                cnt++;
+            }
+        }
+        Setpos(1, 29);
+        cout << " 已召唤 " << cnt << " 个 " << name << "                                    ";
     }
     else
     {
@@ -5282,6 +5386,38 @@ void try_make_st()
             }
         }
     }
+    // 白天在地表自然生成羊（基于列定位地表）
+    if(weidu == 1 && night == 0)
+    {
+        for(int i = To_int(x) - 120; i <= To_int(x) + 120; i += 2)
+        {
+            if(i <= 0 || i >= WORLD_WIDTH - 1)
+                continue;
+            // 排除玩家附近
+            if(abs(i - To_int(x)) < 30)
+                continue;
+            // 从上往下找地表（第一个实心方块上方的空气）
+            int ground = -1;
+            for(int j = 1; j < WORLD_HEIGHT - 1; j++)
+            {
+                if(blocktouch[s[i][j]] == true && (s[i][j - 1] == 0 || s[i][j - 1] == 11))
+                {
+                    ground = j - 1;
+                    break;
+                }
+            }
+            if(ground > 0 && light[i][ground] > 7)
+            {
+                if(rand() % (ed / 2) == 0)
+                {
+                    // 生成位置加随机偏移，避免堆叠
+                    int sx = i + (rand() % 3 - 1);
+                    if(sx > 0 && sx < WORLD_WIDTH - 1 && (s[sx][ground] == 0 || s[sx][ground] == 11))
+                        make_st(12, 8, 0, sx, ground);
+                }
+            }
+        }
+    }
 }
 int dire;
 int gj;
@@ -5370,6 +5506,11 @@ void st_kill_fall(int l)
         if(rand() % 2==0)thing_fall(1,60);
         else thing_fall(1,61);
     }
+    if(shiti[l].type == 12)
+    {
+        thing_fall(1, 87);
+        thing_fall(1, 88);
+    }
     st_kill(l);
 }
 void damage(double dmg)
@@ -5406,7 +5547,7 @@ void st_move()
     boss3hp = 0;
     if(playerCD > 0)
         playerCD--;
-    for(l = 0; l <= 300; l++)
+    for(l = 0; l < 500; l++)
     {
         if(shiti[l].type > 0)
         {
@@ -5435,7 +5576,7 @@ void st_move()
                                 if(shiti[l].type!=5)shiti[l].spgy = -6, gj = 1;
                                 if(beibao[cho][0] == 17||beibao[cho][0] == 47||beibao[cho][0] == 49||beibao[cho][0] == 60||beibao[cho][0] == 73||beibao[cho][0] == 77)
                                 {
-                                    for(int LL = 0; LL <= 300; LL++)
+                                    for(int LL = 0; LL < 500; LL++)
                                     {
                                         if(shiti[LL].type > 0&&LL!=l)
                                         {
@@ -6309,6 +6450,141 @@ void st_move()
                 {
                     shiti[l].gx += (shiti[shiti[l].conl].gx-shiti[l].gx)/7;
                     shiti[l].gy += (shiti[shiti[l].conl].gy-shiti[l].gy)/7;
+                }
+            }
+            else if(shiti[l].AI == 5)
+            {
+                gj = 0;
+                // 点击攻击羊
+                if(KEY_DOWN(VK_LBUTTON) &&
+                        (abs(mpx - shiti[l].gx) < 2 && abs(mpy - shiti[l].gy) < 2) &&
+                        playerCD <= 0)
+                {
+                    if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
+                    {
+                        if(spy > 2)
+                            shiti[l].HP -= gongji * 1.5, gj = 2;
+                        else
+                            shiti[l].HP -= gongji, gj = 1;
+                        playerCD = gongjicd;
+                        // 受击后逃跑
+                        shiti[l].chv = 240;
+                        shiti[l].issd = 1;
+                        shiti[l].spgy = -6;
+                        shiti[l].spgx += ((shiti[l].gx > x) * 2 - 1) * 0.6;
+                        if(shiti[l].HP <= 0)
+                        {
+                            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                            st_kill_fall(l);
+                            continue;
+                        }
+                    }
+                }
+                // 边界与生命检测
+                if(shiti[l].HP <= 0 || shiti[l].gx < To_int(x) - 120 ||
+                        shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
+                        shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
+                        shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 ||
+                        shiti[l].gy > WORLD_HEIGHT - 1)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+                if(shiti[l].CD > 0)
+                    shiti[l].CD--;
+                if(shiti[l].jp == 1)
+                {
+                    shiti[l].spgy = -8;
+                    shiti[l].jp = 2;
+                }
+                // 重力与流体处理
+                if((s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                        s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22) ||
+                        (s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 32 &&
+                         s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 34))
+                {
+                    shiti[l].spgy += g;
+                    shiti[l].spgx *= 0.5;
+                    shiti[l].spgy *= 0.75;
+                    shiti[l].gy += shiti[l].spgy * 0.02;
+                }
+                else
+                {
+                    shiti[l].spgy += g;
+                    shiti[l].gy += shiti[l].spgy * 0.06;
+                    shiti[l].spgy *= 0.98;
+                }
+                // 落地/碰撞处理
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true)
+                {
+                    if(shiti[l].spgy >= 0)
+                    {
+                        while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                            shiti[l].gy -= 0.1;
+                        shiti[l].jp = 0;
+                        shiti[l].spgy = 0.01;
+                    }
+                    if(shiti[l].spgy < 0)
+                    {
+                        while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                            shiti[l].gy += 0.1;
+                        shiti[l].spgy = 2;
+                    }
+                }
+                // 移动：受击逃跑 或 随机漫游
+                if(shiti[l].chv > 0)
+                {
+                    shiti[l].chv--;
+                    if(shiti[l].gx > x)
+                        shiti[l].spgx += 0.012;
+                    else
+                        shiti[l].spgx -= 0.012;
+                }
+                else
+                {
+                    shiti[l].issd = 0;
+                    shiti[l].randomtick++;
+                    if(shiti[l].randomtick > 80)
+                    {
+                        shiti[l].randomtick = 0;
+                        if(shiti[l].direction != 0)
+                            shiti[l].direction = 0;
+                        else
+                            shiti[l].direction = (rand() % 2) * 2 - 1;
+                    }
+                    shiti[l].spgx += 0.015 * shiti[l].direction;
+                }
+                if(s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                        s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22)
+                    shiti[l].gx += shiti[l].spgx * 0.5;
+                else
+                    shiti[l].gx += shiti[l].spgx;
+                shiti[l].spgx *= 0.9;
+                // 碰墙跳跃
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true)
+                {
+                    int Step = 1;
+                    while(Step < 60)
+                    {
+                        shiti[l].gx -= 0.03 * Step;
+                        if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                false)
+                            break;
+                        shiti[l].gx += 0.06 * Step;
+                        if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                false)
+                            break;
+                        shiti[l].gx -= 0.03 * Step;
+                        Step++;
+                    }
+                    if(shiti[l].jp == 0)
+                        shiti[l].jp = 1;
+                    shiti[l].spgx = 0;
                 }
             }
             update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
@@ -7878,10 +8154,14 @@ void SetWindowSize(int cols, int lines)
 }
 void did()
 {
-    for(int x = 0; x <= 86; x++)
+    for(int x = 0; x <= 88; x++)
     {
         thing.insert({name[x], x});
     }
+    // 羊毛方块属性初始化
+    blockwj[87] = 30;
+    blocktouch[87] = 1;
+    blocklv[87] = 0;
 }
 int lenth_ = 0;
 bool bw;
@@ -8110,6 +8390,15 @@ void print_fast()
         if(f3==0)printf("                     ");
     }
     if(f3)cout << " " << "x:" <<int(x-WORLD_WIDTH/2+0.5)<< " y:" << int(WORLD_HEIGHT-1-y) << "          ";
+    if(f3)
+    {
+        int sheep_count = 0;
+        for(int i = 0; i < 500; i++)
+            if(shiti[i].type == 12)
+                sheep_count++;
+        Setpos(20, 1);
+        cout << "羊:" << sheep_count << "   ";
+    }
     l_life=life;
 }
 void game_loop()
@@ -8331,13 +8620,14 @@ void game_loop()
                     life += ((life + 5 > 20) ? (20 - life) : 5);
                     beibao[cho][1]--;
                 }
-                else if(KEY_DOWN(VK_RBUTTON) && (beibao[cho][0] == 37||beibao[cho][0] == 55))
+                else if(KEY_DOWN(VK_RBUTTON) && (beibao[cho][0] == 37||beibao[cho][0] == 55||beibao[cho][0] == 88))
                 {
                     eat++;
                     if(eat > 75)
                     {
                         eat = 0;
                         if(beibao[cho][0] == 37)life += 2;
+                        else if(beibao[cho][0] == 88)life += 2;
                         else life += 4;
                         if(life > 20)
                             life = 20;
@@ -8743,7 +9033,7 @@ int main()
                     cout << "   #     ####     ###    #   #  #####  #####  #   #  #   #  "
                          "#        #";
                     Setpos(40, 12);
-                    cout << "Beta 1.2";
+                    cout << "Beta 1.3pre";
                 };
                 POINT p = GetMousePos();
                 mpx = To_int(p.x / 2 - 26);
