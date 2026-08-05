@@ -227,7 +227,7 @@ float Min(float a, float b)
     return (a <= b) ? a : b;
 }
 
-#define HASH_CELL 32
+#define HASH_CELL 16
 const int HASH_SIZE = (WORLD_WIDTH / HASH_CELL) + 2;
 vector<int> entity_hash[HASH_SIZE][HASH_SIZE];
 
@@ -292,6 +292,8 @@ void query_nearby_entities(double x, double y, double range, vector<int> &result
             if(chx < 0 || chx >= HASH_SIZE || chy < 0 || chy >= HASH_SIZE) continue;
             for(int idx : entity_hash[chx][chy])
             {
+                if(shiti[idx].type <= 0)
+                    continue;
                 double dx = shiti[idx].gx - x;
                 double dy = shiti[idx].gy - y;
                 if(dx*dx + dy*dy <= range*range)
@@ -3963,6 +3965,9 @@ void fill_box_loot(int idx)
         add_box_item(idx, 42, 1 + rand() % 3);
     if(rand() % 8 == 0)
         add_box_item(idx, 43, 1 + rand() % 2);
+    // 金苹果：稀有箱子战利品
+    if(rand() % 16 == 0)
+        add_box_item(idx, 91, 1);
 }
 bool can_place_chest(int xxx, int yyy)
 {
@@ -4017,8 +4022,9 @@ bool read(string nam)
                 ZHI = 1;
             if(ZHI == -1)
                 break;
-            fscanf(fp, "%c", &rd);
-            rd -= 58;
+            char rd_byte;
+            fscanf(fp, "%c", &rd_byte);
+            rd = rd_byte - 58;
             for(int k = 0; k < ZHI; k++)
             {
                 if(cinx >= 0 && cinx < WORLD_WIDTH)
@@ -4039,8 +4045,9 @@ bool read(string nam)
                 ZHI = 1;
             if(ZHI == -1)
                 break;
-            fscanf(fp, "%c", &rd);
-            rd -= 58;
+            char rd_byte;
+            fscanf(fp, "%c", &rd_byte);
+            rd = rd_byte - 58;
             for(int k = 0; k < ZHI; k++)
             {
                 if(cinx >= 0 && cinx < WORLD_WIDTH)
@@ -4166,8 +4173,9 @@ bool read(string nam)
                 ZHI = 1;
             if(ZHI == -1)
                 break;
-            fscanf(fp, "%c", &rd);
-            rd -= 58;
+            char rd_byte;
+            fscanf(fp, "%c", &rd_byte);
+            rd = rd_byte - 58;
             for(int k = 0; k < ZHI; k++)
             {
                 if(cinx >= 0 && cinx < WORLD_WIDTH)
@@ -4198,9 +4206,11 @@ bool read(string nam)
     if(fscanf(fp, " %lf", &boss2hp) == 0)
         boss2hp = 0;
     int boimes_read = 0;
+    int boimes_tmp, boimes2_tmp;
     for(int i = 0; i < WORLD_WIDTH; i++)
     {
-        if(fscanf(fp, " %d %d", &boimes[i], &boimes2[i]) == 2)
+        if(fscanf(fp, " %d %d", &boimes_tmp, &boimes2_tmp) == 2)
+            boimes[i] = boimes_tmp, boimes2[i] = boimes2_tmp,
             boimes_read = i + 1;
         else
             break;
@@ -5209,7 +5219,7 @@ void try_make_st()
                 if(weidu == 1)
                 {
                     if(light[i][j] <= 7 && blocktouch[s[i][j + 1]] >= 1)
-                        if(rand() % To_int(ed / 1.2) == 0)
+                        if(rand() % To_int(ed / 3) == 0)
                         {
                             QQQQ = rand() % 4;
                             if(QQQQ == 0)
@@ -5224,7 +5234,7 @@ void try_make_st()
                 }
                 else
                 {
-                    if(rand() % ed == 0)
+                    if(rand() % To_int(ed / 4) == 0)
                         make_st(7, 20, 6, i, j);
                 }
             }
@@ -5252,11 +5262,33 @@ void try_make_st()
             }
             if(ground > 0 && light[i][ground] > 7)
             {
-                if(rand() % (ed / 2) == 0)
+                // 检查该格上方是否完全无方块（露天地表）
+                bool open_sky = true;
+                for(int jj = 0; jj < ground; jj++)
+                {
+                    if(s[i][jj] != 0 && s[i][jj] != 11)
+                    {
+                        open_sky = false;
+                        break;
+                    }
+                }
+                // 只允许露天地表或 y>840 的位置
+                if((open_sky || ground > 840) && rand() % To_int(ed / 5) == 0)
                 {
                     // 生成位置加随机偏移，避免堆叠
                     int sx = i + (rand() % 3 - 1);
-                    if(sx > 0 && sx < WORLD_WIDTH - 1 && (s[sx][ground] == 0 || s[sx][ground] == 11))
+                    // 不在水中生成：生成格及其脚下支撑格都不能是水
+                    bool water_here = false;
+                    if(sx > 0 && sx < WORLD_WIDTH - 1)
+                    {
+                        if(s[sx][ground] >= 19 && s[sx][ground] <= 22)
+                            water_here = true;
+                        if(ground + 1 < WORLD_HEIGHT &&
+                                s[sx][ground + 1] >= 19 && s[sx][ground + 1] <= 22)
+                            water_here = true;
+                    }
+                    if(sx > 0 && sx < WORLD_WIDTH - 1 && !water_here &&
+                            (s[sx][ground] == 0 || s[sx][ground] == 11))
                     {
                         // 随机生成羊或猪
                         if(rand() % 2 == 0)
@@ -5293,6 +5325,7 @@ void st_kill(int l)
         {
             if(shiti[shiti[l].conr].type==11)
             {
+                remove_entity_from_hash(shiti[l].conr, shiti[shiti[l].conr].gx, shiti[shiti[l].conr].gy);
                 shiti[shiti[l].conr] = {0};
             }
             else
@@ -5304,6 +5337,7 @@ void st_kill(int l)
         {
             if(shiti[shiti[l].conl].type==9)
             {
+                remove_entity_from_hash(shiti[l].conl, shiti[shiti[l].conl].gx, shiti[shiti[l].conl].gy);
                 shiti[shiti[l].conl] = {0};
             }
             else
@@ -5313,9 +5347,17 @@ void st_kill(int l)
         }
         else
         {
-            if(shiti[shiti[l].conl].type==9)shiti[shiti[l].conl] = {0};
+            if(shiti[shiti[l].conl].type==9)
+            {
+                remove_entity_from_hash(shiti[l].conl, shiti[shiti[l].conl].gx, shiti[shiti[l].conl].gy);
+                shiti[shiti[l].conl] = {0};
+            }
             else shiti[shiti[l].conl].type=11,shiti[shiti[l].conl].conr=shiti[l].conl;
-            if(shiti[shiti[l].conr].type==11)shiti[shiti[l].conr] = {0};
+            if(shiti[shiti[l].conr].type==11)
+            {
+                remove_entity_from_hash(shiti[l].conr, shiti[shiti[l].conr].gx, shiti[shiti[l].conr].gy);
+                shiti[shiti[l].conr] = {0};
+            }
             else shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
         }
     }
@@ -6351,14 +6393,16 @@ void st_move()
                     shiti[l].jp = 2;
                 }
                 // 重力与流体处理
-                if((s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
-                        s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22) ||
-                        (s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 32 &&
-                         s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 34))
+                int fluid_block = s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)];
+                if((fluid_block >= 19 && fluid_block <= 22) ||
+                        (fluid_block >= 32 && fluid_block <= 34))
                 {
                     shiti[l].spgy += g;
                     shiti[l].spgx *= 0.5;
                     shiti[l].spgy *= 0.75;
+                    // 游泳：在水中限制下沉速度，使其能浮起游动而不会沉底
+                    if(fluid_block >= 19 && fluid_block <= 22 && shiti[l].spgy > 1.5)
+                        shiti[l].spgy = 1.5;
                     shiti[l].gy += shiti[l].spgy * 0.02;
                 }
                 else
@@ -6409,6 +6453,37 @@ void st_move()
                             shiti[l].direction = (rand() % 2) * 2 - 1;
                     }
                     shiti[l].spgx += 0.015 * shiti[l].direction;
+                }
+                // 避水：不在水中时，前方是水则转向，不主动进入水中（已在水中可游出）
+                {
+                    int cx = int(shiti[l].gx + 0.5), cy = int(shiti[l].gy + 0.5);
+                    bool in_water_now = (cx >= 0 && cx < WORLD_WIDTH && cy >= 0 &&
+                                         cy < WORLD_HEIGHT &&
+                                         s[cx][cy] >= 19 && s[cx][cy] <= 22);
+                    if(!in_water_now && shiti[l].spgx != 0)
+                    {
+                        int ahead_x = (shiti[l].spgx > 0) ? cx + 1 : cx - 1;
+                        if(ahead_x >= 0 && ahead_x < WORLD_WIDTH)
+                        {
+                            bool water_ahead = false;
+                            for(int ddy = -1; ddy <= 1; ddy++)
+                            {
+                                int yy = cy + ddy;
+                                if(yy >= 0 && yy < WORLD_HEIGHT &&
+                                        s[ahead_x][yy] >= 19 && s[ahead_x][yy] <= 22)
+                                {
+                                    water_ahead = true;
+                                    break;
+                                }
+                            }
+                            if(water_ahead)
+                            {
+                                shiti[l].spgx = 0;
+                                shiti[l].direction = -shiti[l].direction;
+                                shiti[l].randomtick = 0;
+                            }
+                        }
+                    }
                 }
                 if(s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
                         s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22)
@@ -7249,16 +7324,16 @@ void moveinbox()
                                             64)
                                         box[open_].things[(29 + c_thing)] +=
                                             box[open_].things[29 + cc] / 1000 * 1000,
-                                            box[open_].things[(29 + c_thing)] = 0;
+                                            box[open_].things[(29 + cc)] = 0;
                                     else
                                         box[open_].things[29 + cc] =
                                             box[open_].things[(29 + cc)] % 1000 +
                                             (box[open_].things[(29 + cc)] / 1000 +
                                              box[open_].things[(29 + c_thing)] / 1000 - 64) *
                                             1000,
-                                            box[open_].things[(29 + cc)] =
+                                            box[open_].things[(29 + c_thing)] =
                                                 64000 +
-                                                box[open_].things[(29 + cc)] %
+                                                box[open_].things[(29 + c_thing)] %
                                                 1000;
                                 }
                             }
@@ -7659,7 +7734,7 @@ void craft_1()
             zz2(7, 8, 12, 57, 1, 3);
             zz2(8, 7, 12, 58, 1, 3);
             zz2(9, 4, 12, 59, 1, 3);
-            zz(10, 3, 66, 3, 87, 90, 1, 3);
+            zz(10, 3, 67, 3, 87, 90, 1, 3);
         }
         else if(page == 3)
         {
@@ -8420,12 +8495,13 @@ void game_loop()
                         GetIn == 1)
                 {
                     memset(s, 0, sizeof(s));
-                    for(int AAAA = 0; AAAA <= 101; AAAA++)
+                    for(int AAAA = 0; AAAA < 500; AAAA++)
                     {
                         shiti[AAAA].CD = 0, shiti[AAAA].HP = 0, shiti[AAAA].spgx = 0,
                                     shiti[AAAA].spgy = 0, shiti[AAAA].gx = 0, shiti[AAAA].gy = 0,
                                                 shiti[AAAA].hurt = 0, shiti[AAAA].type = 0, shiti[AAAA].jp = 0;
                     }
+                    clear_entity_hash();
                     for(int AAAA = 1; AAAA <= 4; AAAA++)
                     {
                         wear[AAAA] = 0;
@@ -8767,7 +8843,7 @@ void game_loop()
                             }
                             else
                             {
-                                if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] > 0)
+                                if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] == 0)
                                     block_(int(x + 0.5), (y - 2.5));
                                 else if(blockwj[s[int(x + 0.5)][int(y - 1.5)]] == 0)
                                     block_(int(x + 0.5), (y - 1.5));
@@ -8839,6 +8915,8 @@ void game_loop()
                     spy = -my * 8;
                     x += spx * 0.16;
                     y += spy * 0.16;
+                    // 创造飞行不累计摔落高度，切回生存时以当前位置为基准，避免摔死
+                    fell = y;
                 }
                 if(x < 0)
                     x = 0;
@@ -8976,7 +9054,7 @@ int main()
                     cout << "   #     ####     ###    #   #  #####  #####  #   #  #   #  "
                          "#        #";
                     Setpos(40, 12);
-                    cout << "Beta 1.3pre";
+                    cout << "Beta 1.3";
                 };
                 POINT p = GetMousePos();
                 mpx = To_int(p.x / 2 - 26);
