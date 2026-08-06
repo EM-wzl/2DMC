@@ -1,0 +1,8690 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <time.h>
+#include <algorithm>
+
+#include<thread>
+#include <cmath>
+#include <conio.h>
+#include <cstdio>
+#include <map>
+#include <vector>
+#include <cstring>
+
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <sys/stat.h>
+    #include <sys/types.h>
+#endif
+#define KEY_DOWN(VK_NONAME) ((GetAsyncKeyState(VK_NONAME) & 0x8000) ? 1 : 0)
+#pragma GCC optimize(2)
+using namespace std;
+// 世界尺寸：修改这两个常量即可改变世界大小
+const int WORLD_WIDTH = 10000;
+const int WORLD_HEIGHT = 1001;
+short s[WORLD_WIDTH][WORLD_HEIGHT];
+short s2[WORLD_WIDTH][WORLD_HEIGHT];
+short light[WORLD_WIDTH][WORLD_HEIGHT];
+int painting[102][102][2];
+bool ep[WORLD_WIDTH][WORLD_HEIGHT];
+
+wchar_t title[256];
+string name[101] = {"air",
+                    "stone",
+                    "wood",
+                    "coal",
+                    "raw_iron",
+                    "dirt",
+                    "stick",
+                    "wood_pickaxe",
+                    "stone_pickaxe",
+                    "furnace",
+                    "bedrock",
+                    "sky",
+                    "diamond",
+                    "iron_ingot",
+                    "iron_pickaxe",
+                    "diamond_pickaxe",
+                    "torch",
+                    "stone_sword",
+                    "stone_axe",
+                    "water",
+                    "flowing_water_3",
+                    "flowing_water_2",
+                    "flowing_water_1",
+                    "leaf",
+                    "health_potion",
+                    "bucket",
+                    "water_bucket",
+                    "iron_chestplate",
+                    "iron_leggings",
+                    "iron_helmet",
+                    "iron_boots",
+                    "shield",
+                    "lava",
+                    "flowing_lava_2",
+                    "flowing_lava_1",
+                    "lava_bucket",
+                    "obsidian",
+                    "rotten_flesh",
+                    "nether_portal",
+                    "netherrack",
+                    "chest",
+                    "bow",
+                    "string",
+                    "gunpowder",
+                    "wood_arrow",
+                    "iron_arrow",
+                    "explosive_arrow",
+                    "iron_sword",
+                    "iron_axe",
+                    "diamond_sword",
+                    "diamond_axe",
+                    "oi_core",
+                    "recursive",
+                    "snow",
+                    "ice",
+                    "apple",
+                    "diamond_helmet",
+                    "diamond_chestplate",
+                    "diamond_leggings",
+                    "diamond_boots",
+                    "oi_sword",
+                    "storm_bow",
+                    "raw_gold",
+                    "nether_gold_ore",
+                    "gold_ingot",
+                    "gold_nugget",
+                    "platforms",
+                    "planks",
+                    "ebonstone",
+                    "ancient_debris",
+                    "netherite_scrap",
+                    "netherite_ingot",
+                    "netherite_pickaxe",
+                    "netherite_sword",
+                    "netherite_axe",
+                    "worm_food",
+                    "gold_pickaxe",
+                    "gold_sword",
+                    "gold_axe",
+                    "gold_helmet",
+                    "gold_chestplate",
+                    "gold_leggings",
+                    "gold_boots",
+                    "netherite_helmet",
+                    "netherite_chestplate",
+                    "netherite_leggings",
+                    "netherite_boots",
+                    "wool",
+                    "mutton",
+                    "pork",
+                    "bed",
+                    "golden_apple",
+					"ebonwall"
+                   };
+map<string, int> thing;
+int blockwj[101] = {0,    200, 200, 400, 600, 100, 0,   0,  0,  200, -1, 0,
+                    800, 0,   0,   0,   5,   -1,  0,   -1, -1, -1,  -1, 12,
+                    -1,   0,   0,   0,   0,   0,   0,   -1, -1, -1,  0,  0,
+                    4000, 0,   -1,  150, 400, 0,   0,   0,  0,  0,   0,  0,
+                    0,    0,   0,   0,   0,   120, 180, 0,  0,  0,   0,  0,
+                    0,    0,   600, 300,0,0,100,100,2000,1200,
+                    0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1
+                   };
+int blocktouch[101] = {0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+                       0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+                       0, 0, 0, 0, 0, 1, 1, 0,0, 2, 1, 1, 1,
+                       0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                      };
+int blocklv[101] = {0, 2, 1,  2,  3,  1,  0,  0,  0,  2,  114, 0, 4, 0, 0,
+                    0, 1, 0,  0,  10, 10, 10, 10, 15, -1, 0,   0, 0, 0, 0,
+                    0, 0, 10, 10, 10, 0,  0,  5,  0,  2,  0,   0, 0, 0, 0,
+                    0, 0, 0,  0,  0,  0,  0,  0,  0,  1,  1,   0, 0, 0, 0,
+                    0, 0, 4,  2,  0,  0,  1,  1,  5, 5,
+                    0,0,0,0,0,0,0,0,0,0,0,0,0,1
+                   };
+const string blockprint[150]={
+"00","  ","  ","##","##","  ","  ","  ","  ","<>","  ","11","%%","  ","  ","  ","I ","  ","  ","  ",
+"  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","##","  ","@@","  ",
+"--","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ",
+"  ","  ","&&","&&","  ","  ","  ","==","##","##","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ",
+"  ","  ","  ","  ","  ","  ","  ","++","  ","  ","--","  ","  "
+};
+const int blockcolor[150]={
+0,-7,-5,7,-37,-12,0,0,0,-15,0,0,11,0,0,0,0,0,0,-21,
+-21,-21,-21,-12,0,0,0,0,0,0,0,0,-4,-4,-4,0,3,0,3,-32,
+-5,0,0,0,0,0,0,0,0,0,0,0,0,-1,-36,0,0,0,0,0,
+0,0,8,-38,0,0,0,-43,-45,-44,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,-8,0,0,-9,0,-3
+};
+string test[150] =
+{
+    " \b空气",       " \b圆石",       " \b原木",       " \b煤炭",
+    " \b粗铁",       " \b泥土",       " \b木棍",       " \b木镐",
+    " \b石镐",       " \b熔炉",       " \b基岩",       " \b天空",
+    " \b钻石",       " \b铁锭",       " \b铁镐",       " \b钻石镐",
+    " \b火把",       " \b石剑",       " \b石斧",       "  \b静态水19",
+    " \b流动水3/4,", " \b流动水2/4,", " \b流动水1/4,", " \b树叶",
+    " \b回血药水",   " \b桶",         " \b水桶",       " \b铁胸甲",
+    " \b铁护腿",     " \b铁头盔",     " \b铁靴子",     " \b31盾牌",
+    " \b岩浆",       " \b2/3岩浆",    " \b1/3岩浆",    " \b岩浆桶",
+    " \b黑曜石",     " \b腐肉",       " \b下界传送门", " \b下界岩",
+    " \b箱子",       " \b木弓",       " \b线",         " \b火药",
+    " \b木箭",       " \b铁箭",       " \b爆炸箭",     " \b铁剑",
+    " \b铁斧",       " \b钻石剑",     " \b钻石斧",     " \bOI核心",
+    " \b递归",       " \b雪",         " \b冰",         " \b苹果",
+    " \b钻石头盔",   " \b钻石胸甲",   " \b钻石护腿",   " \b钻石靴子",
+    " \bOI剑"," \b风暴弓"," \b粗金"," \b下界金矿",
+    " \b金锭"," \b金粒"," \b木平台"," \b木板",
+    " \b腐化石块"," \b远古残骸"," \b下界碎片"," \b下界锭",
+    " \b下界镐"," \b下界剑"," \b下界斧"," \b蠕虫诱饵",
+    " \b金镐"," \b金剑"," \b金斧",
+    " \b金头盔"," \b金胸甲"," \b金护腿"," \b金靴子",
+    " \b下界头盔"," \b下界胸甲"," \b下界护腿"," \b下界靴子",
+    " \b羊毛"," \b羊肉"," \b猪肉"," \b床"," \b金苹果"
+};
+string stname[150] = { " 僵尸"," 箭"," 骷髅"," 苦力怕"," OI"," 蜘蛛"," 僵尸猪灵"," 递归"," 世界吞噬者-头部"," 世界吞噬者-体节"," 世界吞噬者-尾部"," 羊"," 猪"
+                     };
+int beibao[101][2];
+short boimes[WORLD_WIDTH + 5];
+short boimes2[WORLD_WIDTH + 5];
+int wear[6], fbnq[12] = {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
+int l_beibao[30][2]= {{0,0},{1,0}};
+short page = 1;
+int printx = 70, printy = 42, boxlen = 0;
+int print_set,st_num=300;
+bool run = 1, can = 0, start = 0, yes = 0, SetLife = 0, CanGet = 1, oi = false,f3=0,key_d_Y,
+     checkhp = 0,bag;
+int l, bosshp = 0, slow_update = 0, eat = 0, weidu = 1, savetick = 0,special_effect=1,rl=0,boss3hp = 0;
+int gamemode = 1;
+int bed, GetIn = 1, ed = 6000, sun = 1, back_x = 10, now_wait = 0, wait = 0,
+         TheTime = 0, back_y = 145, Clocknum = 0, jump = 0, dx, dy, my, tall,
+         ks = 0, mx, fz, cho = 1, key_ = 0, bx, by, fell = 0, co = 0, H = 0,
+         anx = 0, mpx, mpy, lx, ly, wjlv = 1, playerCD = 0, tick = 0,l_life,
+         setfps = 1, gongji = 1, gongjicd = 20, hujiazhi = 0, wudi = 0;
+double jx = 1, jy = 50, x = 1, y = 50, g = 0.6, spx = 0, spy = 0, wj = 0,
+       FIX = 1, jianshang = 0, life = 20, boss2hp;
+string zzz;
+struct Box_
+{
+    unsigned short things[27], bx, by;
+};
+vector<Box_> box;
+struct guaiwu
+{
+    double HP, hurt, gx, gy, spgy, spgx, randomtick, direction, sd, gongjitick,tox,toy,
+           maxHP;
+    int type, jp, CD, AI, nbt,chv,conl,conr;
+    bool ch,isnotouch,islife2,issd;
+};
+struct boomthings
+{
+    int x, y, color;
+};
+guaiwu shiti[500];
+guaiwu shiti2[500];
+int To_int(double a)
+{
+    return int(a + 0.5);
+}
+float Abs(float a)
+{
+    return (a >= 0) ? a : -a;
+}
+float Min(float a, float b)
+{
+    return (a <= b) ? a : b;
+}
+short willprint[100][50];
+#define HASH_CELL 32
+const int HASH_SIZE = (WORLD_WIDTH / HASH_CELL) + 2;
+vector<int> entity_hash[HASH_SIZE][HASH_SIZE];
+
+inline int hash_coord(double x)
+{
+    int ix = To_int(x);
+    int h = ix / HASH_CELL;
+    if(h < 0) h = 0;
+    if(h >= HASH_SIZE) h = HASH_SIZE - 1;
+    return h;
+}
+
+void update_entity_hash(int index, double old_x, double old_y, double new_x, double new_y)
+{
+    int old_hx = hash_coord(old_x);
+    int old_hy = hash_coord(old_y);
+    int new_hx = hash_coord(new_x);
+    int new_hy = hash_coord(new_y);
+    if(old_hx != new_hx || old_hy != new_hy)
+    {
+        auto &old_bucket = entity_hash[old_hx][old_hy];
+        auto it = std::find(old_bucket.begin(), old_bucket.end(), index);
+        if(it != old_bucket.end())
+        {
+            old_bucket.erase(it);
+        }
+        entity_hash[new_hx][new_hy].push_back(index);
+    }
+}
+
+void add_entity_to_hash(int index, double x, double y)
+{
+    int hx = hash_coord(x);
+    int hy = hash_coord(y);
+    entity_hash[hx][hy].push_back(index);
+}
+
+void remove_entity_from_hash(int index, double x, double y)
+{
+    int hx = hash_coord(x);
+    int hy = hash_coord(y);
+    auto &bucket = entity_hash[hx][hy];
+    auto it = std::find(bucket.begin(), bucket.end(), index);
+    if(it != bucket.end())
+    {
+        bucket.erase(it);
+    }
+}
+
+void query_nearby_entities(double x, double y, double range, vector<int> &results)
+{
+    results.clear();
+    int hx = hash_coord(x);
+    int hy = hash_coord(y);
+    int range_cells = (int)(range / HASH_CELL) + 1;
+    for(int dhx = -range_cells; dhx <= range_cells; dhx++)
+    {
+        for(int dhy = -range_cells; dhy <= range_cells; dhy++)
+        {
+            int chx = hx + dhx;
+            int chy = hy + dhy;
+            if(chx < 0 || chx >= HASH_SIZE || chy < 0 || chy >= HASH_SIZE) continue;
+            for(int idx : entity_hash[chx][chy])
+            {
+                double dx = shiti[idx].gx - x;
+                double dy = shiti[idx].gy - y;
+                if(dx*dx + dy*dy <= range*range)
+                {
+                    results.push_back(idx);
+                }
+            }
+        }
+    }
+}
+
+void clear_entity_hash()
+{
+    for(int i = 0; i < HASH_SIZE; i++)
+    {
+        for(int j = 0; j < HASH_SIZE; j++)
+        {
+            entity_hash[i][j].clear();
+        }
+    }
+}
+void Setpos(float x, float y)
+{
+    COORD pos;
+    pos.X = To_int(x) * 2 + 1, pos.Y = To_int(y);
+    if(bag==1)pos.X+=(printx-50),pos.Y+=(printy-30)/2;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+}
+void Setpos2(float x, float y)
+{
+    COORD pos;
+    pos.X = To_int(x) + 1, pos.Y = To_int(y);
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
+}
+int xlen=142,ylen=43;
+CHAR_INFO charInfo[8005];
+const int f_red=FOREGROUND_RED;
+const int b_red=BACKGROUND_RED;
+const int f_gre=FOREGROUND_GREEN;
+const int b_gre=BACKGROUND_GREEN;
+const int f_blu=FOREGROUND_BLUE;
+const int b_blu=BACKGROUND_BLUE;
+const int f_plu=FOREGROUND_INTENSITY;
+const int b_plu=BACKGROUND_INTENSITY;
+void Color2(int a,int posid,WORD &In_fo)
+{
+    if(a == 0 || a == 8 || a == -8)
+        In_fo=(f_plu | f_red |
+                                f_gre | f_blu);
+    if(a == -10 || a == 1 || a == -18)
+        In_fo=(f_plu | f_gre |
+                                f_blu);
+    if(a == 2)
+        In_fo=(f_plu | f_gre);
+    if(a == 3)
+        In_fo=(f_plu | f_red |f_blu);
+    if(a == 4)
+        In_fo=(f_plu | f_red);
+    if(a == 5)
+        In_fo=(f_plu | f_red |f_gre);
+    if(a == 6)
+        In_fo=(f_plu | f_blu);
+    if(a == 7)
+        In_fo=(b_red | b_gre |b_blu);
+    if(a == 8)
+        In_fo=(b_red | b_gre |b_blu | f_plu |f_red | f_gre);
+    if(a == 9)
+        In_fo=( f_gre);
+    if(a == 10)
+        In_fo=( f_red);
+    if(a == 11)
+        In_fo=(b_red | b_gre |b_blu | f_plu |f_blu);
+    if(a == 12)
+        In_fo=(f_plu | f_red |f_blu);
+    if(a == -1)
+        In_fo=(f_gre | f_blu |f_red | b_plu |b_red | b_gre |b_blu);
+if(a == -2)
+In_fo=(
+b_plu | b_gre |
+f_gre);
+if(a == -3)
+In_fo=(
+b_plu | b_red |
+b_blu | f_red |
+f_blu);
+if(a == -4)
+In_fo=(
+b_plu | b_red);
+if(a == -5)
+In_fo=(
+b_red | b_gre);
+if(a == -6)
+In_fo=(
+b_plu | b_blu);
+if(a == -7)
+In_fo=(
+b_red | b_gre |
+b_blu);
+if(a == -8)
+In_fo=(
+b_red | b_gre |
+b_blu | f_plu |
+f_gre | f_blu |
+f_red);
+if(a == -9)
+In_fo=(
+b_red | b_gre |
+b_blu);
+if(a == -11)
+In_fo=(
+f_plu | f_gre |
+f_blu | f_plu |
+f_gre | f_blu |
+b_plu | b_red |
+b_gre | b_blu);
+if(a == -12)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_plu |
+b_gre);
+if(a == -13)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_plu |
+b_red | b_blu);
+if(a == -14)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_plu |
+b_red);
+if(a == -15)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_plu |
+b_red | b_gre);
+if(a == -16)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_plu |
+b_blu);
+if(a == -17)
+In_fo=(
+f_plu | f_gre |
+f_blu | b_red |
+b_gre | b_blu);
+if(a == -21)
+In_fo=(
+b_plu | b_blu |
+b_gre | f_blu |
+f_gre);
+if(a == -23)
+In_fo=(
+f_plu | f_red |f_gre | f_blu);
+if(a == -27)In_fo=(f_plu | f_red |b_gre | b_blu);
+if(a == -29)In_fo=(f_plu | f_blu |b_blu);
+if(a == -31)In_fo=(f_blu | b_blu);
+if(a == -32)In_fo=( b_red);
+if(a == -33)In_fo=(b_red | b_blu);
+if(a == -34)In_fo=( b_blu);
+if(a == -35)
+In_fo=(b_plu | b_gre | b_blu |f_plu | f_red | f_gre | f_blu);
+if(a == -36)
+In_fo=(b_blu | f_plu | f_blu);
+    if(a == -37)
+        In_fo=(b_gre | b_blu |b_red | f_red|f_gre);
+    if(a == -38)
+        In_fo=(b_red| f_plu |f_red | f_gre);
+    if(a == -39)
+        In_fo=(b_gre | b_blu |b_red| b_plu | f_red|f_gre);
+    if(a == -40)
+        In_fo=(b_blu| b_plu| f_red|f_gre);
+    if(a == -41)
+        In_fo=(b_blu| f_red|f_gre);
+    if(a == -42)
+        In_fo=(f_red|f_gre);
+    if(a == -43)
+        In_fo=(f_gre | f_blu |f_red | b_red|b_gre);
+    if(a == -44)
+        In_fo=(b_red |b_gre| f_red | f_blu);
+    if(a == -45)
+        In_fo=(b_red |b_blu);
+    charInfo[posid+1].Attributes=In_fo;
+}
+void Color(int a)
+{
+    if(a == 0 || a == 8 || a == -8)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if(a == -10 || a == 1 || a == -18)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE);
+    if(a == 2)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+    if(a == 3)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_BLUE);
+    if(a == 4)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED);
+    if(a == 5)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_GREEN);
+    if(a == 6)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_BLUE);
+    if(a == 7)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE);
+    if(a == 8)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE | FOREGROUND_INTENSITY |
+                                FOREGROUND_RED | FOREGROUND_GREEN);
+    if(a == 9)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+    if(a == 10)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+    if(a == 11)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE | FOREGROUND_INTENSITY |
+                                FOREGROUND_BLUE);
+    if(a == 12)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_BLUE);
+    if(a == -1)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_GREEN | FOREGROUND_BLUE |
+                                FOREGROUND_RED | BACKGROUND_INTENSITY |
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE);
+    if(a == -2)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_GREEN |
+                                FOREGROUND_GREEN);
+    if(a == -3)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_RED |
+                                BACKGROUND_BLUE | FOREGROUND_RED |
+                                FOREGROUND_BLUE);
+    if(a == -4)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_RED);
+    if(a == -5)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN);
+    if(a == -6)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_BLUE);
+    if(a == -7)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE);
+    if(a == -8)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE | FOREGROUND_INTENSITY |
+                                FOREGROUND_GREEN | FOREGROUND_BLUE |
+                                FOREGROUND_RED);
+    if(a == -9)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_GREEN |
+                                BACKGROUND_BLUE);
+    if(a == -11)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | FOREGROUND_INTENSITY |
+                                FOREGROUND_GREEN | FOREGROUND_BLUE |
+                                BACKGROUND_INTENSITY | BACKGROUND_RED |
+                                BACKGROUND_GREEN | BACKGROUND_BLUE);
+    if(a == -12)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_INTENSITY |
+                                BACKGROUND_GREEN);
+    if(a == -13)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_INTENSITY |
+                                BACKGROUND_RED | BACKGROUND_BLUE);
+    if(a == -14)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_INTENSITY |
+                                BACKGROUND_RED);
+    if(a == -15)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_INTENSITY |
+                                BACKGROUND_RED | BACKGROUND_GREEN);
+    if(a == -16)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_INTENSITY |
+                                BACKGROUND_BLUE);
+    if(a == -17)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_GREEN |
+                                FOREGROUND_BLUE | BACKGROUND_RED |
+                                BACKGROUND_GREEN | BACKGROUND_BLUE);
+    if(a == -21)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_BLUE |
+                                BACKGROUND_GREEN | FOREGROUND_BLUE |
+                                FOREGROUND_GREEN);
+    if(a == -23)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if(a == -27)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                BACKGROUND_GREEN | BACKGROUND_BLUE);
+    if(a == -29)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_BLUE |
+                                BACKGROUND_BLUE);
+    if(a == -31)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_BLUE | BACKGROUND_BLUE);
+    if(a == -32)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BACKGROUND_RED);
+    if(a == -33)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED | BACKGROUND_BLUE);
+    if(a == -34)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BACKGROUND_BLUE);
+    if(a == -35)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_INTENSITY | BACKGROUND_GREEN | BACKGROUND_BLUE |
+                                FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if(a == -36)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_BLUE | FOREGROUND_INTENSITY | FOREGROUND_BLUE);
+    if(a == -37)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_GREEN | BACKGROUND_BLUE |
+                                BACKGROUND_RED | FOREGROUND_RED|FOREGROUND_GREEN);
+    if(a == -38)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED
+                                | FOREGROUND_INTENSITY |
+                                FOREGROUND_RED | FOREGROUND_GREEN);
+    if(a == -39)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_GREEN | BACKGROUND_BLUE |
+                                BACKGROUND_RED| BACKGROUND_INTENSITY | FOREGROUND_RED|FOREGROUND_GREEN);
+    if(a == -40)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_BLUE| BACKGROUND_INTENSITY| FOREGROUND_RED|FOREGROUND_GREEN);
+    if(a == -41)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_BLUE| FOREGROUND_RED|FOREGROUND_GREEN);
+    if(a == -42)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_RED|FOREGROUND_GREEN);
+    if(a == -43)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_GREEN | FOREGROUND_BLUE |
+                                FOREGROUND_RED | BACKGROUND_RED|BACKGROUND_GREEN);
+    if(a == -44)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED |BACKGROUND_GREEN| FOREGROUND_RED | FOREGROUND_BLUE);
+    if(a == -45)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                BACKGROUND_RED |BACKGROUND_BLUE);
+}
+void HideCursor()
+{
+    CONSOLE_CURSOR_INFO cursor_info = {1, 0};
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor_info);
+}
+double jl(double aaaa, double bbbb)
+{
+    return sqrt((aaaa * aaaa) + (bbbb * bbbb));
+}
+POINT GetMousePos()
+{
+    POINT p;
+    GetCursorPos(&p);
+    ScreenToClient(GetConsoleWindow(), &p);
+    // MinGW 下无法使用 GetCurrentConsoleFont，使用固定字体大小估算
+    const int fontWidth = 8;   // 字体宽度（像素）
+    const int fontHeight = 16; // 字体高度（像素）
+    // const int fontWidth = 9;
+    // const int fontHeight = 18;
+    p.x /= fontWidth;
+    p.y /= fontHeight;
+    // p.y-=3;
+    if(bag==1)p.x-=(printx-50),p.y-=(printy-30)/2;
+    return p;
+}
+boomthings bz[1000];
+int KK;
+boomthings zc[1000];
+
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 60
+wchar_t back_buffer[SCREEN_HEIGHT][SCREEN_WIDTH * 2 + 1];
+WORD color_buffer[SCREEN_HEIGHT][SCREEN_WIDTH];
+int current_x = 0, current_y = 0;
+WORD current_color = 0x07;
+
+void init_buffer()
+{
+    memset(back_buffer, L' ', sizeof(back_buffer));
+    memset(color_buffer, 0x07, sizeof(color_buffer));
+}
+
+void Setpos_buf(int x, int y)
+{
+    current_x = x;
+    current_y = y;
+}
+
+void Color_buf(int color)
+{
+    if(color >= 0) current_color = color;
+    else current_color = color + 16;
+}
+
+void Print_buf(const wchar_t *str)
+{
+    for(int i = 0; str[i]; i++)
+    {
+        if(current_x >= SCREEN_WIDTH)
+        {
+            current_x = 0;
+            current_y++;
+        }
+        if(current_y < SCREEN_HEIGHT)
+        {
+            back_buffer[current_y][current_x * 2] = str[i];
+            back_buffer[current_y][current_x * 2 + 1] = L' ';
+            color_buffer[current_y][current_x] = current_color;
+        }
+        current_x++;
+    }
+}
+
+void flush_buffer()
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD bufferSize = {SCREEN_WIDTH * 2, SCREEN_HEIGHT};
+    COORD bufferCoord = {0, 0};
+    SMALL_RECT writeRegion = {0, 0, SCREEN_WIDTH * 2 - 1, SCREEN_HEIGHT - 1};
+    CHAR_INFO *screenBuffer = new CHAR_INFO[SCREEN_WIDTH * SCREEN_HEIGHT * 2];
+    for(int y = 0; y < SCREEN_HEIGHT; y++)
+    {
+        for(int x = 0; x < SCREEN_WIDTH * 2; x++)
+        {
+            screenBuffer[y * SCREEN_WIDTH * 2 + x].Char.UnicodeChar = back_buffer[y][x];
+            if(x % 2 == 0)
+                screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
+            else
+                screenBuffer[y * SCREEN_WIDTH * 2 + x].Attributes = color_buffer[y][x / 2];
+        }
+    }
+    WriteConsoleOutputW(hConsole, screenBuffer, bufferSize, bufferCoord, &writeRegion);
+    delete[] screenBuffer;
+}
+void Clear()
+{
+    if(weidu == 2)
+        return;
+    for(int i = int(x - 99.5); i <= int(x + 100.5); i++)
+    {
+        if(i < 0 || i >= WORLD_WIDTH)
+            continue;
+        for(int j = 0; j <= 180; j++)
+        {
+            if(s[i][j] == 0)
+                s[i][j] = 11;
+        }
+    }
+}
+void Clear_formap()
+{
+    for(int i = 0; i < WORLD_WIDTH; i++)
+    {
+        for(int j = 0; j <= 180; j++)
+        {
+            if(s[i][j] == 0)
+                s[i][j] = 11;
+        }
+    }
+}
+void Clear_2()
+{
+    Color(0);
+    for(int kkk = 0; kkk <= printy+5; kkk++)
+    {
+        Setpos(0, kkk);
+        for(int i=0; i<=printx+5; i+=2)
+            printf("    ");
+    }
+}
+void boom_add(int i, int j, int col)
+{
+    if(i < 0 || i >= WORLD_WIDTH || j < 0 || j >= WORLD_HEIGHT)
+        return;
+    KK = 0;
+    while(bz[KK].color != 0 && KK < 299)
+        KK++;
+    bz[KK].color = col, bz[KK].x = i, bz[KK].y = j;
+    if(blockwj[s[i][j]] != -1 && bz[KK].color != 1)
+        s[i][j] = 0;
+}
+void boom_add_ready(int i, int j, int col)
+{
+    KK = 0;
+    while(zc[KK].color != 0 && KK < 299)
+        KK++;
+    zc[KK].color = col, zc[KK].x = i, zc[KK].y = j;
+}
+int nnx, nny;
+void boom_loop()
+{
+    for(int i = 0; i < 299; i++)
+    {
+        if(bz[i].color != 0)
+        {
+            if(bz[i].color == -4)
+            {
+                nnx = bz[i].x, nny = bz[i].y;
+                bz[i].color = 0, bz[i].y = 0, bz[i].x = 0;
+                boom_add_ready(nnx, nny, -3);
+                boom_add_ready(nnx + 1, nny, -3);
+                boom_add_ready(nnx - 1, nny, -3);
+                boom_add_ready(nnx, nny + 1, -3);
+                boom_add_ready(nnx, nny - 1, -3);
+                boom_add_ready(nnx + 1, nny + 1, -3);
+                boom_add_ready(nnx + 1, nny - 1, -3);
+                boom_add_ready(nnx - 1, nny + 1, -3);
+                boom_add_ready(nnx - 1, nny - 1, -3);
+                boom_add_ready(nnx + 2, nny - 1, 1);
+                boom_add_ready(nnx + 2, nny, 1);
+                boom_add_ready(nnx + 2, nny + 1, 1);
+                boom_add_ready(nnx - 2, nny - 1, 1);
+                boom_add_ready(nnx - 2, nny, 1);
+                boom_add_ready(nnx - 2, nny + 1, 1);
+                boom_add_ready(nnx + 1, nny + 2, 1);
+                boom_add_ready(nnx - 1, nny + 2, 1);
+                boom_add_ready(nnx, nny + 2, 1);
+                boom_add_ready(nnx + 1, nny - 2, 1);
+                boom_add_ready(nnx - 1, nny - 2, 1);
+                boom_add_ready(nnx, nny - 2, 1);
+            }
+            if(bz[i].color == -3)
+            {
+                nnx = bz[i].x, nny = bz[i].y;
+                bz[i].color = 0, bz[i].y = 0, bz[i].x = 0;
+                boom_add_ready(nnx, nny, -5);
+            }
+            if(bz[i].color == 1)
+            {
+                nnx = bz[i].x, nny = bz[i].y;
+                bz[i].color = 0, bz[i].y = 0, bz[i].x = 0;
+                boom_add_ready(nnx, nny, -5);
+            }
+            if(bz[i].color == -5)
+            {
+                bz[i].color = 0, bz[i].y = 0, bz[i].x = 0;
+            }
+        }
+    }
+    for(int i = 0; i < 99; i++)
+    {
+        if(zc[i].color != 0)
+        {
+            boom_add(zc[i].x, zc[i].y, zc[i].color);
+            zc[i].x = 0, zc[i].y = 0, zc[i].color = 0;
+        }
+    }
+    Clear();
+}
+short noise_result[WORLD_WIDTH][WORLD_HEIGHT];
+double fade(double td)
+{
+    return 6 * td*td*td*td*td - 15 * td*td*td*td + 10 * td*td*td;
+}
+struct grads
+{
+    double nx,ny;
+};
+const int NOISE_GX = WORLD_WIDTH / 10 + 10;
+grads noise_g[NOISE_GX][201];
+grads grad[10]= {{1,1},{1,0},{0,1},{-1,-1},{-1,0},{-1,-1},{0,-1},{1,-1}};
+const int x_len=WORLD_WIDTH-1,y_len=WORLD_HEIGHT-1;
+void spawn_dots(short steplen,short eff)
+{
+    srand(time(NULL));
+    for(int i=1; i<=x_len/steplen; i++)
+    {
+        for(int j=100/steplen; j<=y_len/steplen; j++)
+        {
+            noise_g[i][j]=grad[rand()%8];
+            noise_g[i][j].nx*=eff;
+            noise_g[i][j].ny*=eff;
+        }
+    }
+}
+void fill_noise(short steplen)
+{
+    for(int i=1; i<=x_len; i++)
+    {
+        for(int j=100; j<=y_len; j++)
+        {
+            double ste___=steplen;
+            int x0,y0,x1,y1;
+            double ax=i/ste___,ay=j/ste___;
+            x0=i/(steplen),x1=x0+1;
+            y0=j/(steplen),y1=y0+1;
+            grads dots[4];
+            dots[0]= {ax-x0,ay-y0};
+            dots[1]= {ax-x0,ay-y1};
+            dots[2]= {ax-x1,ay-y0};
+            dots[3]= {ax-x1,ay-y1};
+            double commit00=noise_g[x0][y0].nx*dots[0].nx+noise_g[x0][y0].ny*dots[0].ny;
+            double commit01=noise_g[x0][y1].nx*dots[1].nx+noise_g[x0][y1].ny*dots[1].ny;
+            double commit10=noise_g[x1][y0].nx*dots[2].nx+noise_g[x1][y0].ny*dots[2].ny;
+            double commit11=noise_g[x1][y1].nx*dots[3].nx+noise_g[x1][y1].ny*dots[3].ny;
+            double fade_dx = fade(ax-x0);
+            double fade_dy = fade(ay-y0);
+            noise_result[i][j]+=(commit00 * (1 - fade_dx) * (1 - fade_dy)+
+                                 commit10 * fade_dx * (1 - fade_dy)+
+                                 commit01 * (1 - fade_dx) * fade_dy+
+                                 commit11 * fade_dx * fade_dy)*50;
+        }
+    }
+}
+void spawn_noise_nether()
+{
+    memset(noise_g,0,sizeof(noise_g));
+    memset(noise_result,0,sizeof(noise_result));
+    spawn_dots(80,4);
+    fill_noise(80);
+    spawn_dots(40,3);
+    fill_noise(40);
+    spawn_dots(20,2);
+    fill_noise(20);
+    spawn_dots(10,1);
+    fill_noise(10);
+}
+void spawn_noise_cave()
+{
+    memset(noise_g,0,sizeof(noise_g));
+    memset(noise_result,0,sizeof(noise_result));
+    spawn_dots(40,3);
+    fill_noise(40);
+    spawn_dots(20,2);
+    fill_noise(20);
+    spawn_dots(10,1);
+    fill_noise(10);
+}
+short zs[WORLD_WIDTH + 5];
+double zs_ls[WORLD_WIDTH + 5];
+void perlin(const int pl, const int rad)
+{
+    const int muc = x_len / pl + 2;
+    short cz[muc];
+    for(int i = 0; i < muc; i++)
+    {
+        cz[i]=rand()%(rad);
+    }
+    for(int i = 0; i <= x_len; i++)
+    {
+        int dpl=i/pl;
+        double di=i*1.0/pl;
+        double commit0=cz[dpl]*(di-dpl);
+        double commit1=cz[dpl+1]*(di-(dpl+1));
+        double fade_dx = fade(di-dpl);
+        zs_ls[i] += (commit0 * (1-fade_dx) +
+                     commit1 * fade_dx)*2+rad/2;
+    }
+}
+float Cosine_Interpolate(float a, float b, float x)
+{
+    float ft = x * 3.1415927;
+    float f = (1 - cos(ft)) * 0.5;
+    return a * (1 - f) + b * f;
+}
+void perlin_2(const double pl, const int rad, const int startt, const int endd,
+              const int plu = 0)
+{
+    const int muc = x_len / pl + 2;
+    short cz[muc];
+    for(int i = 0; i < muc; i++)
+    {
+        cz[i] = rand() % (rad)+plu;
+        if(i == startt / ((int)(pl)) - 1)
+            cz[i] = 0;
+        if(i == endd / ((int)(pl)))
+            cz[i] = 0;
+    }
+    for(int i = startt / ((int)(pl)) * ((int)(pl)) - (int)(pl);
+            i <= endd / ((int)(pl)) * ((int)(pl)); i++)
+    {
+        if(i < 0 || i > x_len)
+            continue;
+        zs_ls[i] += Cosine_Interpolate(cz[i / ((int)(pl))], cz[i / ((int)(pl)) + 1],
+                                       (i - i / ((int)(pl)) * ((int)(pl))) / pl) +
+                    0.5;
+    };
+}
+void result()
+{
+    for(int i = 0; i <= x_len; i++)
+    {
+        int v = (int)(zs_ls[i] + 0.5);
+        if(v < 0) v = 0;
+        if(v > WORLD_HEIGHT - 50) v = WORLD_HEIGHT - 50;
+        zs[i] = (short)v;
+    }
+}
+void stt(int i, int j, int step)
+{
+    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
+        return;
+    s[i][j] = 53;
+    if(rand() % 4 == 0)
+        stt(i + 1, j, step + 1);
+    if(rand() % 4 == 0)
+        stt(i - 1, j, step + 1);
+    if(rand() % 4 == 0)
+        stt(i, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        stt(i, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        stt(i + 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        stt(i + 1, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        stt(i - 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        stt(i - 1, j - 1, step + 1);
+}
+void Make_water(int i, int j, int step)
+{
+    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
+        return;
+    if(s[i][j] != 19)
+        s[i][j] = 19;
+    if(rand() % 4 == 0)
+        Make_water(i + 1, j, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i - 1, j, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i + 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i + 1, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i - 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_water(i - 1, j - 1, step + 1);
+}
+void Make_lava(int i, int j, int step)
+{
+    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
+        return;
+    s[i][j] = 32;
+    if(rand() % 4 == 0)
+        Make_lava(i + 1, j, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i - 1, j, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i + 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i + 1, j - 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i - 1, j + 1, step + 1);
+    if(rand() % 4 == 0)
+        Make_lava(i - 1, j - 1, step + 1);
+}
+void noodle_cave(int i, int j)
+{
+    int move_ = 0;
+    if(rand() % 2 == 0)
+    {
+        int deep_ = rand() % 60 + 30;
+        int wei_ = rand() % 5 + 3;
+        bool dir = rand() % 2;
+        for(int uu = 0; uu <= deep_; uu++)
+        {
+            for(int kk = 0; kk <= wei_; kk++)
+            {
+                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+                        j + uu > WORLD_HEIGHT - 2)
+                    return;
+                s[i + kk + move_][j + uu] = 0;
+            }
+            if(dir == 0 && rand() % 8 == 0)
+                move_ += 2;
+            else if(rand() % (2 + dir * 10) == 0)
+                move_++;
+            if(dir == 1 && rand() % 8 == 0)
+                move_ -= 2;
+            else if(rand() % (2 + (1 - dir) * 10) == 0)
+                move_--;
+            if(rand() % 20 == 0)
+                dir = 1 - dir;
+            if(rand() % 15 == 0)
+                wei_++;
+            if(rand() % 15 == 0)
+                wei_--;
+        }
+    }
+    else
+    {
+        int len_ = rand() % 60 + 20;
+        int wei_ = rand() % 4 + 1;
+        for(int kk = 1; kk <= wei_ / 2; kk++)
+        {
+            if(i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
+                return;
+            s[i - 1][j + kk] = 0;
+        }
+        for(int uu = 0; uu <= len_; uu++)
+        {
+            for(int kk = 0; kk <= wei_; kk++)
+            {
+                if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+                        j + kk + move_ > WORLD_HEIGHT - 2)
+                    return;
+                s[i + uu][j + kk + move_] = 0;
+            }
+            if(rand() % 6 == 0)
+                move_++;
+            if(rand() % 6 == 0)
+                move_--;
+            if(rand() % 12 == 0)
+                wei_++;
+            if(rand() % 12 == 0)
+                wei_--;
+        }
+        for(int kk = 1; kk <= wei_ / 2; kk++)
+        {
+            if(i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
+                return;
+            s[i - 1][j + kk + move_] = 0;
+        }
+    }
+}
+void Make_deep(int i)
+{
+    int j;
+    if(rand() % 2 == 0)
+    {
+        j = 100;
+        while(s[i][j] != 0 && j <300)
+        {
+            j++;
+            if(s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)
+                return;
+        }
+    }
+    else
+        j = rand() % 940 + 50;
+    int move_ = 0;
+    int deep_ = rand() % 120 + 20;
+    int wei_ = rand() % 6 + 3;
+    for(int uu = 0; uu <= deep_+1; uu++)
+    {
+        if(uu==deep_+1)
+        {
+            for(int kk = int(wei_/4.0+0.5); kk <= int(wei_/4.0*3.0+0.5); kk++)
+            {
+                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+                        j + uu > WORLD_HEIGHT - 2)
+                    return;
+                s[i + kk + move_][j + uu] = 0;
+            }
+        }
+        else
+        {
+            for(int kk = 0; kk <= wei_; kk++)
+            {
+                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
+                        j + uu > WORLD_HEIGHT - 2)
+                    return;
+                s[i + kk + move_][j + uu] = 0;
+            }
+        }
+        if(rand() % 6 == 0)
+            move_++;
+        if(rand() % 6 == 0)
+            move_--;
+        if(rand() % 15 == 0)
+            wei_++;
+        if(rand() % 15 == 0)
+            wei_--;
+    }
+}
+void make_skycave(int i)
+{
+    int j;
+    j = 100;
+    while(s[i][j] != 0 && j <300)
+    {
+        j++;
+        if(s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)
+            return;
+    }
+    int move_ = 0;
+    int deep_ = rand() % 40 + 35;
+    int wei_ = rand() % 5 + 3;
+    bool dir = rand() % 2;
+    for(int uu = 0; uu <= deep_; uu++)
+    {
+        for(int kk = 0; kk <= wei_; kk++)
+        {
+            if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+                    j + kk + move_ >= WORLD_HEIGHT)
+                return;
+            s[i + kk + move_][j + uu] = 0;
+        }
+        if(dir == 0 && rand() % 8 == 0)
+            move_ += 2;
+        else if(rand() % (2 + dir * 10) == 0)
+            move_++;
+        if(dir == 1 && rand() % 8 == 0)
+            move_ -= 2;
+        else if(rand() % (2 + (1 - dir) * 10) == 0)
+            move_--;
+        if(rand() % 15 == 0)
+            dir = 1 - dir;
+        if(rand() % 15 == 0)
+            wei_++;
+        if(rand() % 15 == 0)
+            wei_--;
+    }
+}
+const int STRU_GX = WORLD_WIDTH / 5 + 20;
+short stru[STRU_GX][201];
+short maxlenth=10;
+const char struc[10][10][10]=
+{
+    {   {0,0,0,0,0},
+        {-1,-1,67,-1,-1},
+        {-1,-1,2,-1,-1},
+        {-1,-1,2,-1,-1},
+        {-2,-2,-2,-2,-2},
+    },
+//s_w
+    {   {0,0,0,0,0},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-2,-2,-2,-2,-2},
+    },
+//s
+    {   {0,0,0,0,0},
+        {0,0,0,-1,-1},
+        {0,0,-1,-1,-1},
+        {0,-1,-1,-1,-1},
+        {0,66,66,66,66},
+    },
+//"/"
+    {   {-1,-1,-1,-1,-2},
+        {-1,-1,-1,-2,0},
+        {-1,-1,-2,0,0},
+        {-1,-2,0,0,0},
+        {-2,0,0,0,0},
+    },
+
+    {   {0,0,0,0,0},
+        {-1,-1,0,0,0},
+        {-1,-1,-1,0,0},
+        {-1,-1,-1,-1,0},
+        {66,66,66,66,0},
+    },
+//"\"
+    {   {-2,-1,-1,-1,-1},
+        {0,-2,-1,-1,-1},
+        {0,0,-2,-1,-1},
+        {0,0,0,-2,-1},
+        {0,0,0,0,-2},
+    },
+
+    {   {0,0,0,0,0},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {66,66,66,66,66},
+    },
+    {   {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-1,-1,-1,-1,-1},
+        {-2,-2,-2,-2,-2},
+    },
+};
+void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr);
+void make_straight(bool isl,short leng,short i,short j)
+{
+    if(leng> maxlenth)return;
+    if(stru[i][j]!=0)return;
+    stru[i][j]=1;
+    if(isl==0)
+    {
+        if(rand()%3==0)
+        {
+            if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
+            else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);
+        }
+        else make_straight(isl,leng+1,i+1,j);
+    }
+    if(isl==1)
+    {
+        if(rand()%3==0)
+        {
+            if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
+            else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);
+        }
+        else make_straight(isl,leng+1,i-1,j);
+    }
+}
+void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr)
+{
+    if(leng> maxlenth)return;
+    if(stru[i][j]!=0)return;
+    if(tlr==1)
+    {
+        if(isu)
+        {
+            if(isl)stru[i][j]=4;
+            else stru[i][j]=6;
+            if(stru[i][j-1]==0)stru[i][j-1]=3;
+        }
+        else
+        {
+            if(isl)stru[i][j]=5;
+            else stru[i][j]=3;
+            if(stru[i][j+1]==0)stru[i][j+1]=6;
+        }
+    }
+    else
+    {
+        if(isu)
+        {
+            if(isl)stru[i][j]=4;
+            else stru[i][j]=6;
+            if(stru[i][j-1]==0)stru[i][j-1]=5;
+        }
+        else
+        {
+            if(isl)stru[i][j]=5;
+            else stru[i][j]=3;
+            if(stru[i][j+1]==0)stru[i][j+1]=4;
+        }
+    }
+    if(isl==2)stru[i][j]=7+isu;
+    if(isl==0)
+    {
+        if(rand()%3==0)
+        {
+            if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
+            else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);
+        }
+        make_straight(isl,leng+1,i+1,j);
+    }
+    if(isl==1)
+    {
+        if(rand()%3==0)
+        {
+            if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
+            else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);
+        }
+        make_straight(isl,leng+1,i-1,j);
+    }
+    if(isl==2)
+    {
+        make_straight(isl,leng+1,i-1,j);
+        make_straight(isl,leng+1,i+1,j);
+    }
+}
+void make_mineshaft()
+{
+    memset(stru,0,sizeof(stru));
+    for(int i=1; i<=250; i++)
+    {
+        int ddx=rand()%(WORLD_WIDTH/5-50)+25,ddy=rand()%150+40;
+        maxlenth=15+rand()%16;
+        make_straight(1,0,ddx,ddy);
+        make_straight(0,0,ddx+1,ddy);
+    }
+    for(int jj=1; jj<=(WORLD_HEIGHT-1)/5-10; jj++)
+    {
+        for(int ii=10; ii<=(WORLD_WIDTH-1)/5-2; ii++)
+        {
+            if(stru[ii][jj]==1)
+            {
+                if(rand()%5<2)
+                {
+                    if(blocktouch[s[ii*5+2][jj*5]]==1);
+                    else
+                    {
+                        int ddy=5;
+                        stru[ii][jj]=2;
+                        while(blocktouch[s[ii*5+2][jj*5+ddy]]==0)s[ii*5+2][jj*5+ddy]=2,ddy++;
+                    }
+                }
+                else stru[ii][jj]=2;
+            }
+            for(int j=0; j<=4; j++)
+            {
+                for(int i=0; i<=8; i++)
+                {
+                    int ddx=ii*5+j,ddy=jj*5+i;
+                    if(stru[ii][jj]>0)
+                    {
+                        if(struc[stru[ii][jj]-1][i][j]==0)continue;
+                        if(struc[stru[ii][jj]-1][i][j]==-2)
+                        {
+                            if(blocktouch[s[ddx][ddy]]==0)s[ddx][ddy]=67;
+                            continue;
+                        }
+                        if(struc[stru[ii][jj]-1][i][j]==-1)
+                        {
+                            if(blocktouch[s[ddx][ddy]]==1||(s[ddx][ddy]>=19&&s[ddx][ddy]<=22)||(s[ddx][ddy]>=32&&s[ddx][ddy]<=34))s[ddx][ddy]=0;
+                            continue;
+                        }
+                        s[ddx][ddy]=struc[stru[ii][jj]-1][i][j];
+                    }
+                }
+            }
+        }
+    }
+}
+int alloc_box(int xxx, int yyy);
+void fill_box_loot(int idx);
+void add_box_item(int idx, int item, int count);
+void spawn_ebon_cave(int spawn_x,int spawn_y)
+{
+	const int s_out=60+rand()%9,s_mid=s_out-8-rand()%3,s_in=rand()%3+5;
+	int s_up,s_down;
+	for(int i=spawn_y-s_out;i<=spawn_y+s_out;i++)
+	{
+		for(int j=spawn_x-s_out;j<=spawn_x+s_out;j++)
+	{
+		s_up=spawn_y-(s_out/2.5)+abs(j-spawn_x)/4-4,s_down=spawn_y+(s_out/2.5)-abs(j-spawn_x)/4+2;
+		if(jl(i-spawn_y,j-spawn_x)<s_in-1)s[j][i]=68;
+		else if(jl(i-spawn_y,j-spawn_x)<s_in&&rand()%2==0)s[j][i]=68;
+		else if(jl(i-spawn_y,j-spawn_x)<s_mid-2){
+		if(i<s_up)s[j][i]=68;
+		else if(i<s_up+rand()%3&&rand()%2==0)s[j][i]=68;
+		else if(i>s_down)s[j][i]=68;
+		else if(i>s_down-rand()%3&&rand()%2==0)s[j][i]=68;
+		else s[j][i]=92;}
+		else if(jl(i-spawn_y,j-spawn_x)<s_mid&&rand()%2==0&&i<=s_up&&i>=s_down)s[j][i]=92;
+		else if(jl(i-spawn_y,j-spawn_x)<s_out-2&&abs(i-spawn_y)>3+rand()%3)s[j][i]=68;
+		else if(jl(i-spawn_y,j-spawn_x)<s_out&&rand()%2==0&&abs(i-spawn_y)>3+rand()%3)s[j][i]=68;
+		else if(jl(i-spawn_y,j-spawn_x)<s_out-2)s[j][i]=92;
+	}
+	}
+	s[spawn_x][spawn_y] = 40;
+    int idx = alloc_box(spawn_x, spawn_y);
+    add_box_item(idx, 37, rand()%10+10);
+}
+void try_spawn()
+{
+	srand(time(0));
+	for(int i=1;i<=WORLD_WIDTH/250;i++)
+	{
+		spawn_ebon_cave(i*250-180+rand()%110,250+rand()%250);
+		spawn_ebon_cave(i*250-180+rand()%110,570+rand()%360);
+	}
+}
+void make_lake(int i,bool isunder)
+{
+    int j=50;
+    bool islava;
+    if(rand()%2==0)islava=1;
+    else islava=0;
+    int wei_=rand()%13+5;
+    int dep=rand()%3+2;
+    int now_high=1,low=0;
+    if(isunder==0)
+    {
+        for(int uu = i-7,kk; uu <= i+wei_-7; uu++)
+        {
+            kk=50;
+            while(kk < WORLD_HEIGHT - 2)
+            {
+                kk++;
+                if((s[uu][kk] >= 19 && s[uu][kk] <= 23))
+                {
+                    return;
+                }
+                if(s[uu][kk]!=0)
+                {
+                    low=max(low,kk);
+                    break;
+                }
+            }
+        }
+        if(low==0)return;
+        j=low;
+    }
+    else j=rand()%700+200;
+    for(int uu = i-7; uu <= i+wei_-7; uu++)
+    {
+        for(int kk = j-2; kk <= j+1; kk++)
+        {
+            s[uu][kk]=0;
+        }
+        for(int kk = j-8; kk <= j-3; kk++)
+        {
+            if(s[uu][kk]==25||s[uu][kk]==2)s[uu][kk]=0;
+        }
+    }
+    for(int uu = i-8; uu <= i+wei_-6; uu++)
+    {
+        if(uu>=i-7&&uu<=i+wei_-7)
+        {
+            for(int kk = j; kk <= j+now_high; kk++)
+            {
+                if(islava==1)s[uu][kk]=32;
+                else s[uu][kk]=19;
+            }
+        }
+        for(int kk = j+now_high+1-(!(uu>=i-7&&uu<=i+wei_-7))*2; kk <= j+now_high+2; kk++)
+        {
+            if(islava==1||j>=200)s[uu][kk]=1;
+            else s[uu][kk]=5;
+        }
+        if(uu>=i-7&&uu<=i+wei_-7)
+        {
+            if(uu<=i-7+wei_/2&&now_high<dep)
+            {
+                if(rand()%5!=0)now_high++;
+            }
+            if(uu>i-7+wei_/2&&now_high>0)
+            {
+                if(rand()%5!=0)now_high--;
+            }
+        }
+    }
+}
+void noodle_cave_nether(int i, int j)
+{
+    int move_ = 0;
+    int len_ = rand() % 20 + 10;
+    int wei_ = rand() % 6 + 4;
+    for(int uu = 0; uu <= len_; uu++)
+    {
+        for(int kk = 0; kk <= wei_; kk++)
+        {
+            if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
+                    j + kk + move_ >= WORLD_HEIGHT)
+                return;
+            s2[i + uu][j + kk + move_] = 39;
+            if(rand() % 100 == 0)
+                s2[i + uu][j + kk + move_] = 32;
+        }
+        if(rand() % 6 == 0)
+            move_++;
+        if(rand() % 6 == 0)
+            move_--;
+        if(rand() % 4 == 0)
+            wei_--;
+        if(rand() % 4 == 0)
+            wei_++;
+    }
+}
+int night = 0, will_night = 0, will_light = 0;
+int now_time = 0;
+struct LightPos
+{
+    int x, y, level;
+};
+void dfs(int i, int j, int lt, int v)
+{
+    if(i < 0 || i >= WORLD_WIDTH || j < 0 || j >= WORLD_HEIGHT || lt <= 0) return;
+    if(blocktouch[s[i][j]] == true)v = 3;
+    else v = 1;
+    light[i][j] = lt;
+    if(lt - v > light[i + 1][j])dfs(i + 1, j, lt - v, v);
+    if(lt - v > light[i - 1][j])dfs(i - 1, j, lt - v, v);
+    if(lt - v > light[i][j + 1])dfs(i, j + 1, lt - v, v);
+    if(lt - v > light[i][j - 1])dfs(i, j - 1, lt - v, v);
+}
+void setlight()
+{
+    if(gamemode==0)
+    {
+        memset(light, 15, sizeof(light));
+        return;
+    }
+    memset(light, 0, sizeof(light));
+    if(beibao[cho][0]==16)light[int(x+0.5)][int(y+0.5)]=19;
+    if(weidu==2)
+    {
+        for(int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+            if(i<0||i>=WORLD_WIDTH)continue;
+            for(int j = 0; j < WORLD_HEIGHT; j++)
+            {
+                if((s[i][j]==0||s[i][j]==11)&&light[i][j]<=8)light[i][j]=8;
+            }
+        }
+    }
+    int now_light=20;
+    if(night>0)now_light=7;
+    if(night==2)now_light+=(20000-now_time)/153;
+    if(night==3)now_light+=(now_time-38000)/153;
+    if(weidu!=2)
+    {
+        for(int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+            if(i<0||i>=WORLD_WIDTH)continue;
+            if((s[i][0] == 0 || s[i][0] == 11)&&light[i][0]<now_light)light[i][0] = now_light;
+        }
+        for(int i = int(x-149.5); i <= int(x+150.5); i++)
+        {
+            if(i<0||i>=WORLD_WIDTH)continue;
+            for(int j = 1; j < WORLD_HEIGHT; j++)
+            {
+                if((s[i][j] == 0 || s[i][j] == 11)&&light[i][j]<now_light && light[i][j - 1] == now_light)
+                {
+                    light[i][j] = now_light;
+                }
+            }
+        }
+    }
+    for(int i = int(x-149.5); i <= int(x+150.5); i++)
+    {
+        if(i<0||i>=WORLD_WIDTH)continue;
+        for(int j = int(y-199.5); j <= int(y+200.5); j++)
+        {
+            if(j<0||j>=WORLD_HEIGHT)continue;
+            if((s[i][j] == 16||(s[i][j]>=32&&s[i][j]<=34))||s[i][j]==92)
+            {
+                if(s[i][j]==92){
+                if(light[i][j]>7)dfs(i, j, light[i][j], 1);
+				else dfs(i, j, 7, 1);
+				}
+				else dfs(i, j, 19, 1);
+            }
+            else
+            {
+                if(light[i][j] > 0)dfs(i, j, light[i][j], 1);
+            }
+        }
+    }
+}
+void shuaxin()
+{
+    Color(0);
+    Setpos(0, 0);
+    for(int i = 0; i <= 15000; i++)
+    {
+        cout << " ";
+    }
+    l_life=30,l_beibao[1][0]=114;
+    setlight();
+    memset(painting, 0, sizeof(painting));
+}
+void sky()
+{
+    for(int i = 0; i <= printx+1; i++)
+    {
+        for(int j = 0; j <= printy+1; j++)
+        {
+            if(painting[i][j][0] == 11||painting[i][j][0] == 66)
+            {
+                painting[i][j][0] = 114;
+            }
+        }
+    }
+    setlight();
+}
+void air_()
+{
+    for(int i = 0; i <= printx+1; i++)
+    {
+        for(int j = 0; j <= printy+1; j++)
+        {
+            if(painting[i][j][0] == 0)
+            {
+                painting[i][j][0] = 114;
+            }
+        }
+    }
+}
+void atime()
+{
+    if(sun == 0)
+        return;
+    now_time += 1;
+    if(now_time == 18000)
+        night = 2, sky();
+    if(now_time == 20000)
+        night = 1, sky();
+    if(now_time == 38000)
+        night = 3, sky();
+    if(now_time >= 40000)
+        night = 0, now_time = 0, sky();
+}
+void hujia_update()
+{
+    hujiazhi = 0;
+    // 胸甲 wear[1]: 铁27/金80/钻石57/下界84
+    if(wear[1] == 27)
+        hujiazhi += 6;
+    else if(wear[1] == 80)
+        hujiazhi += 5;
+    else if(wear[1] == 57)
+        hujiazhi += 8;
+    else if(wear[1] == 84)
+        hujiazhi += 9;
+    // 护腿 wear[2]: 铁28/金81/钻石58/下界85
+    if(wear[2] == 28)
+        hujiazhi += 5;
+    else if(wear[2] == 81)
+        hujiazhi += 4;
+    else if(wear[2] == 58)
+        hujiazhi += 6;
+    else if(wear[2] == 85)
+        hujiazhi += 7;
+    // 头盔 wear[3]: 铁29/金79/钻石56/下界83
+    if(wear[3] == 29)
+        hujiazhi += 2;
+    else if(wear[3] == 79)
+        hujiazhi += 1;
+    else if(wear[3] == 56)
+        hujiazhi += 3;
+    else if(wear[3] == 83)
+        hujiazhi += 4;
+    // 靴子 wear[4]: 铁30/金82/钻石59/下界86
+    if(wear[4] == 30)
+        hujiazhi += 2;
+    else if(wear[4] == 82)
+        hujiazhi += 1;
+    else if(wear[4] == 59)
+        hujiazhi += 3;
+    else if(wear[4] == 86)
+        hujiazhi += 4;
+    jianshang = 1 - hujiazhi * 0.04;
+}
+void st(int type, int x, int y, int ra2)
+{
+    if(s[x][y] == 1 || s[x][y] == 54)
+        s[x][y] = type;
+    if((s[x + 1][y] == 1 || s[x + 1][y] == 54) && rand() % ra2 == 0)
+        s[x + 1][y] = type;
+    if((s[x - 1][y] == 1 || s[x - 1][y] == 54) && rand() % ra2 == 0)
+        s[x - 1][y] = type;
+    if((s[x + 1][y + 1] == 1 || s[x + 1][y + 1] == 54) && rand() % ra2 == 0)
+        s[x + 1][y + 1] = type;
+    if((s[x - 1][y - 1] == 1 || s[x - 1][y - 1] == 54) && rand() % ra2 == 0)
+        s[x - 1][y - 1] = type;
+    if((s[x + 1][y - 1] == 1 || s[x + 1][y - 1] == 54) && rand() % ra2 == 0)
+        s[x + 1][y - 1] = type;
+    if((s[x - 1][y + 1] == 1 || s[x - 1][y + 1] == 54) && rand() % ra2 == 0)
+        s[x - 1][y + 1] = type;
+    if((s[x][y + 1] == 1 || s[x][y + 1] == 54) && rand() % ra2 == 0)
+        s[x][y + 1] = type;
+    if((s[x][y - 1] == 1 || s[x][y - 1] == 54) && rand() % ra2 == 0)
+        s[x][y - 1] = type;
+}
+void st_nether(int type, int x, int y, int ra2)
+{
+    if(s2[x][y] == 39)
+        s2[x][y] = type;
+    if((s2[x + 1][y] == 39) && rand() % ra2 == 0)
+        s2[x + 1][y] = type;
+    if((s2[x - 1][y] == 39) && rand() % ra2 == 0)
+        s2[x - 1][y] = type;
+    if((s2[x + 1][y + 1] == 39) && rand() % ra2 == 0)
+        s2[x + 1][y + 1] = type;
+    if((s2[x - 1][y - 1] == 39) && rand() % ra2 == 0)
+        s2[x - 1][y - 1] = type;
+    if((s2[x + 1][y - 1] == 39) && rand() % ra2 == 0)
+        s2[x + 1][y - 1] = type;
+    if((s2[x - 1][y + 1] ==39) && rand() % ra2 == 0)
+        s2[x - 1][y + 1] = type;
+    if((s2[x][y + 1] ==39) && rand() % ra2 == 0)
+        s2[x][y + 1] = type;
+    if((s2[x][y - 1] ==39) && rand() % ra2 == 0)
+        s2[x][y - 1] = type;
+}
+int water = 0,last_l;
+void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
+{
+    l = 0;
+    while(l < 500 && shiti[l].type != 0)
+        l++;
+    if(l >= 500)
+        return;
+    if(iseof==1)shiti[l].conl= last_l,shiti[last_l].conr=l;
+    if(iseof==2)shiti[l].conl= l,shiti[last_l].conr=l;
+    if(iseof==3)shiti[l].conl= last_l,shiti[last_l].conr=l,shiti[l].conr=l;
+    shiti[l].maxHP = hp, shiti[l].HP = hp, shiti[l].hurt = hur,
+             shiti[l].type = typ, shiti[l].gx = tx, shiti[l].gy = ty;
+    shiti[l].spgx = 0, shiti[l].spgy = 0, shiti[l].jp = 0, shiti[l].CD = 0,
+             shiti[l].nbt = nbtt;
+    shiti[l].randomtick = 0, shiti[l].direction = 0;
+    if(typ == 1)
+        shiti[l].sd = 30, shiti[l].AI = 1;
+    else if(typ == 2)
+        shiti[l].sd = 18, shiti[l].AI = 1;
+    else if(typ == 3)
+        shiti[l].sd = 25, shiti[l].AI = 1;
+    else if(typ == 4)
+        shiti[l].sd = 0, shiti[l].AI = 2, shiti[l].spgx = 10, shiti[l].spgy = -5;
+    else if(typ == 5)
+        shiti[l].sd = 200, shiti[l].AI = 1;
+    else if(typ == 6)
+        shiti[l].sd = 25, shiti[l].AI = 1;
+    else if(typ == 7)
+        shiti[l].sd = 35, shiti[l].AI = 1;
+    else if(typ == 12)
+        shiti[l].sd = 0, shiti[l].AI = 5;
+    else if(typ == 13)
+        shiti[l].sd = 0, shiti[l].AI = 5;
+    else if(typ == 8)
+    {
+        shiti[l].direction = shiti[l].HP;
+        if(nbtt == 10)
+            boss2hp = 689;
+        shiti[l].sd = 200, shiti[l].AI = 3;
+    }
+    else if(typ >= 9)
+    {
+        shiti[l].sd = 300, shiti[l].AI = 4;
+    }
+    add_entity_to_hash(l, tx, ty);
+    last_l=l;
+}
+void MAP_nether()
+{
+    HideCursor();
+    int a, moun = 0;
+    double now = 0;
+    int wmax = 0, wh = 0;
+    tall = 900;
+    memset(s2, 0, sizeof(s2));
+    for(int i = 0; i < WORLD_WIDTH; i++)
+    {
+        if(rand() % 15 == 0)
+            tall++;
+        if(rand() % 15 == 1)
+            tall--;
+        if(water <= 0)
+        {
+            if(rand() % 120 == 0)
+                water = 30 + rand() % 30, wmax = water, wh = tall + 1;
+        }
+        else if(water > wmax / 2)
+        {
+            tall += rand() % 2 + 1;
+            water--;
+        }
+        else
+        {
+            tall -= rand() % 2 + 1;
+            if(!(tall + 1 > wh && water == 1))
+                water--;
+        }
+        if(moun <= 0)
+        {
+            if(rand() % 150 == 0 && water <= 0)
+                moun = 14;
+        }
+        else if(moun > 7)
+            tall -= rand() % 2 + 1, moun--;
+        else if(moun <= 7)
+            tall += rand() % 2 + 1, moun--;
+        if(tall < 0)
+            tall = 0;
+        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
+        {
+            s2[i][j] = 39;
+        }
+        if(water > 0)
+        {
+            for(int j = tall + 1; j >= wh; j--)
+            {
+                s2[i][j] = 32;
+            }
+        }
+        if(rand() % 15 == 2 && water <= 0 && i >= 2 && i < WORLD_WIDTH - 2)
+        {
+            a = tall;
+            s2[i][tall] = 2;
+            tall--;
+            s2[i][tall] = 2;
+            tall--;
+            s2[i][tall] = 2;
+            while(rand() % 2 == 0)
+            {
+                tall--;
+                s2[i][tall] = 2;
+            }
+            if(rand() % 2 == 0)
+            {
+                s2[i - 1][tall - 1] = 23;
+                s2[i][tall - 1] = 23;
+                s2[i + 1][tall - 1] = 23;
+                s2[i - 1][tall] = 23;
+                s2[i + 1][tall] = 23;
+                s2[i - 1][tall - 2] = 23;
+                s2[i][tall - 2] = 23;
+                s2[i + 1][tall - 2] = 23;
+            }
+            else
+            {
+                s2[i - 1][tall - 1] = 23;
+                s2[i - 2][tall - 1] = 23;
+                s2[i][tall - 1] = 23;
+                s2[i + 1][tall - 1] = 23;
+                s2[i + 2][tall - 1] = 23;
+                s2[i - 2][tall] = 23;
+                s2[i - 1][tall] = 23;
+                s2[i + 1][tall] = 23;
+                s2[i + 2][tall] = 23;
+                s2[i - 2][tall - 2] = 23;
+                s2[i - 1][tall - 2] = 23;
+                s2[i][tall - 2] = 23;
+                s2[i + 1][tall - 2] = 23;
+                s2[i + 2][tall - 2] = 23;
+                s2[i - 1][tall - 3] = 23;
+                s2[i][tall - 3] = 23;
+                s2[i + 1][tall - 3] = 23;
+            }
+            tall = a;
+        }
+    }
+    Setpos(21, 13);
+    cout << " 正在创建下界...   ";
+    spawn_noise_nether();
+    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
+    {
+        Setpos(35, 16);
+        for(int j = 1; j <= int(now * 10.0 / (WORLD_WIDTH - 10)); j++)
+        {
+            printf("#");
+        }
+        Setpos(25, 18);
+        printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));
+        now++;
+        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
+        {
+            if(noise_result[i][j]<-15)
+            {
+                if(rand()%100==0)s2[i][j]=32;
+                else s2[i][j]=39;
+            }
+        }
+    }
+    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
+    {
+        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
+        {
+            if(rand() % 300 == 0)
+                st_nether(63,i, j,3);
+        }
+        for(int j = WORLD_HEIGHT - 2; j >= 900; j--)
+        {
+            if(rand() % 1000 == 0)
+            {
+                s2[i][j]=69;
+                if(rand()%5<2)s2[i+rand()%3-1][j+rand()%3-1]=69;
+                if(rand()%5<2)s2[i+rand()%3-1][j+rand()%3-1]=69;
+            }
+        }
+    }
+    sky();
+}
+
+void spawn_chest(int xxx, int yyy);
+void fill_blocks(const int block_id,const int stx,const int sty,const int enx,const int eny)
+{
+	for(int i=stx;i<=enx;i++)
+	{
+		for(int j=sty;j<=eny;j++)
+		{
+			s[i][j]=block_id;
+		}
+	}
+}
+void make_tree(int i, int tall)
+{
+    if(boimes2[i] == 0)
+    {
+        s[i][tall] = 2;
+        tall--;
+        s[i][tall] = 2;
+        tall--;
+        s[i][tall] = 2;
+        while(rand() % 2 == 0)
+        {
+            tall--;
+            s[i][tall] = 2;
+        }
+        if(rand() % 2 == 0)
+        {
+            fill_blocks(23,i-1,tall-2,i+1,tall);
+            s[i][tall] = 2;
+        }
+        else
+        {
+        	fill_blocks(23,i-2,tall-2,i+2,tall);
+        	fill_blocks(23,i-1,tall-3,i+1,tall-3);
+        	s[i][tall] = 2;
+        }
+    }
+    else
+    {
+        s[i][tall] = 2;
+        tall--;
+        s[i][tall] = 2;
+        tall--;
+        s[i][tall] = 2;
+        if(rand() % 2 == 0)
+        {
+            tall--;
+            s[i][tall] = 2;
+        }
+        fill_blocks(23,i-2,tall-1,i+2,tall);
+        fill_blocks(23,i-1,tall-2,i+1,tall-2);
+        s[i][tall] = 2;
+        tall -= 3;
+        s[i][tall] = 2;
+        tall--;
+        s[i][tall] = 2;
+        while(rand() % 2 == 0)
+        {
+            tall--;
+            s[i][tall] = 2;
+        }
+		fill_blocks(23,i-1,tall-1,i+1,tall-1); 
+        s[i - 1][tall] = 23;
+        s[i + 1][tall] = 23;
+        s[i][tall - 2] = 23;
+    }
+}
+void MAP()
+{
+    box.clear();
+    boxlen = 0;
+    memset(boimes, 0, sizeof(boimes));
+    memset(boimes2, 0, sizeof(boimes2));
+    for(int i = 0; i < WORLD_WIDTH; i++)
+        boimes[i] = 0;
+    int a, mouns[64], mouns2[64], ran, js_ = 0, js_2 = 0;
+    for(int i = 50; i <= WORLD_WIDTH - 301; i++)
+    {
+        if(rand() % 700 == 0 && js_ < 64)
+        {
+            ran = rand() % 300 + 100;
+            for(int j = i - 25; j < i + ran; j++)
+                boimes[j] = 1;
+            mouns[js_] = i, mouns2[js_] = ran + i;
+            js_++;
+            i += ran;
+        }
+    }
+    for(int i = 50; i <= WORLD_WIDTH - 301; i++)
+    {
+        if(rand() % 700 == 0)
+        {
+            ran = rand() % 300 + 100;
+            for(int j = i - 25; j < i + ran; j++)
+                boimes2[j] = 2;
+            js_2++;
+            i += ran;
+        }
+    }
+    memset(s, 0, sizeof(s));
+    memset(s2, 0, sizeof(s2));
+    memset(ep, 0, sizeof(ep));
+    memset(shiti, 0, sizeof(shiti));
+    memset(shiti2, 0, sizeof(shiti2));
+    for(int i = 0; i < WORLD_WIDTH; i++)
+        zs_ls[i] = 785;
+    perlin(200, 60);
+    perlin(100, 30);
+    perlin(50, 15);
+    perlin(25, 7);
+    perlin(12, 3);
+    for(int i = 0; i < js_; i++)
+    {
+        perlin_2(25, 30, mouns[i], mouns2[i], rand() % 4+2);
+        perlin_2(12, 10, mouns[i], mouns2[i], rand() % 3+2);
+        perlin_2(6, 5, mouns[i], mouns2[i], rand() % 2+2);
+    }
+    result();
+    if(oi)
+        make_st(5, 500, 8, WORLD_WIDTH / 2, 100);
+    HideCursor();
+    Clear_2();
+    weidu = 1;
+    double now = 0;
+    now_time = 0;
+    night = 0;
+    int wmax = 0, wh = 0;
+    tall = 149;
+    life = 20;
+    water=0;
+    memset(beibao, 0, sizeof(beibao));
+    Setpos(21, 13);
+    cout << "  正在生成主世界...";
+    spawn_noise_cave();
+    for(int i = 0; i < WORLD_WIDTH; i++)
+    {
+        tall = WORLD_HEIGHT - 1 - zs[i];
+        if(tall < 0) tall = 0;
+        if(i == WORLD_WIDTH / 2)
+            back_x = WORLD_WIDTH / 2, back_y = tall, x = WORLD_WIDTH / 2, y = tall;
+        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
+        {
+            int dirt = 5, store = 1;
+            bool ischeckboime=1;
+            for(int ii=0;ii<=4&&ischeckboime;ii++){
+            	if(boimes2[i + ii] == 2)
+            {
+                if(rand() % 5 < 5-ii)
+                    store = 54, dirt = 53,ischeckboime=0;
+            }
+			}
+            for(int ii=-4;ii<=-1&&ischeckboime;ii++){
+            if(boimes2[i + ii] == 2)
+            {
+                if(rand() % 5 < 5+ii)
+                    store = 54, dirt = 53,ischeckboime=0;
+            }
+			}
+            s[i][j] = store;
+            if(j == WORLD_HEIGHT - 1)
+                s[i][j] = 10;
+            if(boimes[i] == 1 && tall < 100)
+                continue;
+            if(boimes[i] == 1 && tall <= 105)
+            {
+                if(j <= tall + (tall - 100))
+                    s[i][j] = dirt;
+                if(j <= tall + 1 + (tall - 100) && rand() % 2 == 0)
+                    s[i][j] = dirt;
+                continue;
+            }
+            if(tall > 160 && tall <= 165)
+            {
+                if(j <= 165)
+                    s[i][j] = dirt;
+                if(j <= 166 && rand() % 2 == 0)
+                    s[i][j] = dirt;
+            }
+            else
+            {
+                if(j <= tall + 6 && tall < 165)
+                    s[i][j] = dirt;
+                if(j <= tall + 7 && tall < 165 && rand() % 2 == 0)
+                    s[i][j] = dirt;
+            }
+        }
+        if(tall >= 160)
+        {
+            for(int j = tall + 1; j >= 160; j--)
+                s[i][j] = 19;
+        }
+        else if(rand() % 15 == 2 && water <= 0 && i > 2 && i < WORLD_WIDTH - 2 &&
+                (!(boimes[i] == 1 && tall < 100)))
+        {
+            make_tree(i, tall);
+        }
+    }
+    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
+    {
+        for(int j = 995; j >= 125; j--)
+        {
+            if(rand() % 450 == 0)
+                st(3, i, j, 2);
+            if(j > 165 && rand() % (700 - int(j * 0.3)) == 0)
+                st(4, i, j, 3);
+            if(boimes2[i] == 0)
+                if(rand() % 1000 == 0)
+                    st(5, i, j, 2);
+            if(boimes2[i] == 2)
+                if(rand() % 400 == 0)
+                    stt(i, j, rand() % 8);
+            if(j > 250)
+            {
+                if(rand() % (800- int(j * 0.3)) == 0)
+                    st(62, i, j, 4);
+            }
+            if(j > 350)
+            {
+                if(rand() % (1000 - int(j * 0.5)) == 0)
+                    st(12, i, j, 5);
+            }
+        }
+        if(boimes[i] == 1)
+        {
+            for(int j = 175; j >= 15; j--)
+            {
+                if(rand() % (235 + int(j)) == 0)
+                    st(3, i, j, 2);
+                if(rand() % (485 + int(j)) == 0)
+                    st(4, i, j, 3);
+            }
+        }
+    }
+    Setpos(11, 15);
+    for(int i = 0; i < 58; i++)
+        cout << "-";
+    Setpos(11, 17);
+    for(int i = 0; i < 58; i++)
+        cout << "-";
+    Setpos(10, 16);
+    cout << " |";
+    Setpos(39, 16);
+    cout << "  |";
+    int df = 0;
+    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
+    {
+        if(df != int(now * 50.0 / (WORLD_WIDTH - 10)))
+            Setpos2(int(now * 50.0 / (WORLD_WIDTH - 10)) + 22, 16), printf("#");
+        df = int(now * 50.0 / (WORLD_WIDTH - 10));
+        Setpos(25, 18);
+        printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));
+        now++;
+        if(rand() % 200 == 0)
+        {
+            Make_deep(i);
+        }
+        if(rand() % 200 == 0)
+        {
+            make_skycave(i);
+        }
+        for(int j = 995; j >= 1030 - zs[i]; j--)
+        {
+            if(noise_result[i][j]<-45)s[i][j]=0;
+            if(rand() % 6000 == 0)
+                Make_water(i, j, 0);
+            if(rand() % 8000 == 0)
+                Make_lava(i, j, 0);
+            if(rand() % 4000 == 0)
+                noodle_cave(i, j);
+        }
+        for(int j = 1029 - zs[i]; j >= WORLD_HEIGHT - 1 - zs[i];j--)
+        {
+            if(noise_result[i][j]<-45+(j-1030+zs[i])*2)s[i][j]=0;
+        }
+    }
+    for(int i = 20; i <= WORLD_WIDTH - 21; i++)
+    {
+        if(rand() % 10 == 0)
+        {
+            if(rand() % 10 == 0)
+            {
+                make_lake(i,0);
+            }
+            else make_lake(i,1);
+        }
+    }
+    make_mineshaft();
+    try_spawn();
+    for(int i = 10; i <= WORLD_WIDTH - 11; i++)
+    {
+        for(int j = 200; j <= 950; j++)
+        {
+            if(rand() % 12000 == 0)
+            {
+                spawn_chest(i, j);
+            }
+        }
+        if(rand() % 250 == 0)
+        {
+            for(int t = 0; t < 2; t++)
+            {
+                int ry = 200 + rand() % 750;
+                spawn_chest(i, ry);
+            }
+        }
+    }
+    Clear_formap();
+    MAP_nether();
+    sky();
+}
+
+void swap_map(bool ismakedoor=1)
+{
+    if(weidu == 1)
+        weidu = 2;
+    else
+        weidu = 1;
+    for(int i = 0; i < WORLD_WIDTH; i++)
+    {
+        for(int j = 0; j < WORLD_HEIGHT; j++)
+        {
+            swap(s[i][j], s2[i][j]);
+        }
+    }
+    swap(shiti, shiti2);
+    clear_entity_hash();
+    for(int i = 0; i < 500; i++)
+    {
+        if(shiti[i].type > 0)
+            add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+    }
+    setlight();
+    memset(painting, -1, sizeof(painting));
+    if(ismakedoor && mpx >= 1 && mpx < WORLD_WIDTH - 1 && mpy >= 0 &&
+            mpy < WORLD_HEIGHT - 1)
+    {
+        x = mpx, y = mpy;
+        s[mpx][mpy] = 38;
+        if(s[mpx][mpy + 1] == 0 || s[mpx][mpy + 1] == 11)
+            s[mpx][mpy + 1] = 39;
+        if(s[mpx - 1][mpy + 1] == 0 || s[mpx - 1][mpy + 1] == 11)
+            s[mpx - 1][mpy + 1] = 39;
+        if(s[mpx + 1][mpy + 1] == 0 || s[mpx + 1][mpy + 1] == 11)
+            s[mpx + 1][mpy + 1] = 39;
+    }
+}
+void Color3(int blockco,int i,int j)
+{
+	Color2(blockco,j*(xlen)+i*2,charInfo[j*(xlen)+i*2].Attributes), co = blockco;
+}
+void printbuf(const string string_in,int i,int j)
+{
+	charInfo[j*(xlen)+i*2].Char.AsciiChar =string_in[0];
+   	charInfo[j*(xlen)+i*2+1].Char.AsciiChar =string_in[1];
+}
+void pr_mouse(int i,int j)
+{
+    if(light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4)
+    {
+        if(co != 0)
+            Color3(0,i,j);
+        printbuf("[]",i,j);
+    }
+    else if(s[dx][dy] == 11)
+    {
+        if(weidu == 1)
+        {
+            if(night == 0)
+                Color3(-6,i,j);
+            else if(night == 1)
+                Color3(-23,i,j);
+            else if(night == 2)
+                Color3(-29,i,j);
+            else if(night == 3)
+                Color3(-31,i,j);
+            printbuf("[]",i,j);
+        }
+        else
+        {
+            Color3(-33,i,j);
+            printbuf("[]",i,j);
+        }
+    }
+    else if(s[dx][dy] == 38)
+    {
+        Color3(3,i,j);
+        printbuf("{}",i,j);
+    }
+    else if(s[dx][dy] == 16)
+    {
+        Color3(-1,i,j);
+        if(s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11)
+        {
+            if(!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
+                printbuf("/<",i,j);
+            else
+                printbuf(">\\",i,j);
+        }
+        else
+            printbuf("I<",i,j);
+    }
+    else if(s[dx][dy] == 66)
+    {
+        if(dy>180)
+        {
+            Color3(-39,i,j);
+        }
+        else
+        {
+            if(night == 0)
+                Color3(-40,i,j);
+            else if(night == 2||night==3)
+                Color3(-41,i,j);
+            else if(night == 1)
+                Color3(-42,i,j);
+        }
+       printbuf("[]",i,j);
+    }
+    else {
+    	Color3(blockcolor[s[dx][dy]],i,j);
+    	printbuf("[]",i,j);
+	}
+}
+void Updateblock(bool ismap,int i,int j)
+{
+    if(ismap && !ep[dx][dy])
+    {
+        if(co != 0)
+            Color(0), co = 0;
+        printf("  ");
+        return;
+    }
+    if(s[dx][dy] == 11 || (s[dx][dy] == 0 && boimes2[To_int(x)] == 2))
+    {
+        if(weidu == 1)
+        {
+            if(light[dx][dy] <= 0 && abs(jl(dx - To_int(x), dy - To_int(y))) >= 4)
+            {
+                Color3(0,i,j);
+            }
+            else if((night == 0) ||
+                    (s[dx][dy] == 0 && boimes2[To_int(x)] == 2))
+                Color3(-6,i,j);
+            else if(night == 1)
+                Color3(-23,i,j);
+            else if(night == 2)
+                Color3(-29,i,j);
+            else if(night == 3)
+                Color3(-31,i,j);
+            printbuf("  ",i,j);
+        }
+        else
+        {
+            Color3(-33,i,j);
+            printbuf("  ",i,j);
+        }
+    }
+    else if(s[dx][dy] == 0)
+    {
+        if(light[dx][dy] > 0 || abs(jl(dx - To_int(x), dy - To_int(y))) < 4)
+        {
+            if(weidu == 1)
+            {
+                Color3(-1,i,j);
+            }
+            else
+            {
+                Color3(-33,i,j);
+            }
+            printbuf("  ",i,j);
+        }
+        else
+        {
+            if(weidu == 1)
+            {
+                Color3(0,i,j);
+            }
+            else
+            {
+                Color3(-3,i,j);
+            }
+            printbuf("  ",i,j);
+        }
+    }
+    else if(light[dx][dy] <= 0 &&
+            abs(jl(dx - To_int(x), dy - To_int(y))) >= 4)
+    {
+        Color3(0,i,j);
+        printbuf("  ",i,j);
+    }
+    else if(s[dx][dy] == 16)
+    {
+        Color3(-1,i,j);
+        if(s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11)
+        {
+            if(!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
+                printbuf("/ ",i,j);
+            else
+                printbuf(" \\",i,j);
+        }
+        else
+            printbuf("I ",i,j);
+    }
+    else if(s[dx][dy] == 66)
+    {
+        if(dy>180)
+        {
+            Color3(-39,i,j);
+        }
+        else
+        {
+            if(night == 0)
+                Color3(-40,i,j);
+            else if(night == 2||night==3)
+                Color3(-41,i,j);
+            else if( night == 1)
+                Color3(-42,i,j);
+        }
+        printbuf("==",i,j);
+    }
+    else {
+       // Color2(blockcolor[s[dx][dy]],j*(xlen)+i*2,charInfo[j*(xlen)+i*2].Attributes), co = blockcolor[s[dx][dy]];
+        Color3(blockcolor[s[dx][dy]],i,j);
+        //charInfo[j*(xlen)+i*2].Char.AsciiChar =blockprint[s[dx][dy]][0];
+   		//charInfo[j*(xlen)+i*2+1].Char.AsciiChar =blockprint[s[dx][dy]][1];
+   		printbuf(blockprint[s[dx][dy]],i,j);
+    }
+}
+void Ubformap(int pt, bool ex)
+{
+    if(!ex)
+    {
+        if(co != 0)
+            Color(0), co = 0;
+        printf("  ");
+    }
+    else if(pt == 11)
+    {
+        if(weidu == 1)
+        {
+            if(co != -6 && night == 0)
+                Color(-6), co = -6;
+            else if(co != -23 && night == 1)
+                Color(-23), co = -23;
+            else if(co != -29 && night == 2)
+                Color(-29), co = -29;
+            else if(co != -31 && night == 3)
+                Color(-31), co = -31;
+            printf("  ");
+        }
+        else
+        {
+            if(co != -33)
+                Color(-33), co = -33;
+            printf("  ");
+        }
+    }
+    else if(pt == 0)
+    {
+        if(weidu == 1)
+        {
+            if(co != -1)
+                Color(-1), co = -1;
+        }
+        else
+        {
+            if(co != -33)
+                Color(-33), co = -33;
+        }
+        printf("  ");
+    }
+    else if(pt == 16)
+    {
+        if(co != -1)
+            Color(-1), co = -1;
+        printf("I ");
+    }
+    else {
+    	if(co != blockcolor[pt])
+            Color(blockcolor[pt]), co = blockcolor[pt];
+        printf("%s",blockprint[pt].c_str());
+    }
+}
+bool pr = false;
+short last_boi;
+void Print()
+{
+    co = 0;
+    Color(0);
+    bool isboss3;
+    if(boss3hp>bosshp)bosshp=boss3hp,isboss3=1;
+    else isboss3=0;
+    if(boimes2[To_int(x)]!=last_boi)air_();
+    last_boi=boimes2[To_int(x)];
+    vector<int> nearby_entities;
+    for(int j = 0; j <= printy; j++)
+    {
+        for(int i = 0; i <= printx; i++)
+        {
+            dx = int(jx + i - printx * 0.5 + 0.5);
+            dy = int(jy + j - printy * 0.5 + 0.5);
+            //Updateblock(0,i,j);
+            if((light[dx][dy] > 0 ||
+                    (abs(jl(dx - To_int(x), dy - To_int(y))) < 4)) &&
+                    ep[dx][dy] == 0)
+                ep[dx][dy] = 1;
+            if(bosshp>0)
+            {
+                if(i >= 15 && i <= ((bosshp * 1.0 / (25+isboss3*15)) + 15) && j == 7)
+                {
+                    painting[i][j][0] = 17;
+                    painting[i][j][1] = 17;
+                    Setpos(i, j);
+                    Color3(-4,i,j);;
+                    if(i == 25)
+                    {
+                        if(bosshp >= 100)
+                            printf("%d", bosshp / 10);
+                        else
+                            printf("%d", bosshp);
+                    }
+                    else if(i == 26 && bosshp >= 100)
+                        printf("%d ", bosshp % 10);
+                    else
+                        printbuf("  ",i,j);
+                    continue;
+                }
+                if(i > ((bosshp * 1.0 / (25+isboss3*15)) + 15) && i <= 35 && j == 7)
+                {
+                    painting[i][j][0] = 17;
+                    painting[i][j][1] = 17;
+                    Setpos(i, j);
+                    Color3(0,i,j);
+                    if(i == 25)
+                    {
+                        if(bosshp >= 100)
+                            printf("%d", bosshp / 10);
+                        else
+                        {
+                            printf("%d", bosshp);
+                        }
+                    }
+                    else if(i == 26 && bosshp >= 100)
+                    {
+                        printf("%d", bosshp % 10);
+                    }
+                    else
+                        printbuf("  ",i,j);
+                    continue;
+                }
+            }
+            if(boss2hp > 0)
+            {
+                if(i >= 15 && i <= ((boss2hp * 1.0 / 32) + 15) && j == 7)
+                {
+                    if(painting[i][j][0] == 21 && painting[i][j][1] == 21 && i != 25 &&
+                            i != 26)
+                        continue;
+                    painting[i][j][0] = 21;
+                    painting[i][j][1] = 21;
+                    Setpos(i, j);
+                    Color3(-4,i,j);
+                    if(i == 25)
+                    {
+                        if(boss2hp >= 100)
+                            printf("%d", ((int)(boss2hp)) / 10);
+                        else
+                            printf("%d", int(boss2hp));
+                    }
+                    else if(i == 26 && boss2hp >= 100)
+                        printf("%d ", ((int)(boss2hp)) % 10);
+                    else
+                        printbuf("  ",i,j);
+                    continue;
+                }
+                if(i > ((boss2hp * 1.0 / 32) + 15) && i <= 35 && j == 7)
+                {
+                    if(painting[i][j][0] == 20 && painting[i][j][1] == 20 && i != 25 &&
+                            i != 26)
+                        continue;
+                    painting[i][j][0] = 20;
+                    painting[i][j][1] = 20;
+                    Setpos(i, j);
+                    Color3(0,i,j);
+                    if(i == 25)
+                    {
+                        if(boss2hp >= 100)
+                            printf("%d", ((int)(boss2hp)) / 10);
+                        else
+                            printf("%d", int(boss2hp));
+                    }
+                    else if(i == 26 && boss2hp >= 100)
+                        printf("%d ", ((int)(boss2hp)) % 10);
+                    else
+                        printbuf("  ",i,j);
+                    continue;
+                }
+            }
+            for(int k = 0; k <= 100; k++)
+            {
+                if(bz[k].color != 0 && bz[k].color != 1)
+                {
+                    if(To_int(bz[k].x) == dx && To_int(bz[k].y) == dy)
+                    {
+                        if(painting[i][j][0]!=2000+bz[k].color)
+                        {
+                            painting[i][j][0] = 2000+bz[k].color;
+                            painting[i][j][1] = 2000;
+                            Color3(bz[k].color,i,j);
+                            printbuf("  ",i,j);
+                        }
+                        pr = true;
+                        break;
+                    }
+                }
+            }
+            nearby_entities.clear();
+            query_nearby_entities(dx, dy, 2, nearby_entities);
+            for(int k : nearby_entities)
+            {
+                if(shiti[k].type > 0)
+                {
+                    if(light[dx][dy] <= 0 && (abs(dx - x) > 4 || abs(dy - y) > 4)&&(shiti[k].type!=5&&shiti[k].type<9))
+                        continue;
+                    if((To_int(shiti[k].gx) == dx && To_int(shiti[k].gy) == dy)||((shiti[k].type >= 9 && shiti[k].type != 12 && shiti[k].type != 13)&&abs(shiti[k].gy-dy)<=1.5&& abs(shiti[k].gx-dx)<=1.5))
+                    {
+                        if(painting[i][j][0]!=1500+shiti[k].type*10+shiti[k].nbt)
+                        {
+                            painting[i][j][0] = 1500+shiti[k].type*10+shiti[k].nbt;
+                            painting[i][j][1] = 1500;
+                            Setpos(i, j);
+                            Color3(1,i,j);
+                            if(shiti[k].type == 1)
+                                printbuf("ZZ",i,j);
+                            else if(shiti[k].type == 2)
+                            {
+                                if(shiti[k].CD == 0)
+                                    Color3(2,i,j);
+                                else
+                                    Color3(0,i,j);
+                                printbuf("CR",i,j);
+                            }
+                            else if(shiti[k].type == 3)
+                            {
+                                Color3(0,i,j);
+                                printbuf("SK",i,j);
+                            }
+                            else if(shiti[k].type == 4)
+                            {
+                                if(shiti[k].nbt == 1)
+                                    Color3(3,i,j);
+                                else
+                                    Color3(0,i,j);
+                                if(shiti[k].spgx > 0)
+                                    printbuf("->",i,j);
+                                else
+                                    printbuf("<-",i,j);
+                            }
+                            else if(shiti[k].type == 5)
+                            {
+                                if(shiti[k].islife2 == 1)Color3(12,i,j);
+                                else Color3(0,i,j);
+                                printbuf("OI",i,j);
+                            }
+                            else if(shiti[k].type == 6)
+                            {
+                                Color3(0,i,j);
+                                printbuf("SP",i,j);
+                            }
+                            else if(shiti[k].type == 7)
+                            {
+                                Color3(0,i,j);
+                                printbuf("ZP",i,j);
+                            }
+                            else if(shiti[k].type == 12)
+                            {
+                                Color3(1,i,j);
+                                printbuf("SH",i,j);
+                            }
+                            else if(shiti[k].type == 13)
+                            {
+                                Color3(0,i,j);
+                                printbuf("PG",i,j);
+                            }
+                            else if(shiti[k].type == 8)
+                            {
+                                if(shiti[k].gongjitick > 600 && shiti[k].gongjitick < 900)
+                                    Color3(12,i,j);
+                                else
+                                    Color3(0,i,j);
+                                printf("%d",int(shiti[k].maxHP + 0.5));
+                            }
+                            else if(shiti[k].type >= 9)
+                            {
+                                Color3(-45,i,j);
+                                printbuf("  ",i,j);
+                            }
+                        }
+                        pr = true;
+                        break;
+                    }
+                }
+            }
+            if(pr)
+            {
+                pr = 0;
+                continue;
+            }
+            if(dx == int(x + 0.5) && dy == int(y + 0.5))
+            {
+                if(painting[i][j][0]!=1000)
+                {
+                    painting[i][j][0] = 1000;
+                    painting[i][j][1] = 1000;
+                    Setpos(i, j);
+                    Color3(1,i,j);
+                    printbuf("{}",i,j);
+                }
+                continue;
+            }
+            else if(dx == int(mpx + 0.5) && dy == int(mpy + 0.5))
+            {
+                if(painting[i][j][1]!=1001+s[dx][dy])
+                {
+                    painting[i][j][0] = 1001;
+                    painting[i][j][1] = 1001+s[dx][dy];
+                    pr_mouse(i,j);
+                }
+            }
+            else if((abs(jl(dx - To_int(x), dy - To_int(y))) < 4) &&
+                    light[dx][dy] <= 0)
+            {
+                if(painting[i][j][0] !=
+                        s[dx][dy] ||
+                        (painting[i][j][1] > 0) != (light[dx][dy] > 0))
+                {
+                    Setpos(i, j);
+                    Updateblock(0,i,j);
+                }
+                painting[i][j][0] = s[dx][dy];
+                painting[i][j][1] = 15;
+            }
+            else if(painting[i][j][0] != s[dx][dy] ||
+                    (painting[i][j][1] > 0) != (light[dx][dy] > 0))
+            {
+                painting[i][j][0] = s[dx][dy];
+                painting[i][j][1] = light[dx][dy];
+                Setpos(i, j);
+                Updateblock(0,i,j);
+            }
+        }
+    }
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+   COORD bufferSize = {(short)xlen, (short)ylen};
+   COORD bufferCoord = {0, 0};
+   SMALL_RECT writeRegion = {0,0, (short)(0+xlen),(short)(0+ylen)};
+   WriteConsoleOutput(hConsole, charInfo, bufferSize, bufferCoord, &writeRegion);
+}
+LARGE_INTEGER frequency;
+LARGE_INTEGER lastTime;
+int frameCount = 0;
+float fps = 0;
+// 初始化帧率计数器
+void InitFPSCounter()
+{
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&lastTime);
+}
+// 更新帧率
+void UpdateFPS()
+{
+    frameCount++;
+    LARGE_INTEGER currentTime;
+    QueryPerformanceCounter(&currentTime);
+    float deltaTime =
+        (float)(currentTime.QuadPart - lastTime.QuadPart) / frequency.QuadPart;
+    if(deltaTime >= 1.0f)
+    {
+        fps = frameCount / deltaTime;
+        frameCount = 0;
+        lastTime = currentTime;
+        swprintf(title, 256, L"我的世界 - FPS: %.2f", fps);
+        SetWindowTextW(GetConsoleWindow(), title);
+    }
+}
+int sdprint[100][60][2];
+int sf;
+void printformap()
+{
+    co = 0;
+    Color(0);
+    int aaa[150];
+    int spt = 0;
+    int tmax = 0, exed = 0;
+    for(int j = 0; j <= printy; j++)
+    {
+        for(int i = 0; i <= printx; i++)
+        {
+            tmax = 0;
+            spt = 0;
+            exed = 0;
+            memset(aaa, 0, sizeof(aaa));
+            for(int kkk = 0; kkk < sf; kkk++)
+            {
+                for(int kkkk = 0; kkkk < sf; kkkk++)
+                {
+                    dx = int(jx + i * sf - printx * 0.5 + kkk + 0.5);
+                    dy = int(jy + j * sf - printy * 0.5 + kkkk + 0.5);
+                    if(ep[dx][dy])
+                        exed++;
+                    aaa[s[dx][dy]]++;
+                    if(aaa[s[dx][dy]] > tmax)
+                    {
+                        spt = s[dx][dy];
+                        tmax = aaa[s[dx][dy]];
+                    }
+                }
+            }
+            sdprint[i][j][0] = spt;
+            sdprint[i][j][1] = (exed >= sf);
+        }
+    }
+    co = 0;
+    for(int j = 0; j <= printy; j++)
+    {
+        for(int i = 0; i <= printx; i++)
+        {
+            if(i == printx - 1 && j == 1)
+                continue;
+            if(i == printx - 1 && j == 3)
+                continue;
+            if(((painting[i][j][0] != sdprint[i][j][0]) && sdprint[i][j][1]) ||
+                    ((painting[i][j][1] == 1) != (sdprint[i][j][1] == 1)))
+            {
+                painting[i][j][0] = sdprint[i][j][0];
+                painting[i][j][1] = sdprint[i][j][1];
+                Setpos(i, j);
+                Ubformap(sdprint[i][j][0], sdprint[i][j][1]);
+            }
+        }
+        Setpos(0, j);
+    }
+}
+void openmap()
+{
+    double rx = jx, ry = jy;
+    double jjx = jx, jjy = jy;
+    POINT p;
+    std::fill(&light[0][0], &light[0][0] + (size_t)WORLD_WIDTH * WORLD_HEIGHT,
+              (short)15);
+    // memset(ep,1,sizeof(ep));
+    sf = 1;
+    while(1)
+    {
+        if(clock() - Clocknum >= 0)
+        {
+            Color(1);
+            Setpos(printx - 1, 1);
+            cout << "--";
+            Setpos(printx - 1, 3);
+            cout << "++";
+            if(GetAsyncKeyState('N') & 0x8000)
+                memset(painting, 0, sizeof(painting)), shuaxin();
+            UpdateFPS();
+            Clocknum = clock();
+            p = GetMousePos();
+            mpx = To_int(p.x / 2 - 26);
+            mpy = To_int(p.y - 14);
+            int mprx, mpry;
+            if(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+            {
+                while(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+                    continue;
+                jx = rx, jy = ry;
+                break;
+            }
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                if((mpx == 24 || mpx == 23) && mpy == -12)
+                {
+                    while(KEY_DOWN(VK_LBUTTON))
+                        continue;
+                    int sf_max = WORLD_WIDTH / (printx + 1);
+                    if(WORLD_HEIGHT / (printy + 1) < sf_max)
+                        sf_max = WORLD_HEIGHT / (printy + 1);
+                    if(sf_max > 25)
+                        sf_max = 25;
+                    if(sf < sf_max)
+                        sf++;
+                    memset(sdprint, 0, sizeof(sdprint));
+                }
+                if((mpx == 24 || mpx == 23) && mpy == -10)
+                {
+                    while(KEY_DOWN(VK_LBUTTON))
+                        continue;
+                    if(sf > 1)
+                        sf--;
+                    memset(sdprint, 0, sizeof(sdprint));
+                }
+                jjx += (mprx - mpx) * sf;
+                jjy += (mpry - mpy) * sf;
+                jx = int(jjx + 0.5) / sf * sf;
+                jy = int(jjy + 0.5) / sf * sf;
+                int jx_min = printx / 2;
+                int jy_min = printy / 2;
+                int jx_max = WORLD_WIDTH - sf * (printx + 1) + printx / 2;
+                int jy_max = WORLD_HEIGHT - sf * (printy + 1) + printy / 2;
+                if(jx < jx_min)
+                    jx = jx_min;
+                if(jy < jy_min)
+                    jy = jy_min;
+                if(jx > jx_max)
+                    jx = jx_max;
+                if(jy > jy_max)
+                    jy = jy_max;
+                if(jjx < jx_min)
+                    jjx = jx_min;
+                if(jjy < jy_min)
+                    jjy = jy_min;
+                if(jjx > jx_max)
+                    jjx = jx_max;
+                if(jjy > jy_max)
+                    jjy = jy_max;
+            }
+            printformap();
+            mprx = mpx;
+            mpry = mpy;
+        }
+        //Sleep(1);
+    }
+}
+const char BIN_MAGIC[] = "2DMCBIN";
+const int BIN_VERSION = 2;
+
+// 旧存档世界尺寸（用于v1二进制格式兼容）
+const int OLD_WORLD_W = 5001;
+const int OLD_WORLD_H = 1001;
+
+// 为扩展的区域生成地形（旧存档加载时，x从from_x到WORLD_WIDTH-1的新区域）
+void expand_world(int from_x)
+{
+    if(from_x >= WORLD_WIDTH) return;
+    int start_biome = from_x > 50 ? from_x : 50;
+    // 为新列生成生物群系
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        boimes[i] = 0;
+        boimes2[i] = 0;
+    }
+    for(int i = start_biome; i <= WORLD_WIDTH - 301; i++)
+    {
+        if(rand() % 700 == 0)
+        {
+            int ran = rand() % 300 + 100;
+            for(int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
+                boimes[j] = 1;
+            i += ran;
+        }
+    }
+    for(int i = start_biome; i <= WORLD_WIDTH - 301; i++)
+    {
+        if(rand() % 700 == 0)
+        {
+            int ran = rand() % 300 + 100;
+            for(int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
+                boimes2[j] = 2;
+            i += ran;
+        }
+    }
+    // 生成全范围高度图（perlin需要全范围）
+    for(int i = 0; i < WORLD_WIDTH; i++)
+        zs_ls[i] = 785;
+    perlin(200, 60);
+    perlin(100, 30);
+    perlin(50, 15);
+    perlin(25, 7);
+    perlin(12, 3);
+    result();
+    // 新旧区域高度图在接缝处平滑过渡，避免出现垂直悬崖
+    if(from_x > 0)
+    {
+        int old_surface = WORLD_HEIGHT - 2;
+        for(int j = 0; j < WORLD_HEIGHT - 1; j++)
+        {
+            short b = s[from_x - 1][j];
+            if(b != 0 && b != 11 && !(b >= 19 && b <= 23) && !(b >= 32 && b <= 34))
+            {
+                old_surface = j;
+                break;
+            }
+        }
+        int blend = WORLD_WIDTH - from_x;
+        if(blend > 200)
+            blend = 200;
+        for(int i = from_x; i < from_x + blend; i++)
+        {
+            double t = (i - from_x + 1.0) / blend;
+            int new_surface = WORLD_HEIGHT - 1 - zs[i];
+            int surf = (int)(old_surface * (1.0 - t) + new_surface * t + 0.5);
+            if(surf < 0)
+                surf = 0;
+            if(surf > WORLD_HEIGHT - 1)
+                surf = WORLD_HEIGHT - 1;
+            zs[i] = (short)(WORLD_HEIGHT - 1 - surf);
+        }
+    }
+    // 仅为新列生成主世界地形
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        tall = WORLD_HEIGHT - 1 - zs[i];
+        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
+        {
+            int dirt = 5, store = 1;
+            if(boimes2[i] == 2) store = 54, dirt = 53;
+            s[i][j] = store;
+            if(j == WORLD_HEIGHT - 1) s[i][j] = 10;
+            if(tall > 160 && tall <= 165)
+            {
+                if(j <= 165) s[i][j] = dirt;
+            }
+            else
+            {
+                if(j <= tall + 6 && tall < 165) s[i][j] = dirt;
+            }
+        }
+        if(tall >= 160)
+        {
+            for(int j = tall + 1; j >= 160; j--)
+                s[i][j] = 19;
+        }
+    }
+    // 新列种树
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        if(i <= 2 || i >= WORLD_WIDTH - 2)
+            continue;
+        int t = WORLD_HEIGHT - 1 - zs[i];
+        if(t < 0)
+            t = 0;
+        if(t >= 160)
+            continue;
+        if(boimes[i] == 1 && t < 100)
+            continue;
+        if(rand() % 15 == 2)
+            make_tree(i, t);
+    }
+    // 新列放置矿石
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        for(int j = 995; j >= 125; j--)
+        {
+            if(rand() % 450 == 0) st(3, i, j, 2);
+            if(j > 165 && rand() % (700 - int(j * 0.3)) == 0) st(4, i, j, 3);
+            if(boimes2[i] == 0 && rand() % 1000 == 0) st(5, i, j, 2);
+            if(j > 250 && rand() % (800 - int(j * 0.3)) == 0) st(62, i, j, 4);
+            if(j > 350 && rand() % (1000 - int(j * 0.5)) == 0) st(12, i, j, 5);
+        }
+    }
+    // 新列生成洞穴
+    spawn_noise_cave();
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        if(rand() % 200 == 0) Make_deep(i);
+        if(rand() % 200 == 0) make_skycave(i);
+        for(int j = 995; j >= 1030 - zs[i]; j--)
+        {
+            if(noise_result[i][j] < -45) s[i][j] = 0;
+            if(rand() % 6000 == 0) Make_water(i, j, 0);
+            if(rand() % 8000 == 0) Make_lava(i, j, 0);
+            if(rand() % 4000 == 0) noodle_cave(i, j);
+        }
+    }
+    // 新列生成湖泊
+    for(int i = from_x; i <= WORLD_WIDTH - 21; i++)
+    {
+        if(i < 20) continue;
+        if(rand() % 10 == 0)
+        {
+            if(rand() % 10 == 0)
+                make_lake(i, 0);
+            else
+                make_lake(i, 1);
+        }
+    }
+    // 新列生成下界地形
+    for(int i = from_x; i < WORLD_WIDTH; i++)
+    {
+        int ntall = 900;
+        if(rand() % 15 == 0) ntall++;
+        if(rand() % 15 == 1) ntall--;
+        if(ntall < 0) ntall = 0;
+        for(int j = WORLD_HEIGHT - 1; j >= ntall + 1; j--)
+            s2[i][j] = 39;
+    }
+    spawn_noise_nether();
+    for(int i = (from_x > 5 ? from_x : 5); i <= WORLD_WIDTH - 6; i++)
+    {
+        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
+        {
+            if(noise_result[i][j] < -15)
+            {
+                if(rand() % 100 == 0) s2[i][j] = 32;
+                else s2[i][j] = 39;
+            }
+        }
+        for(int j = WORLD_HEIGHT - 2; j >= 900; j--)
+        {
+            if(rand() % 1000 == 0)
+            {
+                s2[i][j] = 69;
+                if(rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
+                if(rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
+            }
+        }
+        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
+        {
+            if(rand() % 300 == 0) st_nether(63, i, j, 3);
+        }
+    }
+    // 新列生成宝箱
+    for(int i = from_x; i <= WORLD_WIDTH - 11; i++)
+    {
+        if(i < 10) continue;
+        for(int j = 200; j <= 950; j++)
+        {
+            if(rand() % 12000 == 0)
+                spawn_chest(i, j);
+        }
+        if(rand() % 250 == 0)
+        {
+            for(int t = 0; t < 2; t++)
+            {
+                int ry = 200 + rand() % 750;
+                spawn_chest(i, ry);
+            }
+        }
+    }
+}
+
+// 通用2D数组读取：从文件读取sw×sh的数据，拷贝到cur_w×cur_h的数组中
+// 过大忽略，过小保留原值（由调用者后续生成）
+template<typename T>
+void fread_2d_compat(FILE *fp, T *arr, int cur_w, int cur_h, int sw, int sh)
+{
+    int copy_w = (sw < cur_w) ? sw : cur_w;
+    int copy_h = (sh < cur_h) ? sh : cur_h;
+    T *tmp = new T[sh];
+    for(int i = 0; i < sw; i++)
+    {
+        if(sh > 0) fread(tmp, sizeof(T), sh, fp);
+        if(i < copy_w)
+        {
+            for(int j = 0; j < copy_h; j++)
+                arr[i * cur_h + j] = tmp[j];
+        }
+    }
+    delete[] tmp;
+}
+
+bool save_binary(const char *filename)
+{
+    FILE *fp = fopen(filename, "wb");
+    if(!fp) return false;
+    fwrite(BIN_MAGIC, 1, 7, fp);
+    fwrite(&BIN_VERSION, sizeof(int), 1, fp);
+    fwrite(&WORLD_WIDTH, sizeof(int), 1, fp);
+    fwrite(&WORLD_HEIGHT, sizeof(int), 1, fp);
+    fwrite(s, sizeof(short), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
+    fwrite(s2, sizeof(short), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
+    fwrite(beibao, sizeof(int), 101 * 2, fp);
+    fwrite(&weidu, sizeof(int), 1, fp);
+    fwrite(&x, sizeof(double), 1, fp);
+    fwrite(&y, sizeof(double), 1, fp);
+    fwrite(&back_x, sizeof(int), 1, fp);
+    fwrite(&back_y, sizeof(int), 1, fp);
+    fwrite(&life, sizeof(double), 1, fp);
+    fwrite(&now_time, sizeof(int), 1, fp);
+    fwrite(&night, sizeof(int), 1, fp);
+    fwrite(&will_night, sizeof(int), 1, fp);
+    fwrite(&will_light, sizeof(int), 1, fp);
+    fwrite(shiti, sizeof(guaiwu), 500, fp);
+    fwrite(shiti2, sizeof(guaiwu), 500, fp);
+    fwrite(wear, sizeof(int), 6, fp);
+    fwrite(&ed, sizeof(int), 1, fp);
+    fwrite(ep, sizeof(bool), (size_t)WORLD_WIDTH * WORLD_HEIGHT, fp);
+    int box_count = box.size();
+    fwrite(&box_count, sizeof(int), 1, fp);
+    for(int i = 0; i < box_count; i++)
+    {
+        fwrite(&box[i].bx, sizeof(unsigned short), 1, fp);
+        fwrite(&box[i].by, sizeof(unsigned short), 1, fp);
+        fwrite(box[i].things, sizeof(unsigned short), 27, fp);
+    }
+    fwrite(&boss2hp, sizeof(double), 1, fp);
+    fwrite(boimes, sizeof(short), WORLD_WIDTH + 5, fp);
+    fwrite(boimes2, sizeof(short), WORLD_WIDTH + 5, fp);
+    fclose(fp);
+    return true;
+}
+
+bool load_binary(const char *filename)
+{
+    FILE *fp = fopen(filename, "rb");
+    if(!fp) return false;
+    char magic[7];
+    if(fread(magic, 1, 7, fp) != 7)
+    {
+        fclose(fp);
+        return false;
+    }
+    if(memcmp(magic, BIN_MAGIC, 7) != 0)
+    {
+        fclose(fp);
+        return false;
+    }
+    int version;
+    fread(&version, sizeof(int), 1, fp);
+    int saved_w, saved_h;
+    bool ep_bug = false;
+    if(version == 1)
+    {
+        // 旧版格式：固定5001×1001，ep有bug（写了5001*5001而非5001*1001）
+        saved_w = OLD_WORLD_W;
+        saved_h = OLD_WORLD_H;
+        ep_bug = true;
+    }
+    else
+    {
+        // v2+：从文件头读取维度
+        fread(&saved_w, sizeof(int), 1, fp);
+        fread(&saved_h, sizeof(int), 1, fp);
+    }
+    // 读取地形数据（过大忽略，过小保留）
+    fread_2d_compat(fp, &s[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+    fread_2d_compat(fp, &s2[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+    fread(beibao, sizeof(int), 101 * 2, fp);
+    for(int i = 0; i < 101; i++)
+        if(beibao[i][0] < 0 || beibao[i][0] > 91)
+            beibao[i][0] = 0, beibao[i][1] = 0;
+    fread(&weidu, sizeof(int), 1, fp);
+    fread(&x, sizeof(double), 1, fp);
+    fread(&y, sizeof(double), 1, fp);
+    fread(&back_x, sizeof(int), 1, fp);
+    fread(&back_y, sizeof(int), 1, fp);
+    fread(&life, sizeof(double), 1, fp);
+    fread(&now_time, sizeof(int), 1, fp);
+    fread(&night, sizeof(int), 1, fp);
+    fread(&will_night, sizeof(int), 1, fp);
+    fread(&will_light, sizeof(int), 1, fp);
+    fread(shiti, sizeof(guaiwu), 500, fp);
+    fread(shiti2, sizeof(guaiwu), 500, fp);
+    fread(wear, sizeof(int), 6, fp);
+    fread(&ed, sizeof(int), 1, fp);
+    // 读取ep数据
+    if(ep_bug)
+    {
+        // v1: ep被写成了 saved_w × saved_w（bug），实际有效数据只有 saved_w × saved_h
+        // 需要读取 saved_w*saved_w 个bool，但只取前 saved_w*saved_h 个
+        int ep_total = saved_w * saved_w;       // 文件中的总量
+        int ep_valid_rows = saved_w;            // 有效行数
+        int ep_valid_cols = saved_h;            // 有效列数
+        bool *tmp = new bool[ep_valid_cols];
+        for(int i = 0; i < ep_valid_rows; i++)
+        {
+            fread(tmp, sizeof(bool), ep_valid_cols, fp);
+            if(i < WORLD_WIDTH)
+            {
+                for(int j = 0; j < ep_valid_cols && j < WORLD_HEIGHT; j++)
+                    ep[i][j] = tmp[j];
+            }
+        }
+        delete[] tmp;
+        // 跳过文件中ep的剩余垃圾数据
+        int ep_remaining = ep_total - ep_valid_rows * ep_valid_cols;
+        if(ep_remaining > 0)
+            fseek(fp, ep_remaining * sizeof(bool), SEEK_CUR);
+    }
+    else
+    {
+        // v2+: ep尺寸正确，直接用通用函数读取
+        fread_2d_compat(fp, &ep[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
+    }
+    int box_count;
+    fread(&box_count, sizeof(int), 1, fp);
+    box.clear();
+    boxlen = box_count;
+    for(int i = 0; i < box_count; i++)
+    {
+        unsigned short bx, by;
+        unsigned short things[27];
+        fread(&bx, sizeof(unsigned short), 1, fp);
+        fread(&by, sizeof(unsigned short), 1, fp);
+        fread(things, sizeof(unsigned short), 27, fp);
+        box.push_back({{0}, bx, by});
+        memcpy(box.back().things, things, sizeof(things));
+        for(int j = 0; j < 27; j++)
+            if(box.back().things[j] % 1000 > 91)
+                box.back().things[j] = 0;
+    }
+    fread(&boss2hp, sizeof(double), 1, fp);
+    // 读取boimes（旧格式固定5005，v2+为saved_w+5）
+    int boimes_count = (version == 1) ? 5005 : (saved_w + 5);
+    short *btmp = new short[boimes_count];
+    fread(btmp, sizeof(short), boimes_count, fp);
+    for(int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
+        boimes[i] = btmp[i];
+    fread(btmp, sizeof(short), boimes_count, fp);
+    for(int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
+        boimes2[i] = btmp[i];
+    delete[] btmp;
+    fclose(fp);
+    // 如果存档世界比当前世界小，生成新区域地形
+    if(saved_w < WORLD_WIDTH)
+    {
+        expand_world(saved_w);
+    }
+    clear_entity_hash();
+    for(int i = 0; i < 500; i++)
+    {
+        if(shiti[i].type > 0)
+            add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
+    }
+    setlight();
+    return true;
+}
+
+int r;
+void save(string nam)
+{
+    string bin_name_new = nam + "_new.bin";
+    string bin_name = nam + ".bin";
+    bool isnew_save=save_binary(bin_name_new.c_str());
+    if(isnew_save)
+    {
+        remove(bin_name.c_str());
+        rename(bin_name_new.c_str(),bin_name.c_str());
+        return;
+    }
+    remove(bin_name_new.c_str());
+}
+char saves[100][55];
+int read_s;
+bool read_savelist()
+{
+    for(int i = 0; i <= 50; i++)
+        for(int j = 0; j <= 53; j++)
+            saves[i][j] = '\0';
+    read_s = 0;
+    FILE *fp;
+    fp = fopen("savelist.txt", "r");
+    if(fp == NULL)
+        return false;
+    if(fscanf(fp, "%d", &read_s) != 1 || read_s <= 0)
+    {
+        fclose(fp);
+        read_s = 0;
+        return false;
+    }
+    if(read_s > 100)
+        read_s = 100;
+    for(int i = 0; i < read_s; i++)
+    {
+        if(fscanf(fp, "%54s", saves[i]) != 1)
+        {
+            read_s = i;
+            break;
+        }
+    }
+    fclose(fp);
+    return true;
+}
+bool save_savelist(string add_)
+{
+    int save_s = 0;
+    char sss[55];
+    memset(sss, '\0', sizeof(sss));
+    FILE *fp;
+    fp = fopen("savelist.txt", "r");
+    if(fp != NULL)
+    {
+        if(fscanf(fp, "%d", &save_s) != 1)
+            save_s = 0;
+        if(save_s > 99)
+            save_s = 99;
+        for(int i = 0; i < save_s; i++)
+        {
+            if(fscanf(fp, "%54s", saves[i]) != 1)
+            {
+                save_s = i;
+                break;
+            }
+        }
+        fclose(fp);
+    }
+    FILE *fp2;
+    fp2 = fopen("savelist.txt", "w");
+    if(fp2 == NULL)
+        return false;
+    fprintf(fp2, "%d ", save_s + 1);
+    for(int i = 0; i < save_s; i++)
+    {
+        fprintf(fp2, "%s ", saves[i]);
+    }
+    for(size_t i = 0; i < add_.length() && i < 54; i++)
+        sss[i] = add_[i];
+    fprintf(fp2, "%s ", sss);
+    fclose(fp2);
+    return true;
+}
+bool delete_savelist(string add_)
+{
+    int save_s = 0;
+    FILE *fp;
+    fp = fopen("savelist.txt", "r");
+    if(fp != NULL)
+    {
+        if(fscanf(fp, "%d", &save_s) != 1)
+            save_s = 0;
+        if(save_s > 100)
+            save_s = 100;
+        for(int i = 0; i < save_s; i++)
+        {
+            if(fscanf(fp, "%54s", saves[i]) != 1)
+            {
+                save_s = i;
+                break;
+            }
+        }
+        fclose(fp);
+    }
+    int kept = 0;
+    for(int i = 0; i < save_s; i++)
+        if(saves[i] != add_)
+            kept++;
+    FILE *fp2;
+    fp2 = fopen("savelist.txt", "w");
+    if(fp2 != NULL)
+    {
+        fprintf(fp2, "%d ", kept);
+        for(int i = 0; i < save_s; i++)
+        {
+            if(saves[i] != add_)
+                fprintf(fp2, "%s ", saves[i]);
+        }
+        fclose(fp2);
+    }
+    string txt_name = add_ + ".txt";
+    string bin_name = add_ + ".bin";
+    remove(txt_name.c_str());
+    remove(bin_name.c_str());
+    return true;
+}
+int findbox(int xxx, int yyy)
+{
+    for(int i = 0; i < boxlen; i++)
+    {
+        if(box[i].bx == xxx && box[i].by == yyy)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+int alloc_box(int xxx, int yyy)
+{
+    for(int i = 0; i < boxlen; i++)
+    {
+        if(box[i].bx == 5005)
+        {
+            box[i].bx = (unsigned short)xxx;
+            box[i].by = (unsigned short)yyy;
+            memset(box[i].things, 0, sizeof(box[i].things));
+            return i;
+        }
+    }
+    box.push_back({{0}, (unsigned short)(xxx), (unsigned short)(yyy)});
+    boxlen++;
+    return boxlen - 1;
+}
+void add_box_item(int idx, int item, int count)
+{
+    if(idx < 0 || item <= 0 || count <= 0)
+        return;
+    if(count > 64)
+        count = 64;
+    for(int i = 0; i <= 24; i++)
+    {
+        if(box[idx].things[i] % 1000 == item && box[idx].things[i] / 1000 < 64)
+        {
+            int cur = box[idx].things[i] / 1000;
+            int add = count;
+            if(cur + add > 64)
+                add = 64 - cur;
+            if(add > 0)
+            {
+                box[idx].things[i] = item + (cur + add) * 1000;
+                count -= add;
+            }
+            if(count <= 0)
+                return;
+        }
+    }
+    for(int i = 0; i <= 24; i++)
+    {
+        if(box[idx].things[i] == 0)
+        {
+            box[idx].things[i] = item + count * 1000;
+            return;
+        }
+    }
+}
+void fill_box_loot(int idx)
+{
+    int rolls = 2 + rand() % 3;
+    for(int r = 0; r < rolls; r++)
+    {
+        int roll = rand() % 100;
+        if(roll < 30)
+            add_box_item(idx, 3, 3 + rand() % 8);
+        else if(roll < 55)
+            add_box_item(idx, 4, 2 + rand() % 6);
+        else if(roll < 70)
+            add_box_item(idx, 16, 4 + rand() % 10);
+        else if(roll < 78)
+            add_box_item(idx, 7, 1);
+        else if(roll < 86)
+            add_box_item(idx, 8, 1);
+        else if(roll < 92)
+            add_box_item(idx, 13, 1 + rand() % 3);
+        else if(roll < 95)
+            add_box_item(idx, 24, 1);
+        else if(roll < 97)
+            add_box_item(idx, 55, 1 + rand() % 2);
+        else if(roll < 99)
+        {
+            add_box_item(idx, 41, 1);
+            add_box_item(idx, 44, 6 + rand() % 10);
+        }
+        else
+            add_box_item(idx, 12, 1);
+    }
+    if(rand() % 4 == 0)
+        add_box_item(idx, 42, 1 + rand() % 3);
+    if(rand() % 8 == 0)
+        add_box_item(idx, 43, 1 + rand() % 2);
+}
+bool can_place_chest(int xxx, int yyy)
+{
+    if(xxx <= 2 || xxx >= WORLD_WIDTH - 2 || yyy <= 5 || yyy >= WORLD_HEIGHT - 6)
+        return false;
+    if(s[xxx][yyy] != 0)
+        return false;
+    if(!(s[xxx][yyy - 1] == 0 || s[xxx][yyy - 1] == 11))
+        return false;
+    int below = s[xxx][yyy + 1];
+    if(below == 0 || below == 11)
+        return false;
+    if((below >= 19 && below <= 22) || (below >= 32 && below <= 34))
+        return false;
+    if(s[xxx][yyy] == 40 || s[xxx - 1][yyy] == 40 || s[xxx + 1][yyy] == 40 ||
+            s[xxx][yyy - 1] == 40 || s[xxx][yyy + 1] == 40)
+        return false;
+    return true;
+}
+void spawn_chest(int xxx, int yyy)
+{
+    if(!can_place_chest(xxx, yyy))
+        return;
+    s[xxx][yyy] = 40;
+    int idx = alloc_box(xxx, yyy);
+    fill_box_loot(idx);
+}
+bool read(string nam)
+{
+    string bin_name = nam + ".bin";
+    if(load_binary(bin_name.c_str()))
+        return true;
+    return true;
+}
+void Start()
+{
+    life = 20;
+    l_life=30;
+    l_beibao[1][0]=100;
+    if(weidu==2)
+    {
+        swap_map(0);
+    }
+    // 检查重生点床是否存在
+    if(s[back_x][back_y] == 90)
+    {
+        // 床存在，在床上方重生
+        y = back_y - 1;
+        x = back_x;
+    }
+    else
+    {
+        // 床被挖走，重生到世界中心地表
+        x = WORLD_WIDTH / 2;
+        y = WORLD_HEIGHT - 2;
+        for(int j = 1; j < WORLD_HEIGHT; j++)
+        {
+            if(blocktouch[s[WORLD_WIDTH / 2][j]] >= 1)
+            {
+                y = j - 2;
+                break;
+            }
+        }
+    }
+    // 重置玩家速度
+    spx = 0;
+    spy = 0;
+    jump = 0;
+    setlight();
+}
+int getbeibao(int type)
+{
+    for(int i = 1; i <= 100; i++)
+        if(beibao[i][1] <= 0 || (beibao[i][0] == type && beibao[i][1] < 64))
+            return i;
+    return 0;
+}
+int getbeibao_2(int type)
+{
+    for(int i = 1; i <= 100; i++)
+        if(beibao[i][1] > 0 && beibao[i][0] == type)
+            return i;
+    return 0;
+}
+int ls[101][2];
+int getbeibao_3(int type, int nd)
+{
+    int nw = 0, m = nd;
+    for(int i = 1; i <= 100; i++)
+    {
+        if(beibao[i][1] > 0 && beibao[i][0] == type)
+        {
+            nw += beibao[i][1];
+            if(nw >= nd)
+            {
+                beibao[i][1] -= m;
+                return 1;
+            }
+            else
+                m -= beibao[i][1], beibao[i][1] = 0;
+        }
+    }
+    return 0;
+}
+void wajue(int sx, int sy)
+{
+    if(sx < 0 || sx >= WORLD_WIDTH || sy < 0 || sy >= WORLD_HEIGHT)
+        return;
+    if(blockwj[s[sx][sy]] > 0)
+    {
+        if(s[sx][sy] == 2 || s[sx][sy] == 40||s[sx][sy] == 66||s[sx][sy] == 67)
+        {
+            if(beibao[cho][0] == 74)
+                wj += 18;
+            else if(beibao[cho][0] == 78)
+                wj += 17;
+            else if(beibao[cho][0] == 50)
+                wj += 15;
+            else if(beibao[cho][0] == 48)
+                wj += 12;
+            else   if(beibao[cho][0] == 18)
+                wj += 9;
+            else
+                wj += 3;
+        }
+        else
+        {
+            if(beibao[cho][0] == 72)
+                wj += 18;
+            else if(beibao[cho][0] == 76)
+                wj += 17;
+            else if(beibao[cho][0] == 15)
+                wj += 15;
+            else if(beibao[cho][0] == 14)
+                wj += 11;
+            else if(beibao[cho][0] == 8)
+                wj += 8;
+            else if(beibao[cho][0] == 7)
+                wj += 5;
+            else
+                wj += 3;
+        }
+    }
+    else
+        return;
+    if(wj > blockwj[s[sx][sy]])
+    {
+        wjlv = 1;
+        if(beibao[cho][0] == 7)
+            wjlv = 2;
+        if(beibao[cho][0] == 8)
+            wjlv = 3;
+        if(beibao[cho][0] == 76)
+            wjlv = 4;
+        if(beibao[cho][0] == 14)
+            wjlv = 4;
+        if(beibao[cho][0] == 15)
+            wjlv = 5;
+        if(beibao[cho][0] == 72)
+            wjlv = 6;
+        if(wjlv >= blocklv[s[sx][sy]])
+        {
+            int U;
+            if(s[sx][sy]!=63)
+            {
+                U = getbeibao(s[sx][sy]);
+                if(U != 0)
+                {
+                    beibao[U][1]++, beibao[U][0] = s[sx][sy], wj = 0;
+                }
+            }
+            else
+            {
+                for(int i=1; i<=rand()%5+2; i++)
+                {
+                    U = getbeibao(65);
+                    if(U != 0)
+                    {
+                        beibao[U][1]++, beibao[U][0] = 65, wj = 0;
+                    }
+                }
+            }
+            if(s[sx][sy] == 40)
+            {
+                int del = findbox(sx, sy);
+                int uu;
+                if(del != -1)
+                {
+                    box[del].bx = 5005, box[del].by = 0;
+                    for(int i = 0; i <= 24; i++)
+                    {
+                        if(box[del].things[i] % 1000 == 0 ||
+                                box[del].things[i] % 1000 > 91)
+                            continue;
+                        for(int j = 1; j <= box[del].things[i] / 1000; j++)
+                        {
+                            uu = getbeibao(box[del].things[i] % 1000);
+                            if(uu != 0)
+                                beibao[uu][1]++, beibao[uu][0] = box[del].things[i] % 1000;
+                        }
+                        box[del].things[i] = 0;
+                    }
+                }
+            }
+            if(U != 0)
+                s[sx][sy] = 0;
+        }
+        else if(wj > blockwj[s[sx][sy]] * 6)
+        {
+            if(s[sx][sy] == 23)
+            {
+                if(rand()%10==0)
+                {
+                    int U = getbeibao(55);
+                    if(U != 0)
+                    {
+                        beibao[U][1]++, beibao[U][0] = 55, wj = 0;
+                    }
+                }
+                if(rand()%10==0)
+                {
+                    int U = getbeibao(6);
+                    if(U != 0)
+                    {
+                        beibao[U][1]++, beibao[U][0] = 6, wj = 0;
+                    }
+                }
+            }
+            s[sx][sy] = 0, wj = 0;
+        }
+    }
+    setlight();
+    Clear();
+}
+int sword=0;
+void make_eow()
+{
+    int spwan_x=x+rand()%31-15;
+    make_st(9,20,12,spwan_x,y+30,0,2);
+    for(int i=1; i<=38; i++)
+    {
+        make_st(10,20,8,spwan_x,y+30,0,1);
+    }
+    make_st(11,20,5,spwan_x,y+30,0,3);
+}
+void block_(int xxx, int yyy)
+{
+	if(beibao[cho][1] ==0)return;
+    if(xxx < 1 || xxx >= WORLD_WIDTH - 1 || yyy < 1 || yyy >= WORLD_HEIGHT - 1)
+        return;
+    if(xxx==To_int(x)&&yyy==To_int(y))return;
+    if(beibao[cho][0] == 51||beibao[cho][0] == 75)
+    {
+        if(beibao[cho][0] == 75)make_eow();
+        else make_st(5, 500, 8, mpx, mpy);
+        beibao[cho][1]--;
+        return;
+    }
+    if(beibao[cho][0] == 60)
+    {
+        if(sword==0)
+        {
+            sword=120;
+            double ttx=abs(x-mpx);
+            double tty=abs(y-mpy);
+            double total=ttx+tty+0.001;
+            double px=ttx/total;
+            double py=tty/total;
+            if(x-mpx<0)px*=-1;
+            if(y-mpy<0)py*=-1;
+            wudi=20;
+            spx=30*-px;
+            spy=20*-py;
+        }
+        return;
+    }
+    if(beibao[cho][0] == 6 || beibao[cho][0] == 7 || beibao[cho][0] == 8 ||
+            beibao[cho][0] == 13 || beibao[cho][0] == 14 || beibao[cho][0] == 15 ||
+            beibao[cho][0] == 18 || beibao[cho][0] == 17 || beibao[cho][0] == 25 ||
+            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||(beibao[cho][0]>=70&&beibao[cho][0]!=87&&beibao[cho][0]!=90))
+        return;
+    if((s[xxx + 1][yyy] == 0 || s[xxx + 1][yyy] == 11 ||
+            (s[xxx + 1][yyy] >= 19 && s[xxx + 1][yyy] <= 22) ||
+            (s[xxx + 1][yyy] >= 32 && s[xxx + 1][yyy] <= 34)) &&
+            (s[xxx - 1][yyy] == 0 || s[xxx - 1][yyy] == 11 ||
+             (s[xxx - 1][yyy] >= 19 && s[xxx - 1][yyy] <= 22) ||
+             (s[xxx - 1][yyy] >= 32 && s[xxx - 1][yyy] <= 34)) &&
+            (s[xxx][yyy + 1] == 0 || s[xxx][yyy + 1] == 11 ||
+             (s[xxx][yyy + 1] >= 19 && s[xxx][yyy + 1] <= 22) ||
+             (s[xxx][yyy + 1] >= 32 && s[xxx][yyy + 1] <= 34)) &&
+            (s[xxx][yyy - 1] == 0 || s[xxx][yyy - 1] == 11 ||
+             (s[xxx][yyy - 1] >= 19 && s[xxx][yyy - 1] <= 22) ||
+             (s[xxx][yyy - 1] >= 32 && s[xxx][yyy - 1] <= 34)))
+        return;
+    if(beibao[cho][0] == 26)
+    {
+        if(s[xxx][yyy] == 0 || s[xxx][yyy] == 11 ||
+                (s[xxx][yyy] >= 19 && s[xxx][yyy] <= 22) ||
+                (s[xxx][yyy] >= 32 && s[xxx][yyy] <= 34))
+        {
+            s[xxx][yyy] = 19;
+            beibao[cho][0] = 25;
+            setlight();
+            Clear();
+        }
+        return;
+    }
+    if(beibao[cho][0] == 35)
+    {
+        if(s[xxx][yyy] == 0 || s[xxx][yyy] == 11 ||
+                (s[xxx][yyy] >= 19 && s[xxx][yyy] <= 22) ||
+                (s[xxx][yyy] >= 32 && s[xxx][yyy] <= 34))
+        {
+            s[xxx][yyy] = 32;
+            beibao[cho][0] = 25;
+            setlight();
+            Clear();
+        }
+        return;
+    }
+    if(beibao[cho][1] > 0 && (s[xxx][yyy] == 0 || s[xxx][yyy] == 11 ||
+                              (s[xxx][yyy] >= 19 && s[xxx][yyy] <= 22) ||
+                              (s[xxx][yyy] >= 32 && s[xxx][yyy] <= 34)))
+    {
+        s[xxx][yyy] = beibao[cho][0];
+        beibao[cho][1]--;
+        if(beibao[cho][0] == 40)
+        {
+            bool pus = 1;
+            for(int i = 0; i < boxlen && pus; i++)
+            {
+                if(box[i].bx == 5005)
+                {
+                    box[i].bx = xxx, box[i].by = yyy;
+                    pus = false;
+                }
+            }
+            if(pus)
+            {
+                box.push_back({{0}, (unsigned short)(xxx), (unsigned short)(yyy)}),
+                boxlen++;
+            }
+        }
+    }
+    setlight();
+    Clear();
+}
+void gohome()
+{
+    // 检查重生点床是否存在
+    if(s[back_x][back_y] == 90)
+    {
+        x = back_x, y = back_y - 1;
+        if(weidu==2)
+        {
+            swap_map(0);
+        }
+        shuaxin();
+    }
+    else
+    {
+        // 床被挖走，无法传送
+        Setpos(1, 31);
+        Color(0);
+        cout << " 无法传送：重生点床已被挖走                                ";
+    }
+}
+int step__;
+void x_touch()
+{
+    if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
+    {
+        step__ = 1;
+        while(step__ < 60)
+        {
+            x -= 0.03 * step__;
+            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
+                break;
+            x += 0.06 * step__;
+            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
+                break;
+            x -= 0.03 * step__;
+            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
+                break;
+            step__++;
+        }
+        if(spx > 0)
+            x -= 0.03;
+        spx = 0;
+    }
+}
+void y_touch()
+{
+    if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 2&&y-int(y)>0.5)
+    {
+        if(spy > 0&&my!=-1)
+        {
+            if((y - fell) > 10)
+                life -= (y - fell - 10) * 0.5;
+            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 2&&y-int(y)>0.5)
+                y -= 0.05;
+            fell = y;
+            jump = 0;
+            spy = 0;
+        }
+    }
+    if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
+    {
+        if(spy > 0)
+        {
+            if((y - fell) > 10)
+                life -= (y - fell - 10) * 0.5;
+            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
+                y -= 0.1;
+            fell = y;
+            jump = 0;
+            spy = 0;
+        }
+        if(spy < 0)
+        {
+            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
+                y += 0.1;
+            spy = 3;
+            jump = 5;
+        }
+    }
+}
+void SetClean()
+{
+    Setpos(0, 31);
+    Color(0);
+    cout << "                                                                    "
+         "           ";
+    memset(painting, 0, sizeof(painting));
+}
+string g_cmd_input;
+HWND g_hEdit;
+void execute_command(const string &cmd);
+
+LRESULT CALLBACK CmdWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch(msg)
+    {
+        case WM_COMMAND:
+            if(LOWORD(wParam) == 1001 && HIWORD(wParam) == EN_CHANGE)
+            {
+                char buf[256];
+                GetWindowTextA(g_hEdit, buf, sizeof(buf));
+            }
+            break;
+        case WM_KEYDOWN:
+            if(wParam == VK_ESCAPE)
+            {
+                g_cmd_input = "";
+                DestroyWindow(hWnd);
+                return 0;
+            }
+            break;
+        case WM_CLOSE:
+            g_cmd_input = "";
+            DestroyWindow(hWnd);
+            return 0;
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+    }
+    return DefWindowProcA(hWnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK EditWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch(msg)
+    {
+        case WM_KEYDOWN:
+            if(wParam == VK_RETURN)
+            {
+                char buf[256];
+                GetWindowTextA(hWnd, buf, sizeof(buf));
+                g_cmd_input = buf;
+                DestroyWindow(GetParent(hWnd));
+                return 0;
+            }
+            else if(wParam == VK_ESCAPE)
+            {
+                g_cmd_input = "";
+                DestroyWindow(GetParent(hWnd));
+                return 0;
+            }
+            break;
+    }
+    return CallWindowProcA((WNDPROC)GetWindowLongPtrA(hWnd, GWLP_USERDATA), hWnd, msg, wParam, lParam);
+}
+
+void getin()
+{
+    GetIn = -4;
+    g_cmd_input = "";
+    HINSTANCE hInst = GetModuleHandleA(NULL);
+    WNDCLASSEXA wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEXA);
+    wc.lpfnWndProc = CmdWndProc;
+    wc.hInstance = hInst;
+    wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.lpszClassName = "2DMC_CmdWndClass";
+    RegisterClassExA(&wc);
+    HWND hWnd = CreateWindowExA(
+                    WS_EX_TOPMOST | WS_EX_CLIENTEDGE,
+                    "2DMC_CmdWndClass",
+                    "2DMC Command",
+                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                    100, 100, 420, 100,
+                    NULL, NULL, hInst, NULL
+                );
+    g_hEdit = CreateWindowExA(
+                  0,
+                  "EDIT",
+                  "",
+                  WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL | WS_BORDER,
+                  10, 15, 380, 25,
+                  hWnd, (HMENU)1001, hInst, NULL
+              );
+    SetWindowLongPtrA(g_hEdit, GWLP_USERDATA, (LONG_PTR)GetWindowLongPtrA(g_hEdit, GWLP_WNDPROC));
+    SetWindowLongPtrA(g_hEdit, GWLP_WNDPROC, (LONG_PTR)EditWndProc);
+    SetFocus(g_hEdit);
+    MSG msg;
+    while(GetMessageA(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+    UnregisterClassA("2DMC_CmdWndClass", hInst);
+    if(!g_cmd_input.empty())
+    {
+        execute_command(g_cmd_input);
+    }
+    SetClean();
+}
+
+void execute_command(const string &cmd)
+{
+    stringstream ss(cmd);
+    string cmd_name;
+    ss >> cmd_name;
+    if(cmd_name == "help" || cmd_name == "/help")
+    {
+        Color(0);
+        Setpos(0, 28);
+        cout << " /help - 帮助  /give <item> <n> - 给物品  /heal - 满血          ";
+        Setpos(0, 29);
+        cout << " /life <n> - 设生命  /kill - 自杀  /gamemode - 切换模式        ";
+        Setpos(0, 30);
+        cout << " /clear - 清背包  /time <n> - 设时间  /tp <x> <y> - 传送       ";
+        Setpos(0, 31);
+        cout << " /summon <name> [n] - 召唤(僵尸/骷髅/苦力怕/蜘蛛/羊/猪等)      ";
+        Sleep(3000);
+    }
+    else if(cmd_name == "heal" || cmd_name == "/heal")
+    {
+        life = 20;
+        Setpos(1, 31);
+        cout << " 生命已恢复                                                    ";
+    }
+    else if(cmd_name == "life" || cmd_name == "/life")
+    {
+        int w = 0;
+        ss >> w;
+        if(w >= 0 && w <= 20)
+        {
+            life = w;
+            Setpos(1, 31);
+            cout << " 生命已设置为 " << w << "                                     ";
+        }
+        else
+        {
+            Setpos(1, 31);
+            cout << " 错误: 生命必须在0-20之间                                      ";
+        }
+    }
+    else if(cmd_name == "kill" || cmd_name == "/kill")
+    {
+        life = 0;
+        Start();
+        spx = 0;
+        spy = 0;
+        jump = 0;
+        shuaxin();
+        Setpos(1, 31);
+        cout << " 你死了，已重生到出生点                                       ";
+    }
+    else if(cmd_name == "gamemode" || cmd_name == "/gamemode")
+    {
+        gamemode = 1 - gamemode;
+        Setpos(1, 31);
+        cout << " 游戏模式已切换为 " << (gamemode == 1 ? "生存" : "创造") << "             ";
+    }
+    else if(cmd_name == "clear" || cmd_name == "/clear")
+    {
+        memset(beibao, 0, sizeof(beibao));
+        Setpos(1, 31);
+        cout << " 背包已清空                                                    ";
+    }
+    else if(cmd_name == "give" || cmd_name == "/give")
+    {
+        string item_name;
+        int amount = 1;
+        ss >> item_name >> amount;
+        if(amount <= 0 || amount > 64)
+        {
+            Setpos(1, 31);
+            cout << " 错误: 数量必须在1-64之间                                      ";
+            return;
+        }
+        auto it = thing.find(item_name);
+        if(it == thing.end())
+        {
+            Setpos(1, 31);
+            cout << " 错误: 未知物品: " << item_name << "                          ";
+            return;
+        }
+        int item_id = it->second;
+        int slot = getbeibao(item_id);
+        if(slot > 0)
+        {
+            beibao[slot][0] = item_id;
+            beibao[slot][1] += amount;
+            if(beibao[slot][1] > 64) beibao[slot][1] = 64;
+            Setpos(1, 31);
+            cout << " 已获得 " << amount << " " << test[item_id] << "              ";
+        }
+        else
+        {
+            Setpos(1, 31);
+            cout << " 错误: 背包已满                                                ";
+        }
+    }
+    else if(cmd_name == "time" || cmd_name == "/time")
+    {
+        int w = 0;
+        ss >> w;
+        if(w >= 0 && w <= 40000)
+        {
+            now_time = w;
+            night = (w >= 20000) ? 1 : 0;
+            Setpos(1, 31);
+            cout << " 时间已设置为 " << w << "                                     ";
+        }
+        else
+        {
+            Setpos(1, 31);
+            cout << " 错误: 时间必须在0-40000之间                                  ";
+        }
+    }
+    else if(cmd_name == "tp" || cmd_name == "/tp")
+    {
+        int w = 0, h = 0;
+        ss >> w >> h;
+        // 使用与显示一致的坐标系：x相对世界中心，y从底部向上
+        int tx = w + WORLD_WIDTH / 2;
+        int ty = WORLD_HEIGHT - 1 - h;
+        if(tx >= 0 && tx < WORLD_WIDTH && ty >= 0 && ty < WORLD_HEIGHT)
+        {
+            x = tx;
+            y = ty;
+            shuaxin();
+            Setpos(1, 31);
+            cout << " 已传送到 (" << w << ", " << h << ")                          ";
+        }
+        else
+        {
+            Setpos(1, 31);
+            cout << " 错误: 位置无效                                                ";
+        }
+    }
+    else if(cmd_name == "summon" || cmd_name == "/summon")
+    {
+        string name;
+        int amount = 1;
+        ss >> name >> amount;
+        if(amount <= 0 || amount > 50)
+        {
+            Setpos(1, 31);
+            cout << " 错误: 数量必须在1-50之间                                      ";
+            return;
+        }
+        // 实体名 -> type 映射
+        int typ = -1;
+        if(name == "zombie" || name == "僵尸") typ = 1;
+        else if(name == "skeleton" || name == "骷髅") typ = 3;
+        else if(name == "creeper" || name == "苦力怕") typ = 2;
+        else if(name == "spider" || name == "蜘蛛") typ = 6;
+        else if(name == "pigman" || name == "僵尸猪灵") typ = 7;
+        else if(name == "sheep" || name == "羊") typ = 12;
+        else if(name == "pig" || name == "猪") typ = 13;
+        else if(name == "arrow" || name == "箭") typ = 4;
+        else if(name == "wither" || name == "凋灵") typ = 5;
+        if(typ < 0)
+        {
+            Setpos(1, 31);
+            cout << " 错误: 未知实体: " << name << "                              ";
+            return;
+        }
+        int cnt = 0;
+        for(int k = 0; k < amount; k++)
+        {
+            // 在玩家附近随机位置生成
+            int tx = To_int(x) + (rand() % 11 - 5);
+            int ty = To_int(y) + (rand() % 7 - 3);
+            if(tx <= 0 || ty <= 0 || tx >= WORLD_WIDTH - 1 || ty >= WORLD_HEIGHT - 1)
+                continue;
+            // 找一个空气位置
+            if(s[tx][ty] != 0 && s[tx][ty] != 11)
+            {
+                for(int dy = 1; dy <= 5 && ty - dy > 0; dy++)
+                {
+                    if(s[tx][ty - dy] == 0 || s[tx][ty - dy] == 11)
+                    {
+                        ty -= dy;
+                        break;
+                    }
+                }
+            }
+            if(s[tx][ty] == 0 || s[tx][ty] == 11)
+            {
+                if(typ == 1) make_st(1, 20, 4, tx, ty);
+                else if(typ == 2) make_st(2, 20, 50, tx, ty);
+                else if(typ == 3) make_st(3, 20, 3, tx, ty);
+                else if(typ == 4) make_st(4, 0, 0, tx, ty);
+                else if(typ == 5) make_st(5, 500, 8, tx, ty);
+                else if(typ == 6) make_st(6, 16, 3, tx, ty);
+                else if(typ == 7) make_st(7, 20, 6, tx, ty);
+                else if(typ == 12) make_st(12, 8, 0, tx, ty);
+                else if(typ == 13) make_st(13, 8, 0, tx, ty);
+                cnt++;
+            }
+        }
+        Setpos(1, 31);
+        cout << " 已召唤 " << cnt << " 个 " << name << "                                    ";
+    }
+    else
+    {
+        Setpos(1, 31);
+        cout << " 未知命令: " << cmd_name << "，输入 /help 查看帮助             ";
+    }
+}
+short getnew[WORLD_WIDTH][WORLD_HEIGHT];
+int TT;
+void block_update()
+{
+    TT++;
+    memset(getnew, 0, sizeof(getnew));
+    if(TT >= 10)
+    {
+        TT = 0;
+        for(int i = To_int(x) - 120; i <= To_int(x) + 120; i++)
+        {
+            for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
+            {
+                if(i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
+                    continue;
+                if(s[i][j] == 32)
+                {
+                    if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                    {
+                        getnew[i][j + 1] = 1;
+                    }
+                    if(s[i][j + 1] >= 19 && s[i][j + 1] <= 22)
+                    {
+                        getnew[i][j + 1] = -1;
+                    }
+                    if((s[i - 1][j] >= 19 && s[i - 1][j] <= 22) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i - 1][j] = -1;
+                    }
+                    if((s[i + 1][j] >= 19 && s[i + 1][j] <= 22) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i + 1][j] = -1;
+                    }
+                    if((s[i - 1][j] == 0 || s[i - 1][j] == 11) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i - 1][j] = 33;
+                    }
+                    if((s[i + 1][j] == 0 || s[i + 1][j] == 11) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i + 1][j] = 33;
+                    }
+                }
+                if(s[i][j] == 33)
+                {
+                    if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                    {
+                        getnew[i][j + 1] = 1;
+                    }
+                    if(s[i][j + 1] >= 19 && s[i][j + 1] <= 22)
+                    {
+                        getnew[i][j + 1] = -1;
+                    }
+                    if((s[i - 1][j] >= 19 && s[i - 1][j] <= 22) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i - 1][j] = -1;
+                    }
+                    if((s[i + 1][j] >= 19 && s[i + 1][j] <= 22) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i + 1][j] = -1;
+                    }
+                    if((s[i - 1][j] == 0 || s[i - 1][j] == 11) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i - 1][j] = 34;
+                    }
+                    if((s[i + 1][j] == 0 || s[i + 1][j] == 11) && s[i][j + 1] != 32 &&
+                            getnew[i][j + 1] != 1)
+                    {
+                        getnew[i + 1][j] = 34;
+                    }
+                }
+                if(s[i][j] == 34)
+                {
+                    if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                    {
+                        getnew[i][j + 1] = 1;
+                    }
+                    if(s[i][j + 1] >= 19 && s[i][j + 1] <= 22)
+                    {
+                        getnew[i][j + 1] = -1;
+                    }
+                }
+            }
+        }
+    }
+    for(int i = To_int(x) - 120; i <= To_int(x) + 120; i++)
+    {
+        for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
+        {
+            if(i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
+                continue;
+            if(s[i][j] == 19)
+            {
+                if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                {
+                    getnew[i][j + 1] = 2;
+                }
+                if(s[i][j + 1] >= 32 && s[i][j + 1] <= 34)
+                {
+                    if(s[i][j + 1] == 32)
+                        getnew[i][j + 1] = -2;
+                    else
+                        getnew[i][j + 1] = -1;
+                }
+                if(s[i - 1][j] >= 32 && s[i - 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    if(s[i - 1][j] == 32)
+                        getnew[i - 1][j] = -2;
+                    else
+                        getnew[i - 1][j] = -1;
+                }
+                if(s[i + 1][j] >= 32 && s[i + 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    if(s[i + 1][j] == 32)
+                        getnew[i + 1][j] = -2;
+                    else
+                        getnew[i + 1][j] = -1;
+                }
+                if((s[i - 1][j] == 0 || s[i - 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i - 1][j] = 20;
+                }
+                if((s[i + 1][j] == 0 || s[i + 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i + 1][j] = 20;
+                }
+            }
+            if(s[i][j] == 20)
+            {
+                if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                {
+                    getnew[i][j + 1] = 2;
+                }
+                if(s[i][j + 1] >= 32 && s[i][j + 1] <= 34)
+                {
+                    getnew[i][j + 1] = -1;
+                    if(s[i][j + 1] == 32)
+                        getnew[i][j + 1] = -2;
+                }
+                if(s[i - 1][j] >= 32 && s[i - 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i - 1][j] = -1;
+                    if(s[i - 1][j] == 32)
+                        getnew[i - 1][j] = -2;
+                }
+                if(s[i + 1][j] >= 32 && s[i + 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i + 1][j] = -1;
+                    if(s[i + 1][j] == 32)
+                        getnew[i + 1][j] = -2;
+                }
+                if((s[i - 1][j] == 0 || s[i - 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i - 1][j] = 21;
+                }
+                if((s[i + 1][j] == 0 || s[i + 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i + 1][j] = 21;
+                }
+            }
+            if(s[i][j] == 21)
+            {
+                if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                {
+                    getnew[i][j + 1] = 2;
+                }
+                if(s[i][j + 1] >= 32 && s[i][j + 1] <= 34)
+                {
+                    getnew[i][j + 1] = -1;
+                }
+                if(s[i - 1][j] >= 32 && s[i - 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i - 1][j] = -1;
+                    if(s[i - 1][j] == 32)
+                        getnew[i - 1][j] = -2;
+                }
+                if(s[i + 1][j] >= 32 && s[i + 1][j] <= 34 && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i + 1][j] = -1;
+                    if(s[i + 1][j] == 32)
+                        getnew[i + 1][j] = -2;
+                }
+                if((s[i - 1][j] == 0 || s[i - 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i - 1][j] = 22;
+                }
+                if((s[i + 1][j] == 0 || s[i + 1][j] == 11) && s[i][j + 1] != 19 &&
+                        getnew[i][j + 1] != 2)
+                {
+                    getnew[i + 1][j] = 22;
+                }
+            }
+            if(s[i][j] == 22)
+            {
+                if(s[i][j + 1] == 0 || s[i][j + 1] == 11)
+                {
+                    getnew[i][j + 1] = 2;
+                }
+                if(s[i][j + 1] >= 32 && s[i][j + 1] <= 34)
+                {
+                    getnew[i][j + 1] = -1;
+                    if(s[i][j + 1] == 32)
+                        getnew[i][j + 1] = -2;
+                }
+            }
+        }
+    }
+    for(int i = To_int(x) - 120; i <= To_int(x) + 120; i++)
+    {
+        for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
+        {
+            if(i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
+                continue;
+            if(getnew[i][j] > 3)
+                s[i][j] = getnew[i][j];
+            if(getnew[i][j] == 2)
+                s[i][j] = 19;
+            if(getnew[i][j] == 1)
+                s[i][j] = 32;
+            if(getnew[i][j] == -1)
+                s[i][j] = 1;
+            if(getnew[i][j] == -2)
+                s[i][j] = 36;
+        }
+    }
+    Clear();
+}
+
+void make_jian(double tx, double ty, double stx, double sty, int nbt_)
+{
+    int i = 0;
+    while(i < 500 && shiti[i].type != 0)
+        i++;
+    if(i >= 500)
+        return;
+    add_entity_to_hash(i, tx, ty);
+    shiti[i].HP = 0, shiti[i].hurt = 0, shiti[i].type = 4, shiti[i].gx = tx,
+             shiti[i].gy = ty, shiti[i].nbt = nbt_;
+    shiti[i].spgx = stx, shiti[i].spgy = sty, shiti[i].jp = 0, shiti[i].CD = 0;
+    shiti[i].randomtick = 0, shiti[i].direction = 0;
+    shiti[i].sd = 0;
+    shiti[i].AI = 2;
+}
+int QQQQ = 0;
+void try_make_st()
+{
+    for(int i = To_int(x) - 120; i <= To_int(x) + 120; i++)
+    {
+        for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
+        {
+            if(i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
+                continue;
+            if(i >= To_int(x) - 26 && j >= To_int(y) - 16 && i <= To_int(x) + 26 &&
+                    j <= To_int(y) + 16)
+                continue;
+            if(s[i][j] == 0 || s[i][j] == 11)
+            {
+                if(weidu == 1)
+                {
+                    if(light[i][j] <= 7 && blocktouch[s[i][j + 1]] >= 1)
+                        if(rand() % To_int(ed / 1.2) == 0)
+                        {
+                            QQQQ = rand() % 4;
+                            if(QQQQ == 0)
+                                make_st(1, 20, 4, i, j);
+                            else if(QQQQ == 1)
+                                make_st(3, 20, 3, i, j);
+                            else if(QQQQ == 2)
+                                make_st(2, 20, 50, i, j);
+                            else
+                                make_st(6, 16, 3, i, j);
+                        }
+                }
+                else
+                {
+                    if(rand() % ed == 0)
+                        make_st(7, 20, 6, i, j);
+                }
+            }
+        }
+    }
+    // 白天在地表自然生成羊和猪（基于列定位地表）
+    if(weidu == 1 && night == 0)
+    {
+        for(int i = To_int(x) - 120; i <= To_int(x) + 120; i += 2)
+        {
+            if(i <= 0 || i >= WORLD_WIDTH - 1)
+                continue;
+            // 排除玩家附近
+            if(abs(i - To_int(x)) < 30)
+                continue;
+            // 从上往下找地表（第一个实心方块上方的空气）
+            int ground = -1;
+            for(int j = 1; j < WORLD_HEIGHT - 1; j++)
+            {
+                if(blocktouch[s[i][j]] == true && (s[i][j - 1] == 0 || s[i][j - 1] == 11))
+                {
+                    ground = j - 1;
+                    break;
+                }
+            }
+            if(ground > 0 && light[i][ground] > 7)
+            {
+                if(rand() % (ed / 2) == 0)
+                {
+                    // 生成位置加随机偏移，避免堆叠
+                    int sx = i + (rand() % 3 - 1);
+                    if(sx > 0 && sx < WORLD_WIDTH - 1 && (s[sx][ground] == 0 || s[sx][ground] == 11))
+                    {
+                        // 随机生成羊或猪
+                        if(rand() % 2 == 0)
+                            make_st(12, 8, 0, sx, ground);
+                        else
+                            make_st(13, 8, 0, sx, ground);
+                    }
+                }
+            }
+        }
+    }
+}
+int dire;
+int gj;
+int Step;
+void st_kill(int l)
+{
+    if(shiti[l].type == 4 && (shiti[l].nbt == 1 || shiti[l].nbt == 3))
+    {
+        boom_add(int(shiti[l].gx + 0.5), int(shiti[l].gy + 0.5), -4);
+        if(wudi == 0)
+        {
+            if(jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy)) <= 8)
+            {
+                life -= (8 - jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy))) * 0.5 *
+                        jianshang;
+                wudi = 45;
+            }
+        }
+    }
+    if(shiti[l].AI == 4)
+    {
+        if(l==shiti[l].conl)
+        {
+            if(shiti[shiti[l].conr].type==11)
+            {
+                shiti[shiti[l].conr] = {0};
+            }
+            else
+            {
+                shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
+            }
+        }
+        else if(l==shiti[l].conr)
+        {
+            if(shiti[shiti[l].conl].type==9)
+            {
+                shiti[shiti[l].conl] = {0};
+            }
+            else
+            {
+                shiti[shiti[l].conl].type=11,shiti[shiti[l].conl].conr=shiti[l].conl;
+            }
+        }
+        else
+        {
+            if(shiti[shiti[l].conl].type==9)shiti[shiti[l].conl] = {0};
+            else shiti[shiti[l].conl].type=11,shiti[shiti[l].conl].conr=shiti[l].conl;
+            if(shiti[shiti[l].conr].type==11)shiti[shiti[l].conr] = {0};
+            else shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
+        }
+    }
+    remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
+    shiti[l] = {0};
+}
+void thing_fall(int many_, int get)
+{
+    for(int i = 0; i < many_; i++)
+    {
+        int U = getbeibao(get);
+        if(U != 0)
+            beibao[U][1]++, beibao[U][0] = get;
+    }
+}
+void st_kill_fall(int l)
+{
+    if(shiti[l].type == 1)
+    {
+        thing_fall(rand() % 2 + 1, 37);
+    }
+    if(shiti[l].type == 2)
+    {
+        thing_fall(rand() % 2 + 1, 43);
+    }
+    if(shiti[l].type == 3)
+    {
+        thing_fall(rand() % 2 + 1, 44);
+        if(rand() % 5 == 0)
+            thing_fall(1, 42);
+    }
+    if(shiti[l].type == 6)
+    {
+        thing_fall(rand() % 2 + 1, 42);
+    }
+    if(shiti[l].type ==5)
+    {
+        if(rand() % 2==0)thing_fall(1,60);
+        else thing_fall(1,61);
+    }
+    if(shiti[l].type == 12)
+    {
+        thing_fall(1, 87);
+        thing_fall(1, 88);
+    }
+    if(shiti[l].type == 13)
+    {
+        thing_fall(rand() % 2 + 1, 89);
+    }
+    st_kill(l);
+}
+void damage(double dmg)
+{
+    if(wudi == 0)
+    {
+        wudi = 45;
+        if(ed==8000)dmg*=0.75;
+        if(ed==4000)dmg*=1.5;
+        life -= dmg * jianshang;
+        if(life <= 0)
+        {
+            Start();
+            life = 20;
+            spx = 0;
+            spy = 0;
+            jump = 0;
+            shuaxin();
+        }
+    }
+}
+void touch_atk(int i,double dmg,double dist)
+{
+    if(abs(x - shiti[i].gx) < dist && abs(y - shiti[i].gy) < dist &&shiti[i].CD <= 0)
+    {
+        shiti[i].CD = 90;
+        damage(dmg);
+    }
+}
+
+void st_move()
+{
+    checkhp = 0;
+    boss3hp = 0;
+    if(playerCD > 0)
+        playerCD--;
+    for(l = 0; l < 500; l++)
+    {
+        if(shiti[l].type > 0)
+        {
+            double old_gx = shiti[l].gx;
+            double old_gy = shiti[l].gy;
+            if(shiti[l].AI == 1)
+            {
+                gj = 0;
+                if(KEY_DOWN(VK_LBUTTON) &&
+                        (abs(mpx - shiti[l].gx) < 2 && abs(mpy - shiti[l].gy) < 2) &&
+                        playerCD <= 0)
+                {
+                    if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
+                    {
+                        if(shiti[l].type==5&&shiti[l].islife2==1);
+                        else
+                        {
+                            if(spy > 2)
+                            {
+                                shiti[l].HP -= gongji * 1.5;
+                                if(shiti[l].type!=5)shiti[l].spgy = -8, gj = 2;
+                            }
+                            else
+                            {
+                                shiti[l].HP -= gongji;
+                                if(shiti[l].type!=5)shiti[l].spgy = -6, gj = 1;
+                                if(beibao[cho][0] == 17||beibao[cho][0] == 47||beibao[cho][0] == 49||beibao[cho][0] == 60||beibao[cho][0] == 73||beibao[cho][0] == 77)
+                                {
+                                    for(int LL = 0; LL < 500; LL++)
+                                    {
+                                        if(shiti[LL].type > 0&&LL!=l)
+                                        {
+                                            if((abs(shiti[LL].gx -mpx)<=2)&&(abs(shiti[LL].gy -mpy)<=2))
+                                            {
+                                                shiti[LL].HP -= 1;
+                                                if(shiti[LL].type!=5)shiti[LL].spgy = -6, gj = 1,shiti[LL].spgx += ((x<shiti[l].gx) * 2 - 1) * 0.4;
+                                                if(shiti[LL].HP <= 0)
+                                                {
+                                                    if(shiti[LL].type==5&&shiti[LL].islife2==0)
+                                                    {
+                                                        shiti[LL].islife2=1;
+                                                        shiti[LL].HP=1;
+                                                        shiti[LL].gongjitick=0;
+                                                    }
+                                                    else
+                                                    {
+                                                        st_kill_fall(LL);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        playerCD = gongjicd;
+                        shiti[l].chv=900,shiti[l].issd=1;
+                        if(shiti[l].type == 7)
+                        {
+                            shiti[l].ch = 1;
+                            vector<int> nearby_zombies;
+                            query_nearby_entities(x, y, shiti[l].sd, nearby_zombies);
+                            for(int i : nearby_zombies)
+                                if(shiti[i].type == 7 &&
+                                        jl(abs(shiti[i].gx - x), abs(shiti[i].gy - y)) <
+                                        shiti[l].sd)
+                                    shiti[i].ch = 1;
+                        }
+                        if(shiti[l].HP <= 0)
+                        {
+                            if(shiti[l].type==5&&shiti[l].islife2==0)
+                            {
+                                shiti[l].islife2=1;
+                                shiti[l].HP=1;
+                                shiti[l].gongjitick=0;
+                            }
+                            else
+                            {
+                                update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                                st_kill_fall(l);
+                                continue;
+                            }
+                        }
+                    }
+                }
+                if(shiti[l].type <= 4 || shiti[l].type >= 6)
+                {
+                    if(shiti[l].HP <= 0 || shiti[l].gx < To_int(x) - 120 ||
+                            shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
+                            shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
+                            shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 || shiti[l].gy > WORLD_HEIGHT - 1)
+                    {
+                        update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                        st_kill(l);
+                        continue;
+                    }
+                }
+                else if(shiti[l].type==5&&shiti[l].HP <= 0)
+                {
+                    if(shiti[l].islife2==0)
+                    {
+                        shiti[l].islife2=1;
+                        shiti[l].HP=1;
+                        shiti[l].gongjitick=0;
+                    }
+                    else
+                    {
+                        update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                        if(shiti[l].type==5)st_kill_fall(l);
+                        else st_kill(l);
+                    }
+                }
+                if(shiti[l].CD > 0)
+                    shiti[l].CD--;
+                if(shiti[l].jp == 1)
+                {
+                    if(shiti[l].type == 5)
+                        shiti[l].spgy = -10;
+                    else if(shiti[l].type == 6)
+                        shiti[l].spgy = -4;
+                    else
+                        shiti[l].spgy = -10;
+                    if(shiti[l].type != 6)
+                        shiti[l].jp = 2;
+                }
+                if(shiti[l].isnotouch==1)
+                {
+                    if(shiti[l].islife2==1)
+                    {
+                        if(shiti[l].gongjitick<=180)
+                        {
+                            if(int(shiti[l].gongjitick)%30==0)boom_add(int(shiti[l].gx+rand()%3-1+0.5), int(shiti[l].gy+rand()%3-1 + 0.5), -4);
+                            shiti[l].tox=x,shiti[l].toy=y-8;
+                        }
+                        else if(shiti[l].gongjitick<=360)
+                        {
+                            shiti[l].gx+=(shiti[l].tox-shiti[l].gx)/12.0;
+                            shiti[l].gy+=(shiti[l].toy-shiti[l].gy)/12.0;
+                        }
+                        else
+                        {
+                            if(int(shiti[l].gongjitick)%(30)==0)
+                            {
+                                double ttx,tty,total,px,py;
+                                ttx=abs(x-shiti[l].gx);
+                                tty=abs(y-shiti[l].gy);
+                                total=ttx+tty;
+                                px=ttx/total;
+                                py=tty/total;
+                                if(x-shiti[l].gx<0)px*=-1;
+                                if(y-shiti[l].gy<0)py*=-1;
+                                shiti[l].spgx = 90*px,
+                                         shiti[l].spgy = 90*py*1.5;
+                            }
+                            if(int(shiti[l].gongjitick)%(30)==29)boom_add(int(shiti[l].gx+0.5), int(shiti[l].gy+ 0.5), -4);
+                            shiti[l].gx+=shiti[l].spgx*0.02;
+                            shiti[l].gy+=shiti[l].spgy*0.02;
+                            shiti[l].spgy*=0.92;
+                            shiti[l].spgx*=0.92;
+                        }
+                        if(shiti[l].gongjitick>=900)
+                        {
+                            shiti[l].HP=0,boom_add(int(shiti[l].gx+0.5), int(shiti[l].gy+ 0.5), -4);
+                        }
+                        update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    }
+                    else
+                    {
+                        if(shiti[l].gongjitick<=810)
+                        {
+                            shiti[l].gx+=(x-shiti[l].gx)/6.0;
+                            shiti[l].gy+=(y-shiti[l].gy-15)/6.0;
+                            if(shiti[l].gongjitick==810)shiti[l].gx+=(x-shiti[l].gx)/2.0,shiti[l].toy=y,shiti[l].spgy=15;
+                        }
+                        else if(shiti[l].gongjitick>=820&&shiti[l].HP>250)
+                        {
+                            shiti[l].spgy+=g*2;
+                            shiti[l].gy+=shiti[l].spgy*0.04;
+                            if(shiti[l].gy>=shiti[l].toy
+                                    &&(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]]==1))shiti[l].isnotouch=0,shiti[l].gy-=shiti[l].spgy*0.02,boom_add(int(shiti[l].gx + 0.5), int(shiti[l].gy + 0.5), -4);
+                        }
+                        else if(shiti[l].gongjitick>=820&&shiti[l].HP<=250)
+                        {
+                            if(int(shiti[l].gongjitick)%(60-(shiti[l].HP<=125)*20)==0)
+                            {
+                                double ttx,tty,total,px,py;
+                                ttx=abs(x-shiti[l].gx);
+                                tty=abs(y-shiti[l].gy);
+                                total=ttx+tty;
+                                px=ttx/total;
+                                py=tty/total;
+                                if(x-shiti[l].gx<0)px*=-1;
+                                if(y-shiti[l].gy<0)py*=-1;
+                                shiti[l].spgx = (60+(shiti[l].HP<=75)*20)*px,
+                                         shiti[l].spgy = (60+(shiti[l].HP<=75)*20)*py*1.5;
+                            }
+                            shiti[l].gx+=shiti[l].spgx*0.02;
+                            shiti[l].gy+=shiti[l].spgy*0.02;
+                            shiti[l].spgy*=0.92;
+                            shiti[l].spgx*=0.92;
+                        }
+                    }
+                }
+                else
+                {
+                    if((s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                            s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22) ||
+                            (s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 32 &&
+                             s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 34))
+                    {
+                        if(s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 32 &&
+                                s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 34 &&
+                                shiti[l].type != 5 && shiti[l].type != 7)
+                            shiti[l].HP -= 0.25;
+                        shiti[l].spgy += g;
+                        if(shiti[l].type <= 3)
+                            shiti[l].spgx *= 0.5;
+                        shiti[l].spgy *= 0.75;
+                        if(shiti[l].type == 2)
+                            shiti[l].spgy = -3;
+                        if(shiti[l].type == 5)
+                        {
+                            if(shiti[l].gy < y)
+                                shiti[l].spgy = 8;
+                            else
+                                shiti[l].spgy = -8;
+                        }
+                        shiti[l].gy += shiti[l].spgy * 0.02;
+                    }
+                    else
+                    {
+                        shiti[l].spgy += g;
+                        shiti[l].gy += shiti[l].spgy * 0.06;
+                        shiti[l].spgy *= 0.98;
+                        if(shiti[l].type == 5 && shiti[l].HP <= 250)
+                        {
+                            if(shiti[l].gy > y - 6&&shiti[l].gy < y - 5)shiti[l].spgy = 0;
+                            else if(shiti[l].gy > y - 5)
+                                shiti[l].spgy = -6;
+                            else
+                                shiti[l].spgy = 6;
+                            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                    true)
+                            {
+                                s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] = 0;
+                                Clear();
+                            }
+                        }
+                    }
+                    if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                            true)
+                    {
+                        if(shiti[l].spgy >= 0)
+                        {
+                            while(
+                                blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                                shiti[l].gy -= 0.1;
+                            shiti[l].jp = 0;
+                            shiti[l].spgy = 0.01;
+                        }
+                        if(shiti[l].spgy < 0)
+                        {
+                            while(
+                                blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                                shiti[l].gy += 0.1;
+                            shiti[l].spgy = 2;
+                        }
+                    }
+                    bool isjump=1,isdown=0;
+                    if(abs(x-shiti[l].gx)<1.5&&(shiti[l].type==1||shiti[l].type==5))
+                    {
+                        if(y<shiti[l].gy)
+                        {
+                            for(int i=-3; i<=-1; i++)
+                                if(blocktouch[s[To_int(shiti[l].gx)][To_int(shiti[l].gy+i)]]==1)isjump=0;
+                            if(isjump&&shiti[l].jp==0)shiti[l].jp = 1;
+                        }
+                    }
+                    if(y>shiti[l].gy)
+                    {
+                        isdown=1;
+                    }
+                    if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==2&&shiti[l].gy-int(shiti[l].gy)>0.5)
+                    {
+                        if(shiti[l].spgy >= 0&&!isdown)
+                        {
+                            while(
+                                blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                2&&shiti[l].gy-int(shiti[l].gy)>0.5)
+                                shiti[l].gy -= 0.05;
+                            shiti[l].jp = 0;
+                            shiti[l].spgy = 0.01;
+                        }
+                    }
+                    if(tick%5==0&&!shiti[l].issd)
+                    {
+                        double total=25,px,py;
+                        for(double ddx=0,ddy=total; ddx<=total&&!shiti[l].issd; ddx++)
+                        {
+                            ddy=total-ddx;
+                            for(int i=1; i<=4&&!shiti[l].issd; i++)
+                            {
+                                px=shiti[l].gx,py=shiti[l].gy;
+                                for(double LL=0; LL<=shiti[l].sd; LL+=0.25)
+                                {
+                                    if(i==1)px+=ddx/100,py+=ddy/100;
+                                    else if(i==2)px+=-ddx/100,py+=ddy/100;
+                                    else if(i==3)px+=ddx/100,py+=-ddy/100;
+                                    else px+=-ddx/100,py+=-ddy/100;
+                                    if(blocktouch[s[To_int(px)][To_int(py)]]==1)break;
+                                    if(abs(px-x)<0.5&&abs(py-y)<0.5)
+                                    {
+                                        shiti[l].chv=600;
+                                        shiti[l].issd=1;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(shiti[l].chv>0)shiti[l].chv--;
+                    else shiti[l].issd=0;
+                    if(shiti[l].type==5)shiti[l].issd=1,shiti[l].chv=300;
+                    if((shiti[l].chv>0) &&
+                            (shiti[l].type != 7 || shiti[l].ch == 1))
+                    {
+                        if(shiti[l].gx > x)
+                            shiti[l].spgx -= 0.007, dire = 1;
+                        else
+                            shiti[l].spgx += 0.007, dire = 0;
+                        shiti[l].direction =1;
+                    }
+                    else
+                    {
+                        shiti[l].spgx += 0.004 * shiti[l].direction;
+                        if(shiti[l].direction==0)shiti[l].randomtick+=2;
+                        shiti[l].randomtick++;
+                        if(shiti[l].randomtick > 300)
+                        {
+                            shiti[l].randomtick = 0;
+                            if(shiti[l].direction!=0)shiti[l].direction =0;
+                            else shiti[l].direction = (rand() % 2)*2-1;
+                        }
+                        if(shiti[l].direction==-1)dire=0;
+                        else dire=1;
+                    }
+                    if(gj == 1)
+                        shiti[l].spgx += ((dire) * 2 - 1) * 0.4;
+                    else if(gj == 2)
+                        shiti[l].spgx += ((dire) * 2 - 1) * 0.6;
+                    if(s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                            s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22)
+                        shiti[l].gx += shiti[l].spgx * 0.5;
+                    else
+                        shiti[l].gx += shiti[l].spgx;
+                    shiti[l].spgx *= 0.9;
+                    if(shiti[l].type == 5 && shiti[l].HP <= 250)
+                    {
+                        if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                        {
+                            s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] = 0;
+                            Clear();
+                        }
+                    }
+                    isjump=1;
+                    for(int i=1; i<=3; i++)
+                        if(blocktouch[s[To_int(shiti[l].gx-((dire) * 2 - 1))][To_int(shiti[l].gy+i)]]==1)isjump=0;
+                    if(isjump&&shiti[l].jp==0)shiti[l].jp = 1;
+                    if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                            true)
+                    {
+                        Step = 1;
+                        while(Step < 60)
+                        {
+                            shiti[l].gx -= 0.03 * Step;
+                            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                    false)
+                                break;
+                            shiti[l].gx += 0.06 * Step;
+                            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                    false)
+                                break;
+                            shiti[l].gx -= 0.03 * Step;
+                            Step++;
+                        }
+                        if(shiti[l].jp == 0)
+                            shiti[l].jp = 1;
+                        shiti[l].spgx = 0;
+                    }
+                    else if(shiti[l].type == 6)
+                        shiti[l].jp = 0;
+                }
+                if(shiti[l].type == 1 || shiti[l].type == 6 ||
+                        (shiti[l].type == 7 && shiti[l].ch == 1))
+                {
+                    touch_atk(l,shiti[l].hurt,0.75);
+                }
+                else if(shiti[l].type == 2)
+                {
+                    if(abs(x - shiti[l].gx) < 8 && abs(y - shiti[l].gy) < 8&&shiti[l].chv>0)
+                    {
+                        if(shiti[l].CD < 0)
+                            shiti[l].CD--, shiti[l].spgx = 0;
+                        if(shiti[l].CD < -100)
+                        {
+                            if(wudi == 0)
+                            {
+                                if(jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy)) <= 8)
+                                    damage((5 - jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy))) *
+                                           4 * jianshang);
+                            }
+                            boom_add(To_int(shiti[l].gx),To_int(shiti[l].gy), -4);
+                            Clear();
+                            for(int LL = 0; LL < 500; LL++)
+                            {
+                                if(shiti[LL].type > 0)
+                                {
+                                    if(jl(abs(shiti[l].gx - shiti[LL].gx),
+                                            abs(shiti[l].gy - shiti[LL].gy)) <= 8)
+                                        shiti[LL].HP -= (8 - jl(abs(shiti[l].gx - shiti[LL].gx),
+                                                                abs(shiti[l].gy - shiti[LL].gy))) *
+                                                        0.1 * shiti[l].hurt;
+                                }
+                            }
+                            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                            st_kill(l);
+                            continue;
+                        }
+                        if(abs(x - shiti[l].gx) < 4 && abs(y - shiti[l].gy) < 4)
+                        {
+                            if(shiti[l].CD == 0)
+                                shiti[l].CD--;
+                        }
+                    }
+                    else
+                        shiti[l].CD = 0;
+                }
+                else if(shiti[l].type == 3)
+                {
+                    if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) <
+                            shiti[l].sd * 1.25&&shiti[l].chv>0)
+                    {
+                        shiti[l].CD--;
+                        if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y))<=8)shiti[l].spgx = ((x<shiti[l].gx)*2-1)*0.05;
+                        else if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y))<=10)shiti[l].spgx = 0;
+                        if(shiti[l].CD <=
+                                -120 + (shiti[l].sd * 2.5 -
+                                        jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y) * 3)))
+                        {
+                            shiti[l].CD = 0;
+                            double ttx,tty,total,px,py;
+                            ttx=abs(x-shiti[l].gx);
+                            tty=abs(y-shiti[l].gy);
+                            total=ttx+tty+0.001;
+                            px=ttx/total;
+                            py=tty/total;
+                            if(x-shiti[l].gx<0)px*=-1;
+                            if(y-shiti[l].gy<0)py*=-1;
+                            make_jian(shiti[l].gx,shiti[l].gy-0.75,30*px,50*py,0);
+                        }
+                    }
+                }
+                else if(shiti[l].type == 5)
+                {
+                    if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) < shiti[l].sd)
+                    {
+                        bosshp = shiti[l].HP;
+                        shiti[l].gongjitick++;
+                        touch_atk(l,shiti[l].hurt,0.75);
+                        if(shiti[l].gongjitick<240)shiti[l].gongjitick++;
+                        if(shiti[l].islife2==1)
+                        {
+                            if(shiti[l].gongjitick==2)
+                            {
+                                shiti[l].isnotouch=1;
+                                shiti[l].tox=x;
+                                shiti[l].toy=y;
+                            }
+                            continue;
+                        }
+                        if(shiti[l].gongjitick >= 240 && shiti[l].gongjitick <= 480 &&
+                                shiti[l].CD <= 0)
+                        {
+                            shiti[l].CD = 50 - (500 - shiti[l].HP) / 20;
+                            double ttx,tty,total,px,py;
+                            ttx=abs(x-shiti[l].gx);
+                            tty=abs(y-shiti[l].gy);
+                            total=ttx+tty+0.001;
+                            px=ttx/total;
+                            py=tty/total;
+                            if(x-shiti[l].gx<0)px*=-1;
+                            if(y-shiti[l].gy<0)py*=-1;
+                            if(shiti[l].HP>200)make_jian(shiti[l].gx,shiti[l].gy ,((500-shiti[l].HP)/25+25)*px, ((500-shiti[l].HP)/25+25)*py*1.5, 4);
+                            else
+                            {
+                                make_jian(shiti[l].gx,shiti[l].gy ,-40, 0, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,40, 0, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,0, -60, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,0, 60, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,-20,30, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,20,-30, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,-20,-30, 4);
+                                make_jian(shiti[l].gx,shiti[l].gy ,20,30, 4);
+                            }
+                        }
+                        if(shiti[l].gongjitick >= 480 && shiti[l].gongjitick <= 720 &&
+                                shiti[l].CD <= 0)
+                        {
+                            shiti[l].CD = 100 - (500 - shiti[l].HP) / 10;
+                            if(shiti[l].HP>150||(shiti[l].HP>75&&(rand()%2==0)))
+                            {
+                                make_jian(x-30, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x-25, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x-20, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x-15, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x-10, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x-5, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x, y - 25,   0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x+5, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x+10, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x+15, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x+20, y - 25,0, (500-shiti[l].HP)/50,5);
+                                make_jian(x+25, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                make_jian(x+30, y - 25,0, (500-shiti[l].HP)/50, 5);
+                            }
+                            else
+                            {
+                                if(shiti[l].HP<=75)
+                                {
+                                    make_jian(x-30, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x-25, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x-20, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x-15, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x-10, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x-5, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x, y - 25,   0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x+5, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x+10, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x+15, y - 25, 0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x+20, y - 25,0, (500-shiti[l].HP)/50,5);
+                                    make_jian(x+25, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                    make_jian(x+30, y - 25,0, (500-shiti[l].HP)/50, 5);
+                                }
+                                int ran__=rand()%2*2-1;
+                                make_jian(x+ran__*45, y - 30,((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y - 24,((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y - 18, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y - 12,((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y - 6, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y - 0, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y + 6, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y + 12, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y + 18, ((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                                make_jian(x+ran__*45, y + 24,((500-shiti[l].HP)/50+15)*-ran__, 0,4);
+                                make_jian(x+ran__*45, y + 30,((500-shiti[l].HP)/50+15)*-ran__, 0, 4);
+                            }
+                        }
+                        if(shiti[l].gongjitick >= 800 && shiti[l].gongjitick<=980+(shiti[l].HP<=250)*120+(shiti[l].HP<=125)*120)
+                        {
+                            if(shiti[l].gongjitick==800)shiti[l].spgy=0,shiti[l].spgx=0,shiti[l].CD = 120,shiti[l].isnotouch=1,shiti[l].toy=y;
+                        }
+                        if(shiti[l].gongjitick>980+(shiti[l].HP<=250)*120+(shiti[l].HP<=125)*120)
+                        {
+                            shiti[l].spgy=0,shiti[l].spgx=0;
+                            shiti[l].gongjitick = 0;
+                            shiti[l].isnotouch = 0;
+                        }
+                    }
+                }
+            }
+            else if(shiti[l].AI == 2)
+            {
+                if(shiti[l].gx < To_int(x) - 120 || shiti[l].gy < To_int(y) - 80 ||
+                        shiti[l].gx > To_int(x) + 120 || shiti[l].gy > To_int(y) + 80 ||
+                        shiti[l].gx < 0 || shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 ||
+                        shiti[l].gy > WORLD_HEIGHT - 1)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                }
+                shiti[l].randomtick++;
+                if(shiti[l].randomtick > 1200)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                }
+                if(shiti[l].nbt<=3)
+                {
+                    shiti[l].spgx *= 0.995;
+                    shiti[l].gx += shiti[l].spgx * 0.03;
+                }
+                else
+                {
+                    shiti[l].gx += shiti[l].spgx * 0.03;
+                }
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true && shiti[l].nbt!=4&& shiti[l].nbt!=5)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+                if(abs(x - shiti[l].gx) < 0.75 && abs(y - shiti[l].gy) < 0.75 &&
+                        shiti[l].nbt != 2 && shiti[l].nbt != 3)
+                {
+                    damage(3);
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+                if(shiti[l].nbt == 2)
+                {
+                    for(int LL = 0; LL < 500; LL++)
+                    {
+                        if(shiti[LL].type > 0 && LL != l)
+                        {
+                            if(abs(shiti[LL].gx - shiti[l].gx) < 1 &&
+                                    abs(shiti[LL].gy - shiti[l].gy) < 1&&shiti[LL].AI!=2)
+                            {
+                                if(shiti[LL].type!=5&&shiti[LL].type<9)
+                                {
+                                    shiti[LL].spgy = -6,
+                                              shiti[LL].spgx = ((shiti[LL].gx-x> 0) * 2 - 1) * 0.4;
+                                }
+                                if(!(shiti[LL].type==5&&shiti[LL].islife2==1))shiti[LL].HP -= 5;
+                                update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                                if(shiti[LL].HP <= 0)
+                                {
+                                    if(shiti[LL].type==5&&shiti[LL].islife2==0)
+                                    {
+                                        shiti[LL].islife2=1;
+                                        shiti[LL].HP=1;
+                                        shiti[LL].gongjitick=0;
+                                    }
+                                    else
+                                    {
+                                        st_kill_fall(LL);
+                                    }
+                                }
+                                update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                                st_kill(l);
+                                continue;
+                            }
+                        }
+                    }
+                }
+                if(shiti[l].nbt<=3)
+                {
+                    shiti[l].spgy += g;
+                    shiti[l].gy += shiti[l].spgy * 0.02;
+                    shiti[l].spgy *= 0.98;
+                }
+                else
+                {
+                    if(shiti[l].nbt==5)shiti[l].gy +=g;
+                    shiti[l].gy += shiti[l].spgy * 0.02;
+                }
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true&& shiti[l].nbt!=4&& shiti[l].nbt!=5)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+                if(abs(x - shiti[l].gx) < 0.75 && abs(y - shiti[l].gy) < 0.75 &&
+                        shiti[l].nbt != 2 && shiti[l].nbt != 3)
+                {
+                    damage(3);
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+            }
+            else if(shiti[l].AI == 3)
+            {
+                checkhp = 1;
+                if(shiti[l].HP <= 0)
+                {
+                    boss2hp -= shiti[l].direction;
+                    int xxxx = shiti[l].gx, yyyy = shiti[l].gy, nbtt = shiti[l].nbt - 1;
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    if(nbtt >= 1)
+                    {
+                        if(nbtt >= 0)
+                            make_st(8, fbnq[nbtt], 1 + (nbtt / 2.0), xxxx + rand() % 5 - 2,
+                                    yyyy + rand() % 5 - 2, nbtt);
+                        if(nbtt - 1 >= 0)
+                            make_st(8, fbnq[nbtt - 1], 1 + (nbtt / 2.0),
+                                    xxxx + rand() % 5 - 2, yyyy + rand() % 5 - 2, nbtt - 1);
+                    }
+                    continue;
+                }
+                if(shiti[l].HP != shiti[l].direction)
+                    boss2hp -= shiti[l].direction - shiti[l].HP;
+                shiti[l].direction = shiti[l].HP;
+                gj = 0;
+                if(KEY_DOWN(VK_LBUTTON) &&
+                        (abs(mpx - shiti[l].gx) < 2 && abs(mpy - shiti[l].gy) < 2) &&
+                        playerCD <= 0)
+                {
+                    if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
+                    {
+                        if(spy > 2)
+                            shiti[l].HP -= gongji * 1.5, shiti[l].spgy = -8, gj = 2,
+                                                                  playerCD = gongjicd;
+                        else
+                            shiti[l].HP -= gongji, shiti[l].spgy = -6, gj = 1,
+                                                            playerCD = gongjicd;
+                        if(shiti[l].gongjitick > 600 && shiti[l].gongjitick < 900)
+                            shiti[l].HP -= gongji * 10;
+                        if(shiti[l].HP <= 0)
+                        {
+                            boss2hp -= shiti[l].direction;
+                            if(shiti[l].gongjitick > 600 && shiti[l].gongjitick < 900)
+                            {
+                                boom_add(int(shiti[l].gx + 0.5), int(shiti[l].gy + 0.5), -4);
+                                for(int LL = 0; LL < 500; LL++)
+                                {
+                                    if(shiti[LL].type > 0)
+                                    {
+                                        if(jl(abs(shiti[l].gx - shiti[LL].gx),
+                                                abs(shiti[l].gy - shiti[LL].gy)) <= 8)
+                                            shiti[LL].HP -=
+                                                (8 - jl(abs(shiti[l].gx - shiti[LL].gx),
+                                                        abs(shiti[l].gy - shiti[LL].gy))) *
+                                                2;
+                                    }
+                                }
+                            }
+                            int xxxx = shiti[l].gx, yyyy = shiti[l].gy,
+                                nbtt = shiti[l].nbt - 1;
+                            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                            st_kill(l);
+                            if(nbtt >= 1)
+                            {
+                                if(nbtt >= 0)
+                                    make_st(8, fbnq[nbtt], 1 + (nbtt / 2.0),
+                                            xxxx + rand() % 5 - 2, yyyy + rand() % 5 - 2, nbtt);
+                                if(nbtt - 1 >= 0)
+                                    make_st(8, fbnq[nbtt - 1], 1 + (nbtt / 2.0),
+                                            xxxx + rand() % 5 - 2, yyyy + rand() % 5 - 2,
+                                            nbtt - 1);
+                            }
+                            continue;
+                        }
+                    }
+                }
+                if(gj == 1 && shiti[l].gongjitick < 900)
+                    shiti[l].spgy *= -3, shiti[l].spgx *= -3;
+                if(gj == 2 && shiti[l].gongjitick < 900)
+                    shiti[l].spgy *= -4, shiti[l].spgx *= -4;
+                shiti[l].gongjitick++;
+                if(shiti[l].gongjitick < 300)
+                    shiti[l].spgx += ((x - shiti[l].gx) * 0.05 +
+                                      (((x - shiti[l].gx) > 0) * 2 - 1) * 0.4) *
+                                     (shiti[l].nbt / 10.0 + 0.1);
+                else if(shiti[l].gongjitick <= 600)
+                    shiti[l].spgx += ((x - shiti[l].gx) * 0.02 +
+                                      (((x - shiti[l].gx) > 0) * 2 - 1) * 0.2) *
+                                     (shiti[l].nbt / 10.0 + 0.1);
+                if(shiti[l].spgx < -24 && shiti[l].gongjitick < 900)
+                    shiti[l].spgx = -24;
+                if(shiti[l].spgx > 24 && shiti[l].gongjitick < 900)
+                    shiti[l].spgx = 24;
+                shiti[l].gx += shiti[l].spgx * 0.01;
+                if(shiti[l].gongjitick < 300)
+                    shiti[l].spgy -= ((y - shiti[l].gy) * 0.05 +
+                                      (((y - shiti[l].gy) > 0) * 2 - 1) * 0.6) *
+                                     (shiti[l].nbt / 10.0 + 0.1);
+                else if(shiti[l].gongjitick <= 600)
+                    shiti[l].spgy -= ((y - shiti[l].gy - 3) * 0.02 +
+                                      (((y - shiti[l].gy - 3) > 0) * 2 - 1) * 0.2) *
+                                     (shiti[l].nbt / 10.0 + 0.1);
+                if(shiti[l].spgy < -24 && shiti[l].gongjitick < 900)
+                    shiti[l].spgy = -24;
+                if(shiti[l].spgy > 24 && shiti[l].gongjitick < 900)
+                    shiti[l].spgy = 24;
+                shiti[l].gy -= shiti[l].spgy * 0.01;
+                if(shiti[l].CD > 0)
+                    shiti[l].CD--;
+                if(shiti[l].gongjitick > 300 && shiti[l].gongjitick <= 600 &&
+                        shiti[l].CD <= 0 && shiti[l].nbt > 5)
+                    shiti[l].CD = (20 - shiti[l].nbt) * 12,
+                             make_jian(shiti[l].gx, shiti[l].gy, (x - shiti[l].gx),
+                                       (y - shiti[l].gy) * 5 - 1, 0);
+                if(shiti[l].gongjitick == 900)
+                    shiti[l].spgx = (x - shiti[l].gx) * (shiti[l].nbt / 2.0),
+                             shiti[l].spgy = -((y - shiti[l].gy) * (shiti[l].nbt / 2.0));
+                if(shiti[l].gongjitick > 1020)
+                    shiti[l].gongjitick = 0;
+                shiti[l].spgx *= 0.98;
+                shiti[l].spgy *= 0.98;
+                if(abs(x - shiti[l].gx) < 0.5 && abs(y - shiti[l].gy) < 0.5 &&
+                        wudi <= 0)
+                {
+                    life -= shiti[l].hurt * jianshang;
+                    wudi = 45;
+                }
+            }
+            else if(shiti[l].AI==4)
+            {
+                if(KEY_DOWN(VK_LBUTTON) &&
+                        (abs(mpx - shiti[l].gx) < 2 && abs(mpy - shiti[l].gy) < 2) &&
+                        playerCD <= 0)
+                {
+                    if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
+                    {
+                        if(spy > 2)
+                            shiti[l].HP -= gongji * 1.5;
+                        else
+                            shiti[l].HP -= gongji;
+                        playerCD=gongjicd;
+                        if(shiti[l].HP<0)
+                            st_kill(l);
+                    }
+                }
+                boss3hp+=shiti[l].HP;
+                if(shiti[l].CD>0)shiti[l].CD--;
+                touch_atk(l,shiti[l].hurt,1);
+                if(shiti[l].chv<480)shiti[l].chv++;
+                else
+                {
+                    if(rand()%2==0)
+                    {
+                        shiti[l].chv=0;
+                        double ttx,tty,total,px,py;
+                        ttx=abs(x-shiti[l].gx);
+                        tty=abs(y-shiti[l].gy);
+                        total=ttx+tty+0.001;
+                        px=ttx/total;
+                        py=tty/total;
+                        if(x-shiti[l].gx<0)px*=-1;
+                        if(y-shiti[l].gy<0)py*=-1;
+                        make_jian(shiti[l].gx,shiti[l].gy ,10*px, 15*py, 4);
+                    }
+                    else shiti[l].chv=0;
+                }
+                if(shiti[l].type==9)
+                {
+                    double ttx,tty,total,px,py,speed=0.1;
+                    bool ischangespeed=1;
+                    shiti[l].gongjitick++;
+                    if(shiti[l].gongjitick==1)shiti[l].tox=x,shiti[l].toy=y;
+                    if(shiti[l].gongjitick<=300&&!(shiti[l].randomtick>60))
+                    {
+                        if(jl(abs(shiti[l].gx-x),abs(shiti[l].gy-y))<10||shiti[l].issd)
+                        {
+                            ischangespeed=0;
+                            shiti[l].tox=x,shiti[l].toy=y;
+                            shiti[l].direction=shiti[l].spgx*25;
+                            speed=0.15;
+                            shiti[l].issd=1;
+                            shiti[l].randomtick++;
+                        }
+                        else
+                        {
+                            shiti[l].tox=x,shiti[l].toy=y;
+                            speed=0.12;
+                            if(jl(abs(shiti[l].gx-x),abs(shiti[l].gy-y))>30)speed=0.3;
+                        }
+                    }
+                    else
+                    {
+                        shiti[l].tox+=shiti[l].direction*0.1;
+                        if(shiti[l].randomtick>180)shiti[l].direction+=((x>shiti[l].gx)*2-1)*0.25;
+                        shiti[l].direction*=0.95;
+                        shiti[l].toy+=0.25;
+                        speed=0.1;
+                        shiti[l].randomtick++;
+                    }
+                    if(ischangespeed)
+                    {
+                        ttx=abs(shiti[l].gx-shiti[l].tox);
+                        tty=abs(shiti[l].gy-shiti[l].toy);
+                        total=ttx+tty+0.001;
+                        px=ttx/total;
+                        py=tty/total;
+                        if(shiti[l].tox-shiti[l].gx<0)px*=-1;
+                        if(shiti[l].toy-shiti[l].gy<0)py*=-1;
+                        shiti[l].spgx+=px*speed;
+                        shiti[l].spgy+=py*speed;
+                        shiti[l].spgx*=0.85;
+                        shiti[l].spgy*=0.85;
+                    }
+                    shiti[l].gx+=shiti[l].spgx;
+                    shiti[l].gy+=shiti[l].spgy;
+                    if(shiti[l].gongjitick>=600||shiti[l].randomtick>300)
+                    {
+                        shiti[l].gongjitick=1;
+                        shiti[l].issd=0;
+                        shiti[l].randomtick=0;
+                    }
+                }
+                else
+                {
+                    shiti[l].gx += (shiti[shiti[l].conl].gx-shiti[l].gx)/7;
+                    shiti[l].gy += (shiti[shiti[l].conl].gy-shiti[l].gy)/7;
+                }
+            }
+            else if(shiti[l].AI == 5)
+            {
+                gj = 0;
+                // 点击攻击羊
+                if(KEY_DOWN(VK_LBUTTON) &&
+                        (abs(mpx - shiti[l].gx) < 2 && abs(mpy - shiti[l].gy) < 2) &&
+                        playerCD <= 0)
+                {
+                    if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
+                    {
+                        if(spy > 2)
+                            shiti[l].HP -= gongji * 1.5, gj = 2;
+                        else
+                            shiti[l].HP -= gongji, gj = 1;
+                        playerCD = gongjicd;
+                        // 受击后逃跑
+                        shiti[l].chv = 240;
+                        shiti[l].issd = 1;
+                        shiti[l].spgy = -6;
+                        shiti[l].spgx += ((shiti[l].gx > x) * 2 - 1) * 0.6;
+                        if(shiti[l].HP <= 0)
+                        {
+                            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                            st_kill_fall(l);
+                            continue;
+                        }
+                    }
+                }
+                // 边界与生命检测
+                if(shiti[l].HP <= 0 || shiti[l].gx < To_int(x) - 120 ||
+                        shiti[l].gy < To_int(y) - 80 || shiti[l].gx > To_int(x) + 120 ||
+                        shiti[l].gy > To_int(y) + 80 || shiti[l].gx < 0 ||
+                        shiti[l].gy < 0 || shiti[l].gx > WORLD_WIDTH - 1 ||
+                        shiti[l].gy > WORLD_HEIGHT - 1)
+                {
+                    update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                    st_kill(l);
+                    continue;
+                }
+                if(shiti[l].CD > 0)
+                    shiti[l].CD--;
+                if(shiti[l].jp == 1)
+                {
+                    shiti[l].spgy = -8;
+                    shiti[l].jp = 2;
+                }
+                // 重力与流体处理
+                if((s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                        s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22) ||
+                        (s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 32 &&
+                         s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 34))
+                {
+                    shiti[l].spgy += g;
+                    shiti[l].spgx *= 0.5;
+                    shiti[l].spgy *= 0.75;
+                    shiti[l].gy += shiti[l].spgy * 0.02;
+                }
+                else
+                {
+                    shiti[l].spgy += g;
+                    shiti[l].gy += shiti[l].spgy * 0.06;
+                    shiti[l].spgy *= 0.98;
+                }
+                // 落地/碰撞处理
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true)
+                {
+                    if(shiti[l].spgy >= 0)
+                    {
+                        while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                            shiti[l].gy -= 0.1;
+                        shiti[l].jp = 0;
+                        shiti[l].spgy = 0.01;
+                    }
+                    if(shiti[l].spgy < 0)
+                    {
+                        while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                true)
+                            shiti[l].gy += 0.1;
+                        shiti[l].spgy = 2;
+                    }
+                }
+                // 移动：受击逃跑 或 随机漫游
+                if(shiti[l].chv > 0)
+                {
+                    shiti[l].chv--;
+                    if(shiti[l].gx > x)
+                        shiti[l].spgx += 0.012;
+                    else
+                        shiti[l].spgx -= 0.012;
+                }
+                else
+                {
+                    shiti[l].issd = 0;
+                    shiti[l].randomtick++;
+                    if(shiti[l].randomtick > 80)
+                    {
+                        shiti[l].randomtick = 0;
+                        if(shiti[l].direction != 0)
+                            shiti[l].direction = 0;
+                        else
+                            shiti[l].direction = (rand() % 2) * 2 - 1;
+                    }
+                    shiti[l].spgx += 0.015 * shiti[l].direction;
+                }
+                if(s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] >= 19 &&
+                        s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)] <= 22)
+                    shiti[l].gx += shiti[l].spgx * 0.5;
+                else
+                    shiti[l].gx += shiti[l].spgx;
+                shiti[l].spgx *= 0.9;
+                // 碰墙跳跃
+                if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                        true)
+                {
+                    int Step = 1;
+                    while(Step < 60)
+                    {
+                        shiti[l].gx -= 0.03 * Step;
+                        if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                false)
+                            break;
+                        shiti[l].gx += 0.06 * Step;
+                        if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] ==
+                                false)
+                            break;
+                        shiti[l].gx -= 0.03 * Step;
+                        Step++;
+                    }
+                    if(shiti[l].jp == 0)
+                        shiti[l].jp = 1;
+                    shiti[l].spgx = 0;
+                }
+            }
+            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+        }
+    }
+    if(!checkhp)
+        boss2hp = 0;
+}
+int open_;
+short color_change = 0;
+void bb(short nowwz, short chos, bool change_)
+{
+    for(int j = 10; j <= 20; j += 2)
+    {
+        Setpos(17 - change_ * 2, j + 5 + change_ * 3);
+        if(change_)
+            cout << ' ';
+        for(int i = (j - 10) / 2 * 5 + 1; i <= (j - 10) / 2 * 5 + 5; i++)
+        {
+            Color(-7);
+            if(i == nowwz)
+            {
+                Color(-8);
+                if(chos > 0)
+                {
+                    cout << beibao[chos][1] << test[beibao[chos][0]] << "  ";
+                    if((test[beibao[chos][0]].length()+(beibao[chos][1]>9))<9)printf("  ");
+                    else if((test[beibao[chos][0]].length()+(beibao[chos][1]>9))<11)printf(" ");
+                }
+                else
+                    cout << box[open_].things[29 + chos] / 1000
+                         << test[box[open_].things[29 + chos] % 1000] << "    ";
+                continue;
+            }
+            if(i == chos)
+            {
+                if(nowwz > 0)
+                {
+                    if(beibao[nowwz][1] > 0)
+                        cout << beibao[nowwz][1] << test[beibao[nowwz][0]] << "    ";
+                    else
+                        cout << " 无      ";
+                }
+                else
+                {
+                    if(box[open_].things[29 + nowwz] >= 1000)
+                        cout << box[open_].things[29 + nowwz] / 1000
+                             << test[box[open_].things[29 + nowwz] % 1000] << "    ";
+                    else
+                        cout << " 无      ";
+                }
+            }
+            else if(beibao[i][1] > 0)
+            {
+                cout << beibao[i][1] << test[beibao[i][0]] << "  ";
+                if((test[beibao[i][0]].length()+(beibao[i][1]>9))<9)printf("  ");
+                else if((test[beibao[i][0]].length()+(beibao[i][1]>9))<11)printf(" ");
+            }
+            else
+                cout << " 无      ";
+        }
+        cout << " ";
+    }
+    if(change_)
+    {
+        for(int j = 10; j <= 18; j += 2)
+        {
+            Setpos(15, j - 6);
+            cout << ' ';
+            for(int i = (j - 10) / 2 * 5; i <= (j - 10) / 2 * 5 + 4; i++)
+            {
+                Color(-7);
+                if(i == 29 + nowwz && nowwz < 0)
+                {
+                    Color(-8);
+                    if(chos > 0)
+                        cout << beibao[chos][1] << test[beibao[chos][0]] << "   ";
+                    else
+                        cout << box[open_].things[29 + chos] / 1000
+                             << test[box[open_].things[29 + chos] % 1000] << "   ";
+                    continue;
+                }
+                if(i == 29 + chos && chos < 0)
+                {
+                    if(nowwz > 0)
+                    {
+                        if(beibao[nowwz][1] > 0)
+                            cout << beibao[nowwz][1] << test[beibao[nowwz][0]] << "   ";
+                        else
+                            cout << " 无     ";
+                    }
+                    else
+                    {
+                        if(box[open_].things[29 + nowwz] >= 1000)
+                            cout << box[open_].things[29 + nowwz] / 1000
+                                 << test[box[open_].things[29 + nowwz] % 1000] << "   ";
+                        else
+                            cout << " 无     ";
+                    }
+                }
+                else if(box[open_].things[i] >= 1000)
+                {
+                    cout << box[open_].things[i] / 1000
+                         << test[box[open_].things[i] % 1000] << "   ";
+                }
+                else
+                    cout << " 无     ";
+            }
+            cout << "      ";
+        }
+    }
+    Sleep(1);
+}
+void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
+{
+    Color(-7);
+    if(isprintback)
+    {
+        Setpos(4, 4);
+        printf("===================================================================="
+               "===============");
+        for(int i = 5; i <= 26; i++)
+        {
+            Setpos(4, i);
+            printf("|                                                                "
+                   "                 |");
+        }
+        Setpos(4, 27);
+        printf("===================================================================="
+               "===============");
+    }
+    Setpos(20, 7);
+    cout << "  护甲栏 ";
+    Setpos(19, 9);
+    if(wear[1] == 27)
+        cout << " 铁胸甲   ";
+    else if(wear[1] == 80)
+        cout << " 金胸甲   ";
+    else if(wear[1] == 57)
+        cout << " 钻石胸甲 ";
+    else if(wear[1] == 84)
+        cout << " 下界胸甲 ";
+    else
+        cout << " 胸甲位   ";
+    Setpos(19, 12);
+    if(wear[2] == 28)
+        cout << " 铁护腿   ";
+    else if(wear[2] == 81)
+        cout << " 金护腿   ";
+    else if(wear[2] == 58)
+        cout << " 钻石护腿 ";
+    else if(wear[2] == 85)
+        cout << " 下界护腿 ";
+    else
+        cout << " 护腿位   ";
+    Setpos(24, 9);
+    if(wear[3] == 29)
+        cout << " 铁头盔   ";
+    else if(wear[3] == 79)
+        cout << " 金头盔   ";
+    else if(wear[3] == 56)
+        cout << " 钻石头盔 ";
+    else if(wear[3] == 83)
+        cout << " 下界头盔 ";
+    else
+        cout << " 头盔位   ";
+    Setpos(24, 12);
+    if(wear[4] == 30)
+        cout << " 铁靴子   ";
+    else if(wear[4] == 82)
+        cout << " 金靴子   ";
+    else if(wear[4] == 59)
+        cout << " 钻石靴子 ";
+    else if(wear[4] == 86)
+        cout << " 下界靴子 ";
+    else
+        cout << " 靴子位  ";
+    for(int j = 10; j <= 20; j += 2)
+    {
+        Setpos(17, j + 5);
+        for(int i = (j - 10) / 2 * 5 + 1; i <= (j - 10) / 2 * 5 + 5; i++)
+        {
+            Color(-7);
+            if(i == color_change && ischangecolor)
+                Color(-8);
+            if(beibao[i][1] > 0)
+            {
+                cout << beibao[i][1] << test[beibao[i][0]] << "  ";
+                if((test[beibao[i][0]].length()+(beibao[i][1]>9))<9)printf("  ");
+                else if((test[beibao[i][0]].length()+(beibao[i][1]>9))<11)printf(" ");
+            }
+            else
+                cout << " 无      ";
+        }
+        printf("       ");
+    }
+    Color(-7);
+    if(num == 1)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  1原木->2木棍";
+        Setpos(6, 9);
+        cout << "  2木棍+3原木->木镐";
+        Setpos(6, 10);
+        cout << "  2木棍+5圆石->石镐";
+        Setpos(6, 11);
+        cout << "  20圆石+5煤炭->熔炉";
+        Setpos(6, 12);
+        cout << "  2木棍+3铁锭->铁镐";
+        Setpos(6, 13);
+        cout << "  10黑曜石->下界传送门";
+        Setpos(6, 14);
+        cout << "  1木棍+1煤炭->5火把";
+        Setpos(6, 15);
+        cout << "  1木棍+2圆石->石剑";
+        Setpos(6, 16);
+        cout << "  2木棍+3圆石->石斧";
+        Setpos(6, 17);
+        cout << "  3铁锭->桶";
+        Setpos(6, 18);
+        cout << "  8铁锭->铁胸甲";
+        Setpos(6, 19);
+        cout << "  7铁锭->铁护腿";
+        Setpos(6, 20);
+        cout << "  5铁锭->铁头盔";
+        Setpos(6, 21);
+        cout << "  4铁锭->铁靴子";
+        Setpos(6, 22);
+        cout << "  9金粒->金锭";
+        Setpos(6, 23);
+        cout << "  金锭->9金粒";
+        Setpos(6, 24);
+        cout << "  下一页";
+    }
+    else if(num == 2)
+    {
+        Setpos(6, 7);
+        cout << " 熔炼配方：";
+        Setpos(6, 8);
+        cout << " 当前燃烧时长："<<rl<<"    ";
+        Setpos(6, 9);
+        cout << "  煤炭->8燃烧时长";
+        Setpos(6, 10);
+        cout << "  原木->2燃烧时长";
+        Setpos(6, 11);
+        cout << "  木棍->1燃烧时长";
+        Setpos(6, 12);
+        cout << "  粗铁+燃烧->铁锭";
+        Setpos(6, 13);
+        cout << "  粗金+燃烧->金锭";
+        Setpos(6, 14);
+        cout << "  原木+燃烧->煤炭";
+        Setpos(6, 15);
+        cout << "  远古残骸+燃烧->";
+        Setpos(6, 16);
+        cout << "  下界碎片";
+    }
+    else if(num == 3)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  8原木->箱子";
+        Setpos(6, 9);
+        cout << "  3木棍+3线->木弓";
+        Setpos(6, 10);
+        cout << "  1木棍+1圆石->8木箭";
+        Setpos(6, 11);
+        cout << "  1木棍+1铁锭->8铁箭";
+        Setpos(6, 12);
+        cout << "  1木棍+1火药->8爆炸箭";
+        Setpos(6, 13);
+        cout << "  1木棍+2铁锭->铁剑";
+        Setpos(6, 14);
+        cout << "  2木棍+3铁锭->铁斧";
+        Setpos(6, 15);
+        cout << "  2木棍+3钻石->钻石镐";
+        Setpos(6, 16);
+        cout << "  1木棍+2钻石->钻石剑";
+        Setpos(6, 17);
+        cout << "  2木棍+3钻石->钻石斧";
+        Setpos(6, 18);
+        cout << "  4铁锭->OI";
+        Setpos(6, 19);
+        cout << "  5钻石->钻石头盔";
+        Setpos(6, 20);
+        cout << "  8钻石->钻石胸甲";
+        Setpos(6, 21);
+        cout << "  7钻石->钻石护腿";
+        Setpos(6, 22);
+        cout << "  4钻石->钻石靴子";
+        Setpos(6, 23);
+        cout << "  3木板+3羊毛->床";
+        Setpos(6, 24);
+        cout << "  下一页   上一页";
+    }
+    else if(num == 4)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  1原木->4木板";
+        Setpos(6, 9);
+        cout << "  木板->2木平台";
+        Setpos(6, 10);
+        cout << "  4金锭+4下界碎片";
+        Setpos(6, 11);
+        cout << "  ->下界锭";
+        Setpos(6, 12);
+        cout << "  钻石镐+下界锭 ";
+        Setpos(6,13);
+        cout << "  ->下界镐";
+        Setpos(6, 14);
+        cout << "  钻石剑+下界锭 ";
+        Setpos(6,15);
+        cout << "  ->下界剑";
+        Setpos(6, 16);
+        cout << "  钻石斧+下界锭 ";
+        Setpos(6,17);
+        cout << "  ->下界斧";
+        Setpos(6, 18);
+        cout << "  10腐肉->蠕虫诱饵";
+        Setpos(6, 19);
+        cout << "  钻石头盔+下界锭 ";
+        Setpos(6,20);
+        cout << "  ->下界头盔";
+        Setpos(6,21);
+        cout << "  钻石胸甲+下界锭 ";
+        Setpos(6,22);
+        cout << "  ->下界胸甲";
+        Setpos(6, 24);
+        cout << "  下一页   上一页";
+    }
+    else if(num == 6)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  钻石护腿+下界锭 ";
+        Setpos(6, 9);
+        cout << "  ->下界护腿";
+        Setpos(6, 10);
+        cout << "  钻石靴子+下界锭 ";
+        Setpos(6, 11);
+        cout << "  ->下界靴子";
+        Setpos(6, 24);
+        cout << "  下一页   上一页";
+    }
+    else if(num == 5)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  2木棍+3金锭->金镐";
+        Setpos(6, 9);
+        cout << "  1木棍+2金锭->金剑";
+        Setpos(6, 10);
+        cout << "  2木棍+3金锭->金斧";
+        Setpos(6, 11);
+        cout << "  5金锭->金头盔";
+        Setpos(6, 12);
+        cout << "  8金锭->金胸甲";
+        Setpos(6, 13);
+        cout << "  7金锭->金护腿";
+        Setpos(6, 14);
+        cout << "  4金锭->金靴子";
+        Setpos(6, 15);
+        cout << "  8金锭+1苹果->金苹果";
+        Setpos(6, 24);
+        cout << "  上一页";
+    }
+}
+short AN;
+bool wear_things(int wid,int tplace,int cc,int c_thing,int upd)
+{
+	if(wid!=beibao[cc][0])return 0;
+	bool iswear=0;
+	if(tplace==1){
+		if(c_thing == -7 || c_thing == -8 ||c_thing == -2 || c_thing == -3)
+        {
+            iswear=1;
+        }
+	}
+	if(tplace==2){
+		if(c_thing == 2 || c_thing == 1)
+        {
+            iswear=1;
+        }
+	}
+	if(tplace==3){
+		if(c_thing == -6 || c_thing == -1)
+        {
+            iswear=1;
+        }
+	}
+	if(tplace==4){
+		if(c_thing == 3)
+        {
+            iswear=1;
+        }
+	}
+	if(iswear){
+	wear[tplace] = wid;
+	beibao[cc][0] = 0;
+	beibao[cc][1] = 0;
+    craft_update(upd);
+	return true;}
+    return false;
+}
+void movethings(int upd)
+{
+    int c_thing = 0, cc = 0;
+    int wear_slot = 0; // 护甲栏位置索引
+    POINT p = GetMousePos();
+    bool upda = (mpx != To_int(p.x / 2 - 26) || mpy != To_int(p.y - 14));
+    mpx = To_int(p.x / 2 - 26);
+    mpy = To_int(p.y - 14);
+    c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+    // 检测护甲栏点击
+    if(c_thing == -7 || c_thing == -8 || c_thing == -2 || c_thing == -3)
+        wear_slot = 1; // 胸甲位
+    else if(c_thing == 2 || c_thing == 1)
+        wear_slot = 2; // 护腿位
+    else if(c_thing == -6 || c_thing == -1)
+        wear_slot = 3; // 头盔位
+    else if(c_thing == 3)
+        wear_slot = 4; // 靴子位
+    if(wear_slot > 0 && wear[wear_slot] != 0)
+    {
+        if(KEY_DOWN(VK_LBUTTON))
+        {
+            int wear_item = wear[wear_slot];
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            while(!(KEY_DOWN(VK_LBUTTON)))
+            {
+                POINT p = GetMousePos();
+                mpx = To_int(p.x / 2 - 26);
+                mpy = To_int(p.y - 14);
+                c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+            }
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                POINT p = GetMousePos();
+                mpx = To_int(p.x / 2 - 26);
+                mpy = To_int(p.y - 14);
+                c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+                // 拖到背包格子时卸下盔甲
+                if(c_thing > 0 && c_thing < 31)
+                {
+                    int O = getbeibao(wear_item);
+                    if(O != 0)
+                    {
+                        beibao[O][0] = wear_item;
+                        beibao[O][1] += 1;
+                        wear[wear_slot] = 0;
+                        hujia_update();
+                        craft_update(upd);
+                    }
+                }
+            }
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+        }
+    }
+    if(!(int((mpx + 12) / 4 + 0.5) > 5 || int((mpx + 12) / 4 + 0.5) < 1 ||
+            int(mpy / 2 * 5 + 0.5) > 26 || int(mpy + 0.5) < 1))
+    {
+        c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+        if(c_thing < 31 && c_thing > 0)
+        {
+            if(GetAsyncKeyState('Q') & 0x8000)
+            {
+                cc = c_thing;
+                if(GetAsyncKeyState(VK_CONTROL))
+                    beibao[cc][1] = 0;
+                else if(beibao[cc][1] > 0)
+                    beibao[cc][1] -= 1;
+                craft_update(1);
+                while(GetAsyncKeyState('Q') & 0x8000 && AN < 40)
+                    AN++, Sleep(1);
+            }
+            else
+                AN = 0;
+            if(KEY_DOWN(VK_LBUTTON) && beibao[c_thing][1] != 0)
+            {
+                cc = c_thing;
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                while(!(KEY_DOWN(VK_LBUTTON)))
+                {
+                    POINT p = GetMousePos();
+                    mpx = To_int(p.x / 2 - 26);
+                    mpy = To_int(p.y - 14);
+                    c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+                    if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
+                            int((mpx + 12) / 4 + 0.5) < 1 || int(mpy / 2 * 5 + 0.5) > 26 ||
+                            int(mpy / 2 * 5 + 0.5) < 0))
+                        bb(c_thing, cc, 0);
+                }
+                if(KEY_DOWN(VK_LBUTTON))
+                {
+                    if(cc % 5 == 0)
+                        Setpos(33, (cc / 5 + 13) * 2 - 12), cout << "   ";
+                    else
+                        Setpos((cc % 5) * 4 + 13, (cc / 5 + 14) * 2 - 12), cout << "   ";
+                    POINT p = GetMousePos();
+                    mpx = To_int(p.x / 2 - 26);
+                    mpy = To_int(p.y - 14);
+                    c_thing = int((mpx + 12) / 4 + 0.5) + int(mpy / 2 * 5 + 0.5);
+                    if(wear_things(27,1,cc,c_thing,upd));
+                    else if(wear_things(28,2,cc,c_thing,upd));
+                    else if(wear_things(29,3,cc,c_thing,upd));
+                    else if(wear_things(30,4,cc,c_thing,upd));
+                    else if(wear_things(80,1,cc,c_thing,upd));
+                    else if(wear_things(81,2,cc,c_thing,upd));
+                    else if(wear_things(79,3,cc,c_thing,upd));
+                    else if(wear_things(82,4,cc,c_thing,upd));
+                    else if(wear_things(57,1,cc,c_thing,upd));
+                    else if(wear_things(58,2,cc,c_thing,upd));
+                    else if(wear_things(56,3,cc,c_thing,upd));
+                    else if(wear_things(59,4,cc,c_thing,upd));
+                    else if(wear_things(84,1,cc,c_thing,upd));
+                    else if(wear_things(85,2,cc,c_thing,upd));
+                    else if(wear_things(83,3,cc,c_thing,upd));
+                    else if(wear_things(86,4,cc,c_thing,upd));
+                    else if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
+                              int((mpx + 12) / 4 + 0.5) < 1 ||
+                              int(mpy / 2 * 5 + 0.5) > 26 ||
+                              int(mpy / 2 * 5 + 0.5) < 0))
+                    {
+                        if((cc != c_thing))
+                        {
+                            if(beibao[cc][0] != beibao[c_thing][0])
+                                swap(beibao[cc], beibao[c_thing]), craft_update(upd);
+                            else if(beibao[cc][1] + beibao[c_thing][1] <= 64)
+                                beibao[c_thing][1] += beibao[cc][1], beibao[cc][1] = 0,
+                                                      craft_update(upd);
+                            else
+                                beibao[cc][1] = beibao[cc][1] + beibao[c_thing][1] - 64,
+                                                beibao[c_thing][1] = 64, craft_update(upd);
+                        }
+                    }
+                }
+            }
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+        }
+        if(upda)
+        {
+            if(c_thing < 31 && c_thing > 0)
+                color_change = c_thing;
+            else
+                color_change = 0;
+            if(upd==2)
+            {
+                craft_update(2,0,1);
+            }
+            else if(page == 1)
+                craft_update(1, 0, 1);
+            else if(page == 2)
+                craft_update(3, 0, 1);
+            else if(page == 3)
+                craft_update(4, 0, 1);
+            else if(page == 4)
+                craft_update(6, 0, 1);
+            else craft_update(5, 0, 1);
+        }
+    }
+}
+void boxprint()
+{
+    for(int j = 10; j <= 20; j += 2)
+    {
+        Setpos(15, j + 8);
+        cout << ' ';
+        for(int i = (j - 10) / 2 * 5 + 1; i <= (j - 10) / 2 * 5 + 5; i++)
+        {
+            Color(-7);
+            if(i == color_change)
+                Color(-8);
+            if(beibao[i][1] > 0)
+            {
+                cout << beibao[i][1] << test[beibao[i][0]] << "   ";
+            }
+            else
+                cout << " 无     ";
+        }
+        cout << "      ";
+    }
+    for(int j = 10; j <= 18; j += 2)
+    {
+        Setpos(15, j - 6);
+        cout << ' ';
+        for(int i = (j - 10) / 2 * 5; i <= (j - 10) / 2 * 5 + 4; i++)
+        {
+            Color(-7);
+            if(i == 29 + color_change)
+                Color(-8);
+            if(box[open_].things[i] >= 1000)
+            {
+                cout << box[open_].things[i] / 1000 << test[box[open_].things[i] % 1000]
+                     << "   ";
+            }
+            else
+                cout << " 无     ";
+        }
+        cout << "      ";
+    }
+}
+void moveinbox()
+{
+    int c_thing = 0, cc = 0;
+    POINT p = GetMousePos();
+    bool upda = (mpx != To_int(p.x / 2 - 24) || mpy != To_int(p.y - 17));
+    mpx = To_int(p.x / 2 - 24);
+    mpy = To_int(p.y - 17);
+    if(!(int((mpx + 12) / 4 + 0.5) > 5 || int((mpx + 12) / 4 + 0.5) < 1 ||
+            int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+    {
+        c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
+        if(c_thing < 26 && c_thing > -30 && (c_thing < -4 || c_thing > 0))
+        {
+            Setpos(0, 0);
+            cout << 29 + c_thing << "   " << mpy << "  ";
+            if(GetAsyncKeyState('Q') & 0x8000)
+            {
+                cc = c_thing;
+                if(c_thing > 0)
+                {
+                    if(GetAsyncKeyState(VK_CONTROL))
+                        beibao[cc][1] = 0;
+                    else if(beibao[cc][1] > 0)
+                        beibao[cc][1] -= 1;
+                }
+                else
+                {
+                    if(GetAsyncKeyState(VK_CONTROL))
+                        box[open_].things[29 + cc] = 0;
+                    else if(box[open_].things[29 + cc] > 1000)
+                        box[open_].things[29 + cc] -= 1000;
+                }
+                boxprint();
+                while(GetAsyncKeyState('Q') & 0x8000 && AN < 40)
+                    AN++, Sleep(1);
+            }
+            else
+                AN = 0;
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                if((c_thing > 0 && beibao[c_thing][1] != 0) ||
+                        (c_thing < -4 && box[open_].things[(29 + c_thing)] >= 1000))
+                {
+                    cc = c_thing;
+                    while(KEY_DOWN(VK_LBUTTON))
+                        continue;
+                    while(!(KEY_DOWN(VK_LBUTTON)))
+                    {
+                        POINT p = GetMousePos();
+                        mpx = To_int(p.x / 2 - 24);
+                        mpy = To_int(p.y - 17);
+                        c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
+                        if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
+                                int((mpx + 12) / 4 + 0.5) < 1 ||
+                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+                            bb(c_thing, cc, 1);
+                    }
+                    if(KEY_DOWN(VK_LBUTTON))
+                    {
+                        POINT p = GetMousePos();
+                        mpx = To_int(p.x / 2 - 24);
+                        mpy = To_int(p.y - 17);
+                        c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
+                        if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
+                                int((mpx + 12) / 4 + 0.5) < 1 ||
+                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+                        {
+                            if((cc != c_thing))
+                            {
+                                if(cc > 0 && c_thing > 0)
+                                {
+                                    if(beibao[cc][0] != beibao[c_thing][0])
+                                        swap(beibao[cc], beibao[c_thing]);
+                                    else if(beibao[cc][1] + beibao[c_thing][1] <= 64)
+                                        beibao[c_thing][1] += beibao[cc][1], beibao[cc][1] = 0;
+                                    else
+                                        beibao[cc][1] = beibao[cc][1] + beibao[c_thing][1] - 64,
+                                                        beibao[c_thing][1] = 64;
+                                }
+                                else if(cc < 0 && c_thing > 0)
+                                {
+                                    ;
+                                    if(beibao[c_thing][0] !=
+                                            box[open_].things[(29 + cc)] % 1000)
+                                    {
+                                        int swap1 = box[open_].things[(29 + cc)];
+                                        box[open_].things[(29 + cc)] =
+                                            beibao[c_thing][0] + beibao[c_thing][1] * 1000;
+                                        beibao[c_thing][0] = swap1 % 1000,
+                                                             beibao[c_thing][1] = swap1 / 1000;
+                                    }
+                                    else if(beibao[c_thing][1] +
+                                            box[open_].things[(29 + cc)] / 1000 <=
+                                            64)
+                                        box[open_].things[(29 + cc)] += beibao[c_thing][1] * 1000,
+                                                                        beibao[c_thing][1] = 0;
+                                    else
+                                        beibao[c_thing][1] = beibao[c_thing][1] +
+                                                             box[open_].things[(29 + cc)] / 1000 -
+                                                             64,
+                                                             box[open_].things[(29 + cc)] =
+                                                                 64000 + box[open_].things[(29 + cc)] % 1000;
+                                }
+                                else if(cc > 0 && c_thing < 0)
+                                {
+                                    if(beibao[cc][0] !=
+                                            box[open_].things[(29 + c_thing)] % 1000)
+                                    {
+                                        int swap1 = box[open_].things[(29 + c_thing)];
+                                        box[open_].things[(29 + c_thing)] =
+                                            beibao[cc][0] + beibao[cc][1] * 1000;
+                                        beibao[cc][0] = swap1 % 1000, beibao[cc][1] = swap1 / 1000;
+                                    }
+                                    else if(beibao[cc][1] +
+                                            box[open_].things[(29 + c_thing)] / 1000 <=
+                                            64)
+                                        box[open_].things[(29 + c_thing)] += beibao[cc][1] * 1000,
+                                                                             beibao[cc][1] = 0;
+                                    else
+                                        beibao[cc][1] = beibao[cc][1] +
+                                                        box[open_].things[(29 + c_thing)] / 1000 -
+                                                        64,
+                                                        box[open_].things[(29 + c_thing)] =
+                                                            64000 + box[open_].things[29 + c_thing] % 1000;
+                                }
+                                else if(cc < 0 && c_thing < 0)
+                                {
+                                    if(box[open_].things[(29 + cc)] % 1000 !=
+                                            box[open_].things[(29 + c_thing)] % 1000)
+                                        swap(box[open_].things[(29 + cc)],
+                                             box[open_].things[(29 + c_thing)]);
+                                    else if(box[open_].things[(29 + cc)] / 1000 +
+                                            box[open_].things[(29 + c_thing)] / 1000 <=
+                                            64)
+                                        box[open_].things[(29 + c_thing)] +=
+                                            box[open_].things[29 + cc] / 1000 * 1000,
+                                            box[open_].things[(29 + c_thing)] = 0;
+                                    else
+                                        box[open_].things[29 + cc] =
+                                            box[open_].things[(29 + cc)] % 1000 +
+                                            (box[open_].things[(29 + cc)] / 1000 +
+                                             box[open_].things[(29 + c_thing)] / 1000 - 64) *
+                                            1000,
+                                            box[open_].things[(29 + cc)] =
+                                                64000 +
+                                                box[open_].things[(29 + cc)] %
+                                                1000;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            POINT p = GetMousePos();
+            mpx = To_int(p.x / 2 - 24);
+            mpy = To_int(p.y - 17);
+        }
+    }
+    if(upda)
+    {
+        if(c_thing < 26 && c_thing > -30)
+            color_change = c_thing;
+        else
+            color_change = -3;
+        boxprint();
+    }
+}
+void SetConsoleToFullscreen()
+{
+    HWND hwnd = GetConsoleWindow();
+    // 设置初始窗口标题
+    SetWindowTextW(hwnd, L"我的世界");
+    // 最大化窗口（Windows 会将其置于工作区左上角）
+    ShowWindow(hwnd, SW_MAXIMIZE);
+}
+void zz(int Y, int need1, int type1, int need2, int type2, int get, int sl,
+        int upd)
+{
+    if(mpy == Y && mpx < -9)
+    {
+        if(KEY_DOWN(VK_LBUTTON))
+        {
+            Setpos(5, Y + 13), cout << " ->";
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            for(int i = 1; i <= 100; i++)
+            {
+                ls[i][0] = beibao[i][0];
+                ls[i][1] = beibao[i][1];
+            }
+            int U = getbeibao_3(type1, need1);
+            int PP = getbeibao_3(type2, need2);
+            if(U > 0 && PP > 0)
+            {
+                bool noroom = false;
+                for(int i = 0; i < sl; i++)
+                {
+                    int O = getbeibao(get);
+                    if(O == 0)
+                    {
+                        noroom = true;
+                        break;
+                    }
+                    beibao[O][0] = get;
+                    beibao[O][1] += 1;
+                }
+                if(noroom)
+                {
+                    for(int i = 1; i <= 100; i++)
+                    {
+                        beibao[i][0] = ls[i][0];
+                        beibao[i][1] = ls[i][1];
+                    }
+                }
+                craft_update(upd);
+            }
+            else
+            {
+                for(int i = 1; i <= 100; i++)
+                {
+                    beibao[i][0] = ls[i][0];
+                    beibao[i][1] = ls[i][1];
+                }
+            }
+        }
+        else
+            Setpos(5, Y + 13), cout << "-> ";
+    }
+    else
+        Setpos(5, Y + 13), cout << "   ";
+}
+void zz2(int Y, int need1, int type1, int get, int sl, int upd)
+{
+    if(mpy == Y && mpx < -9)
+    {
+        if(KEY_DOWN(VK_LBUTTON))
+        {
+            Setpos(5, Y + 13), cout << " ->";
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            for(int i = 1; i <= 100; i++)
+            {
+                ls[i][0] = beibao[i][0];
+                ls[i][1] = beibao[i][1];
+            }
+            int U = getbeibao_3(type1, need1);
+            if(U > 0)
+            {
+                bool noroom = false;
+                for(int i = 0; i < sl; i++)
+                {
+                    int O = getbeibao(get);
+                    if(O == 0)
+                    {
+                        noroom = true;
+                        break;
+                    }
+                    beibao[O][0] = get;
+                    beibao[O][1] += 1;
+                }
+                if(noroom)
+                {
+                    for(int i = 1; i <= 100; i++)
+                    {
+                        beibao[i][0] = ls[i][0];
+                        beibao[i][1] = ls[i][1];
+                    }
+                }
+                craft_update(upd);
+            }
+            else
+            {
+                for(int i = 1; i <= 100; i++)
+                {
+                    beibao[i][0] = ls[i][0];
+                    beibao[i][1] = ls[i][1];
+                }
+            }
+        }
+        else
+            Setpos(5, Y + 13), cout << "-> ";
+    }
+    else
+        Setpos(5, Y + 13), cout << "   ";
+}
+void zz_rl(int Y, int need1, int type1, int sl)
+{
+    if(mpy == Y && mpx < -9)
+    {
+        if(KEY_DOWN(VK_LBUTTON))
+        {
+            Setpos(5, Y + 13), cout << " ->";
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            for(int i = 1; i <= 100; i++)
+            {
+                ls[i][0] = beibao[i][0];
+                ls[i][1] = beibao[i][1];
+            }
+            int U = getbeibao_3(type1, need1);
+            if(U > 0)
+            {
+                rl+=sl;
+                craft_update(2);
+            }
+            else
+            {
+                for(int i = 1; i <= 100; i++)
+                {
+                    beibao[i][0] = ls[i][0];
+                    beibao[i][1] = ls[i][1];
+                }
+            }
+        }
+        else
+            Setpos(5, Y + 13), cout << "-> ";
+    }
+    else
+        Setpos(5, Y + 13), cout << "   ";
+}
+void zz_rl_2(int Y, int need1, int type1,int get, int sl)
+{
+    if(mpy == Y && mpx < -9)
+    {
+        if(KEY_DOWN(VK_LBUTTON))
+        {
+            Setpos(5, Y + 13), cout << " ->";
+            while(KEY_DOWN(VK_LBUTTON))
+                continue;
+            for(int i = 1; i <= 100; i++)
+            {
+                ls[i][0] = beibao[i][0];
+                ls[i][1] = beibao[i][1];
+            }
+            int U = getbeibao_3(type1, need1);
+            if(U > 0&&rl)
+            {
+                bool noroom = false;
+                for(int i = 0; i < sl; i++)
+                {
+                    int O = getbeibao(get);
+                    if(O == 0)
+                    {
+                        noroom = true;
+                        break;
+                    }
+                    beibao[O][0] = get;
+                    beibao[O][1] += 1;
+                }
+                if(noroom)
+                {
+                    for(int i = 1; i <= 100; i++)
+                    {
+                        beibao[i][0] = ls[i][0];
+                        beibao[i][1] = ls[i][1];
+                    }
+                }
+                else
+                    rl--;
+                craft_update(2);
+            }
+            else
+            {
+                for(int i = 1; i <= 100; i++)
+                {
+                    beibao[i][0] = ls[i][0];
+                    beibao[i][1] = ls[i][1];
+                }
+            }
+        }
+        else
+            Setpos(5, Y + 13), cout << "-> ";
+    }
+    else
+        Setpos(5, Y + 13), cout << "   ";
+}
+void openbox()
+{
+    Color(-7);
+    bag=1;
+    open_ = findbox(mpx, mpy);
+    if(open_ == -1)
+        return;
+    Setpos(7, 2);
+    printf("====================================================================="
+           "===");
+    for(int i = 3; i <= 13; i++)
+    {
+        Setpos(7, i);
+        printf("|                                                                  "
+               "    |");
+    }
+    Setpos(7, 14);
+    printf("====================================================================="
+           "===");
+    Setpos(7, 16);
+    printf("====================================================================="
+           "===");
+    for(int i = 17; i <= 29; i++)
+    {
+        Setpos(7, i);
+        printf("|                                                                  "
+               "    |");
+    }
+    Setpos(7, 30);
+    printf("====================================================================="
+           "===");
+    AN = 0;
+    while(1)
+    {
+        if(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+        {
+            while(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+                continue;
+            memset(painting, 114, sizeof(painting));
+            bag=0;
+            break;
+        }
+        moveinbox();
+        Sleep(1);
+    }
+}
+void craft_2()
+{
+    bag=1;
+    craft_update(2, 1);
+    AN = 0;
+    while(1)
+    {
+        if(GetAsyncKeyState('E') & 0x8000)
+        {
+            if(anx == 0)
+            {
+                anx = 1;
+                bag=0;
+                break;
+            }
+            anx = 1;
+        }
+        else
+            anx = 0;
+        movethings(2);
+        zz_rl(-4, 1, 3, 8);
+        zz_rl(-3, 1, 2, 2);
+        zz_rl(-2, 1, 6, 1);
+        zz_rl_2(-1, 1, 4, 13,1);
+        zz_rl_2(0, 1, 62, 64,1);
+        zz_rl_2(1, 1, 2, 3,1);
+        zz_rl_2(2, 1, 69, 70,1);
+        Sleep(1);
+    }
+    setlight();
+    memset(painting, 114, sizeof(painting));
+}
+void craft_1()
+{
+    bag=1;
+    craft_update(1, 1);
+    AN = 0;
+    page = 1;
+    while(1)
+    {
+        if(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+        {
+            while(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+                continue;
+            page = 1;
+            bag=0;
+            break;
+        }
+        else
+            anx = 0;
+        if(page == 1)
+            movethings(1);
+        else if(page == 2)
+            movethings(3);
+        else if(page == 3)
+            movethings(4);
+        else if(page == 4)
+            movethings(6);
+        else movethings(5);
+        if(page == 1)
+        {
+            if(mpy == -5 && mpx < -9)
+            {
+                if(KEY_DOWN(VK_LBUTTON))
+                {
+                    Setpos(5, 8), cout << " ->";
+                    while(KEY_DOWN(VK_LBUTTON))
+                        continue;
+                    int U = getbeibao_2(2);
+                    if(U > 0)
+                    {
+                        int O = getbeibao(6);
+                        if(O > 0)
+                        {
+                            beibao[U][1]--;
+                            beibao[O][0] = 6;
+                            beibao[O][1] += 1;
+                            O = getbeibao(6);
+                            if(O > 0)
+                                beibao[O][0] = 6, beibao[O][1] += 1;
+                            craft_update(1);
+                        }
+                    }
+                }
+                else
+                    Setpos(5, 8), cout << "-> ";
+            }
+            else
+                Setpos(5, 8), cout << "   ";
+            zz(-4, 3, 2, 2, 6, 7, 1, 1);
+            zz(-3, 5, 1, 2, 6, 8, 1, 1);
+            zz(-2, 20, 1, 5, 3, 9, 1, 1);
+            zz(-1, 3, 13, 2, 6, 14, 1, 1);
+            zz2(0, 10, 36, 38, 1, 1);
+            zz(1, 1, 3, 1, 6, 16, 5, 1);
+            zz(2, 1, 6, 2, 1, 17, 1, 1);
+            zz(3, 2, 6, 3, 1, 18, 1, 1);
+            zz2(4, 3, 13, 25, 1, 1);
+            zz2(5, 8, 13, 27, 1, 1);
+            zz2(6, 7, 13, 28, 1, 1);
+            zz2(7, 5, 13, 29, 1, 1);
+            zz2(8, 4, 13, 30, 1, 1);
+            zz2(9, 9, 65, 64, 1, 1);
+            zz2(10, 1, 64, 65, 9, 1);
+        }
+        else if(page == 2)
+        {
+            zz2(-5, 8, 2, 40, 1, 3);
+            zz(-4, 3, 6, 3, 42, 41, 1, 3);
+            zz(-3, 1, 6, 1, 1, 44, 8, 3);
+            zz(-2, 1, 6, 1, 13, 45, 8, 3);
+            zz(-1, 1, 6, 1, 43, 46, 8, 3);
+            zz(0, 1, 6, 2, 13, 47, 1, 3);
+            zz(1, 2, 6, 3, 13, 48, 1, 3);
+            zz(2, 3, 12, 2, 6, 15, 1, 3);
+            zz(3, 1, 6, 2, 12, 49, 1, 3);
+            zz(4, 2, 6, 3, 12, 50, 1, 3);
+            zz2(5, 4, 13, 51, 1, 3);
+            zz2(6, 5, 12, 56, 1, 3);
+            zz2(7, 8, 12, 57, 1, 3);
+            zz2(8, 7, 12, 58, 1, 3);
+            zz2(9, 4, 12, 59, 1, 3);
+            zz(10, 3, 66, 3, 87, 90, 1, 3);
+        }
+        else if(page == 3)
+        {
+            zz2(-5, 1, 2, 67, 4, 4);
+            zz2(-4, 1, 67, 66, 2, 4);
+            zz(-3, 4, 64, 4, 70, 71, 1, 4);
+            zz(-1, 1, 15, 1, 71, 72, 1, 4);
+            zz(1, 1, 49, 1, 71, 73, 1, 4);
+            zz(3, 1, 50, 1, 71, 74, 1, 4);
+            zz2(5, 10, 37, 75, 1, 4);
+            zz(6, 1, 56, 1, 71, 83, 1, 4);
+            zz(8, 1, 57, 1, 71, 84, 1, 4);
+        }
+        else if(page == 4)
+        {
+            zz(-5, 1, 58, 1, 71, 85, 1, 6);
+            zz(-3, 1, 59, 1, 71, 86, 1, 6);
+        }
+        else
+        {
+            zz(-5, 2, 6, 3, 64, 76, 1, 5);
+            zz(-4, 1, 6, 2, 64, 77, 1, 5);
+            zz(-3, 2, 6, 3, 64, 78, 1, 5);
+            zz2(-2, 5, 64, 79, 1, 5);
+            zz2(-1, 8, 64, 80, 1, 5);
+            zz2(0, 7, 64, 81, 1, 5);
+            zz2(1, 4, 64, 82, 1, 5);
+            zz(2, 8, 64, 1, 55, 91, 1, 5);
+        }
+        if(mpy == 11 && mpx < -9)
+        {
+            bool hasPrev = (page > 1);
+            bool hasNext = (page < 5);
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                if(mpx > -15 && hasPrev)
+                {
+                    Setpos(10, 24), cout << "->";
+                    Setpos(5, 24), cout << "   ";
+                }
+                else if(mpx <= -15 && hasNext)
+                {
+                    Setpos(5, 24), cout << "->";
+                    Setpos(10, 24), cout << "   ";
+                }
+                while(KEY_DOWN(VK_LBUTTON))
+                {
+                    Sleep(1);
+                }
+                if(mpx > -15 && hasPrev) page--;
+                else if(mpx <= -15 && hasNext) page++;
+                for(int i = 8; i <= 24; i++)
+                    Setpos(5, i), cout << "                        ";
+                if(page == 1) craft_update(1);
+                else if(page == 2) craft_update(3);
+                else if(page == 3) craft_update(4);
+                else if(page == 4) craft_update(6);
+                else craft_update(5);
+            }
+            else
+            {
+                if(mpx > -15 && hasPrev)
+                {
+                    Setpos(10, 24), cout << "->";
+                    Setpos(5, 24), cout << "   ";
+                }
+                else if(mpx <= -15 && hasNext)
+                {
+                    Setpos(5, 24), cout << "->";
+                    Setpos(10, 24), cout << "   ";
+                }
+                else
+                {
+                    Setpos(10, 24), cout << "   ";
+                    Setpos(5, 24), cout << "   ";
+                }
+            }
+        }
+        else
+        {
+            Setpos(10, 24), cout << "   ";
+            Setpos(5, 24), cout << "   ";
+        }
+        Sleep(1);
+    }
+}
+void SwitchMode()
+{
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hStdin, &mode);
+    mode &= ~ENABLE_QUICK_EDIT_MODE;
+    SetConsoleMode(hStdin, mode);
+}
+void SetWindowSize(int cols, int lines);
+void update_set()
+{
+    // 调整窗口和缓冲区大小以适应当前渲染尺寸
+    SetWindowSize(printx + 5, printy + 5);
+    Setpos(7, 5), Color(-7);
+    printf("====================================================================="
+           "====");
+    for(int i = 6; i <= 28; i++)
+    {
+        Setpos(7, i);
+        printf("|                                                                  "
+               "      |");
+    }
+    Setpos(7, 28);
+    printf("====================================================================="
+           "=====");
+    Setpos(23, 6);
+    cout << " 设置";
+    Setpos(20, 9);
+    cout << " 渲染设置：X轴：" << printx << " \b格     +      -";
+    Setpos(20, 10);
+    cout << "           Y轴：" << printy << " \b格     +      -";
+    Setpos(20, 12);
+    cout << " 作弊模式：";
+    if(CanGet)
+        cout << " 开";
+    else
+        cout << " 关";
+    Setpos(20, 14);
+    cout << " 帧率设置：";
+    if(setfps == 1)
+        cout << " 60帧";
+    else if(setfps == 2)
+        cout << " 30帧";
+    else if(setfps == 3)
+        cout << " 20帧";
+    Setpos(20, 17);
+    cout << " 定格时间： ";
+    if(!sun)
+        cout << " 开";
+    else
+        cout << " 关";
+    Setpos(21, 19);
+    cout << " 难度：";
+    if(ed == 8000)
+        cout << " 简单";
+    else if(ed == 6000)
+        cout << " 普通";
+    else
+        cout << " 困难";
+    Setpos(20, 23);
+    cout << " 保存并退出游戏";
+    Setpos(20, 21);
+    cout << " 缓动渲染：";
+    if(special_effect == 1)
+        cout << " 关";
+    else if(special_effect == 2)
+        cout << " 开";
+    else if(special_effect == 3)
+        cout << " 加强";
+}
+void SET()
+{
+    bag=1;
+    update_set();
+    while(1)
+    {
+        if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        {
+            if(anx == 0)
+            {
+                anx = 1;
+                bag=0;
+                break;
+            }
+            anx = 1;
+        }
+        else
+            anx = 0;
+        POINT p = GetMousePos();
+        mpx = To_int(p.x / 2 - 26);
+        mpy = To_int(p.y - 14);
+        if(mpy == 0 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 14), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(setfps == 1)
+                    setfps = 2;
+                else if(setfps == 2)
+                    setfps = 3;
+                else
+                    setfps = 1;
+                update_set();
+            }
+            else
+                Setpos(18, 14), cout << "-> ";
+        }
+        else
+            Setpos(18, 14), cout << "   ";
+        if(mpy == 9 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 23), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                save(zzz);
+                run = false;
+                return;
+            }
+            else
+                Setpos(18, 23), cout << "-> ";
+        }
+        else
+            Setpos(18, 23), cout << "   ";
+        if(mpy == -4 && mpx > 2 && mpx < 8)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(30, 9), cout << "  ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(printx < 90)
+                    printx += 2,xlen+=4;
+                update_set();
+            }
+            else
+                Setpos(30, 9), cout << " -> ";
+        }
+        else
+            Setpos(30, 9), cout << "     ";
+        if(mpy == -3 && mpx > 2 && mpx < 8)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(30, 10), cout << "  ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(printy < 46)
+                    printy += 2,ylen+=2;
+                update_set();
+            }
+            else
+                Setpos(30, 10), cout << " -> ";
+        }
+        else
+            Setpos(30, 10), cout << "     ";
+        if(mpy == -4 && mpx > 8 && mpx < 16)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(33, 9), cout << "  ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(printx > 20)
+                    printx -= 2,xlen-=4;
+                update_set();
+            }
+            else
+                Setpos(33, 9), cout << " -> ";
+        }
+        else
+            Setpos(33, 9), cout << "     ";
+        if(mpy == -3 && mpx > 8 && mpx < 16)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(33, 10), cout << "  ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(printy > 20)
+                    printy -= 2,ylen-=2;
+                update_set();
+            }
+            else
+                Setpos(33, 10), cout << " -> ";
+        }
+        else
+            Setpos(33, 10), cout << "     ";
+        if(mpy == 3 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 17), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                sun = (sun == 0 ? 1 : 0);
+                update_set();
+            }
+            else
+                Setpos(18, 17), cout << "-> ";
+        }
+        else
+            Setpos(18, 17), cout << "   ";
+        if(mpy == 5 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 19), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                ed = (ed == 8000 ? 6000 : (ed == 6000 ? 4000 : 8000));
+                update_set();
+            }
+            else
+                Setpos(18, 19), cout << "-> ";
+        }
+        else
+            Setpos(18, 19), cout << "   ";
+        if(mpy == -1 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 12), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                CanGet = (CanGet == 0 ? 1 : 0);
+                update_set();
+            }
+            else
+                Setpos(18, 12), cout << "-> ";
+        }
+        else
+            Setpos(18, 12), cout << "   ";
+        if(mpy ==7 && mpx > -4 && mpx < 4)
+        {
+            if(KEY_DOWN(VK_LBUTTON))
+            {
+                Setpos(18, 21), cout << " ->";
+                while(KEY_DOWN(VK_LBUTTON))
+                    continue;
+                if(special_effect == 1)
+                    special_effect = 2;
+                else if(special_effect == 2)
+                    special_effect = 3;
+                else
+                    special_effect = 1;
+                update_set();
+            }
+            else
+                Setpos(18, 21), cout << "-> ";
+        }
+        else
+            Setpos(18, 21), cout << "   ";
+        Sleep(1);
+    }
+}
+void cls()
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if(GetConsoleScreenBufferInfo(hConsole, &csbi))
+    {
+        DWORD cCharsWrieern;
+        DWORD dw = csbi.dwSize.X * csbi.dwSize.Y;
+        FillConsoleOutputCharacter(hConsole, ' ', dw, {0, 0}, &cCharsWrieern);
+    }
+}
+bool SetFileReadOnly(const std::string &filePath, bool readOnly)
+{
+    #ifdef _WIN32
+    DWORD attributes = GetFileAttributesA(filePath.c_str());
+    if(attributes == INVALID_FILE_ATTRIBUTES)
+    {
+        // std::cerr << " 获取文件属性失败: " << GetLastError() << std::endl;
+        return false;
+    }
+    if(readOnly)
+    {
+        attributes |= FILE_ATTRIBUTE_READONLY;
+    }
+    else
+    {
+        attributes &= ~FILE_ATTRIBUTE_READONLY;
+    }
+    if(!SetFileAttributesA(filePath.c_str(), attributes))
+    {
+        std::cerr << " 设置文件属性失败: " << GetLastError() << std::endl;
+        return false;
+    }
+    #else
+    struct stat fileStat;
+    if(stat(filePath.c_str(), &fileStat) != 0)
+    {
+        perror(" 获取文件状态失败");
+        return false;
+    }
+    mode_t newMode;
+    if(readOnly)
+    {
+        newMode = fileStat.st_mode & ~(S_IWUSR | S_IWGRP | S_IWOTH);
+    }
+    else
+    {
+        newMode = fileStat.st_mode | S_IWUSR;
+    }
+    if(chmod(filePath.c_str(), newMode) != 0)
+    {
+        perror(" 修改文件权限失败");
+        return false;
+    }
+    #endif
+    return true;
+}
+void SetWindowSize(int cols, int lines)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    // 设置缓冲区大小，避免超出缓冲区时窗口滚动
+    COORD newSize = {(SHORT)(cols * 2 + 1), (SHORT)(lines + 1)};
+    SetConsoleScreenBufferSize(hConsole, newSize);
+    // 设置控制台窗口区域（不影响外部窗口大小，全屏时由SetConsoleToFullscreen控制）
+    SMALL_RECT winSize = {0, 0, (SHORT)(cols * 2), (SHORT)(lines)};
+    SetConsoleWindowInfo(hConsole, TRUE, &winSize);
+}
+void did()
+{
+    for(int x = 0; x <= 91; x++)
+    {
+        thing.insert({name[x], x});
+    }
+    // 羊毛方块属性初始化
+    blockwj[87] = 30;
+    blocktouch[87] = 1;
+    blocklv[87] = 0;
+    // 床方块属性初始化
+    blockwj[90] = 30;
+    blocktouch[90] = 1;
+    blocklv[90] = 0;
+}
+int lenth_ = 0;
+bool bw;
+int keydown[129];
+void getkeydown(char getzf)
+{
+    if(GetAsyncKeyState(getzf) & 0x8000 && lenth_ <= 50)
+    {
+        keydown[(int)(getzf)]++;
+        if(keydown[(int)(getzf)] == 1 ||
+                (keydown[(int)(getzf)] >= 30 && keydown[(int)(getzf)] % 2 == 0))
+        {
+            if(getzf >= 65 && getzf <= 90 && bw == false)
+                zzz += getzf + 32, lenth_++;
+            else
+                zzz += getzf, lenth_++;
+        }
+    }
+    else
+        keydown[getzf] = 0;
+}
+bool iscre = false;
+void delete_world()
+{
+    Setpos(18, 27);
+    cout << "                                    ";
+    Setpos(18, 28);
+    cout << "                                    ";
+    Setpos(18, 29);
+    cout << "                                    ";
+    Setpos(23, 3);
+    cout << "                      ";
+    Setpos(22, 3);
+    cout << "  选择要删除的存档  ";
+    bool abcde;
+    while(1)
+    {
+        if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+        {
+            Setpos(22, 3);
+            cout << "                      ";
+            while(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                continue;
+            return;
+        }
+        POINT p = GetMousePos();
+        mpx = To_int(p.x / 2 - 26);
+        mpy = To_int(p.y - 14);
+        for(int i = 0; i < read_s; i++)
+        {
+            abcde = 0;
+            Setpos(15, 6 + i * 2);
+            if(mpy >= i * 2 - 8 && mpy <= i * 2 - 7)
+            {
+                Color(10);
+                if(KEY_DOWN(VK_LBUTTON))
+                {
+                    while(KEY_DOWN(VK_LBUTTON))
+                        continue;
+                    abcde = true;
+                    delete_savelist(saves[i]);
+                    read_savelist();
+                    Clear_2();
+                    return;
+                }
+            }
+            else
+            {
+                Color(0);
+            }
+            if(!abcde)
+                cout << saves[i];
+        }
+        Sleep(1);
+    }
+}
+void make_newworld()
+{
+    Setpos(18, 27);
+    cout << "                                    ";
+    Setpos(18, 28);
+    cout << "                                    ";
+    Setpos(18, 29);
+    cout << "                                    ";
+    for(int i = 0; i < read_s; i++)
+    {
+        Setpos(15, 6 + i * 2);
+        cout << "                                    ";
+    }
+    Setpos(23, 3);
+    cout << "               ";
+    int brtick = 0;
+    zzz.clear();
+    while(1)
+    {
+        if(clock() - Clocknum >= 15)
+        {
+            if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+            {
+                while(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                    continue;
+                break;
+            }
+            brtick++;
+            Color(0);
+            Clocknum = clock();
+            bw = (GetAsyncKeyState(VK_SHIFT) & 0x8000) ||
+                 (GetKeyState(VK_CAPITAL) & 0x0001);
+            for(char zf = 36; zf <= 125; zf++)
+            {
+                getkeydown(zf);
+            }
+            if(GetAsyncKeyState('\b') & 0x8000)
+            {
+                keydown[(int)('\b')]++;
+                if((keydown[(int)('\b')] == 1 ||
+                        (keydown[(int)('\b')] >= 30 && keydown[(int)('\b')] % 2 == 0)) &&
+                        lenth_ > 0)
+                    zzz.erase(zzz.end() - 1), lenth_--;
+            }
+            else
+                keydown[(int)('\b')] = 0;
+            Setpos(15, 13);
+            cout << " 存档名：（由大小写字母和数字组成，不超过50字符）";
+            Setpos(15, 15);
+            cout << zzz;
+            if(brtick % 60 <= 30)
+                cout << "_        ";
+            else
+                cout << "     ";
+            POINT p = GetMousePos();
+            mpx = To_int(p.x / 2 - 26);
+            mpy = To_int(p.y - 14);
+            iscre = false;
+            if(mpx >= -1 && mpx <= 4 && mpy >= 4 && mpy <= 7)
+            {
+                Color(1);
+                Setpos(23, 18);
+                cout << "  ----------";
+                Setpos(23, 19);
+                cout << " | 创建世界 |";
+                Setpos(23, 20);
+                cout << "  ----------";
+                if(KEY_DOWN(VK_LBUTTON) && lenth_ > 0)
+                {
+                    MAP();
+                    save(zzz);
+                    save_savelist(zzz);
+                    iscre = true;
+                    return;
+                }
+            }
+            else
+            {
+                Color(0);
+                Setpos(23, 18);
+                cout << "  ----------";
+                Setpos(23, 19);
+                cout << " | 创建世界 |";
+                Setpos(23, 20);
+                cout << "  ----------";
+            }
+        }
+        Sleep(1);
+    }
+}
+void print_bag()
+{
+    printf("   \n");
+    for(int i = 1; i <= 9; i++)
+    {
+        if(cho == i)
+            Color(1);
+        else
+            Color(0);
+        printf("  ");
+        if(beibao[i][1] > 0)
+        {
+            cout << beibao[i][1] << test[beibao[i][0]] << "   ";
+        }
+        else
+            cout << " 无  ";
+    }
+}
+int l_cho=10;
+void print_fast()
+{
+    if(l_life!=life)
+    {
+        cout<<"  生命：" << int((life*10)+0.5)/10.0;
+        printf("        ");
+    }
+    print_set=0;
+    bool isbagp=0;
+    for(int i=1; i<=25; i++)
+    {
+        if(beibao[i][0]!=l_beibao[i][0]||beibao[i][1]!=l_beibao[i][1])isbagp=1;
+        l_beibao[i][0]=beibao[i][0],l_beibao[i][1]=beibao[i][1];
+    }
+    if(l_cho!=cho)isbagp=1;
+    l_cho=cho;
+    if(print_set==0)
+    {
+        if(isbagp)
+        {
+            print_bag();
+        }
+    }
+    else
+    {
+        if(tick%5==0)print_bag();
+    }
+    Color(0);
+    Setpos(1, 35);
+    if(printy > 30)
+        Setpos(1, printy + 3);
+    if(printy > 30)
+        Setpos(1, printy + 3);
+    if(GetAsyncKeyState('Y') & 0x8000)
+    {
+        key_d_Y=1;
+    }
+    else if(key_d_Y==1)
+    {
+        f3=1-f3,key_d_Y=0;
+        if(f3==0)printf("                     ");
+    }
+    if(f3)cout << " " << "x:" <<int(x-WORLD_WIDTH/2+0.5)<< " y:" << int(WORLD_HEIGHT-1-y) << "          ";
+    if(f3)
+    {
+        int sheep_count = 0, pig_count = 0;
+        for(int i = 0; i < 500; i++)
+        {
+            if(shiti[i].type == 12) sheep_count++;
+            else if(shiti[i].type == 13) pig_count++;
+        }
+        Setpos(20, 1);
+        cout << "羊:" << sheep_count << " 猪:" << pig_count << "   ";
+    }
+    l_life=life;
+}
+void game_loop()
+{
+    fell = y;
+    // 初始化窗口大小以适应渲染尺寸
+    SetWindowSize(printx + 5, printy + 5);
+    jx = x, jy = y;
+    if(jx < printx / 2)
+        jx = printx / 2;
+    if(jy < printy / 2)
+        jy = printy / 2;
+    if(jx > WORLD_WIDTH - printx / 2 - 1)
+        jx = WORLD_WIDTH - printx / 2 - 1;
+    if(jy > WORLD_HEIGHT - printy / 2 - 1)
+        jy = WORLD_HEIGHT - printy / 2 - 1;
+    Clear();
+    setlight();
+    int bow = 0;
+    memset(painting, 1145, sizeof(painting));
+    l_life=30;
+    l_beibao[1][0]=100;
+    run = 1;
+    hujia_update();
+    slow_update = 400;
+    while(1)
+    {
+        if(setfps == 0 || clock() - Clocknum >= 15 * setfps)
+        {
+            GetIn += (GetIn >= 1 ? 0 : 1);
+            keybd_event(VK_MENU, 0, 0, 0);               // 按下
+            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
+            UpdateFPS();
+            HideCursor();
+            Clocknum = clock();
+            for(int S = 1; S <= setfps; S++)
+            {
+                slow_update++;
+                if(slow_update > 60)
+                    slow_update = 0, setlight();
+                bosshp = 0;
+                tick++;
+                if(tick >= 20)
+                    tick = 0, try_make_st();
+                if(tick % 10 == 0)
+                    boom_loop();
+                atime();
+                mx = 0;
+                if(wudi > 0)
+                    wudi--;
+                SwitchMode();
+                gongji = 1;
+                gongjicd = 20;
+                if(beibao[cho][0] == 17)
+                    gongji = 5, gongjicd = 37.5;
+                if(beibao[cho][0] == 18)
+                    gongji = 9, gongjicd = 75;
+                if(beibao[cho][0] == 47)
+                    gongji = 6, gongjicd = 37.5;
+                if(beibao[cho][0] == 48)
+                    gongji = 9, gongjicd = 67;
+                if(beibao[cho][0] == 49)
+                    gongji = 7, gongjicd = 37.5;
+                if(beibao[cho][0] == 50)
+                    gongji = 9, gongjicd = 60;
+                if(beibao[cho][0] == 60)
+                    gongji = 7, gongjicd = 30;
+                if(beibao[cho][0] == 73)
+                    gongji = 9, gongjicd = 37.5;
+                if(beibao[cho][0] == 74)
+                    gongji = 11, gongjicd = 60;
+                if(beibao[cho][0] == 77)
+                    gongji = 4, gongjicd = 37.5;
+                if(beibao[cho][0] == 78)
+                    gongji = 7, gongjicd = 60;
+                st_move();
+                if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                {
+                    if(anx == 0)
+                    {
+                        anx = 1, SET();
+                        if(run == 0)
+                            return;
+                        setlight();
+                        memset(painting, 114, sizeof(painting));
+                        Print();
+                    }
+                    anx = 1;
+                }
+                else
+                    anx = 0;
+                if(GetAsyncKeyState('O') & 0x8000 && GetAsyncKeyState('T') & 0x8000 &&
+                        GetIn == 1)
+                {
+                    memset(s, 0, sizeof(s));
+                    for(int AAAA = 0; AAAA <= 101; AAAA++)
+                    {
+                        shiti[AAAA].CD = 0, shiti[AAAA].HP = 0, shiti[AAAA].spgx = 0,
+                                    shiti[AAAA].spgy = 0, shiti[AAAA].gx = 0, shiti[AAAA].gy = 0,
+                                                shiti[AAAA].hurt = 0, shiti[AAAA].type = 0, shiti[AAAA].jp = 0;
+                    }
+                    for(int AAAA = 1; AAAA <= 4; AAAA++)
+                    {
+                        wear[AAAA] = 0;
+                    }
+                    cls();
+                    shuaxin();
+                    MAP();
+                    cls();
+                    now_time = 0;
+                    night = 0;
+                    Clear();
+                    memset(beibao, 0, sizeof(beibao));
+                    back_x = 10, back_y = 145;
+                    life = 20;
+                    Start();
+                }
+                if((GetAsyncKeyState('E') & 0x8000) && GetIn == 1)
+                {
+                    while(GetAsyncKeyState('E') & 0x8000)
+                        continue;
+                    craft_1();
+                    setlight();
+                    hujia_update();
+                    memset(painting, 114, sizeof(painting));
+                }
+                else
+                    anx = 0;
+                if((GetAsyncKeyState('M')) && GetIn == 1)
+                {
+                    while(GetAsyncKeyState('M'))
+                        continue;
+                    openmap();
+                    setlight();
+                }
+                else
+                    anx = 0;
+                if(GetAsyncKeyState('I') & 0x8000)
+                {
+                    while(GetAsyncKeyState('I') & 0x8000)
+                        Sleep(1);
+                    gamemode = 1 - gamemode;
+                }
+                if(GetAsyncKeyState('N') & 0x8000 && GetIn == 1)
+                    shuaxin();
+                if(GetAsyncKeyState('U') & 0x8000 && GetIn == 1)
+                    save(zzz);
+                if(GetAsyncKeyState('B') & 0x8000 && GetIn == 1)
+                    gohome();
+                if(((GetAsyncKeyState('A') & 0x8000) ||
+                        (GetAsyncKeyState(VK_LEFT) & 0x8000)) &&
+                        GetIn == 1)
+                {
+                    if(spx > -1)
+                        spx = -1;
+                    spx -= 0.25, mx--;
+                }
+                if(((GetAsyncKeyState('D') & 0x8000) ||
+                        (GetAsyncKeyState(VK_RIGHT) & 0x8000)) &&
+                        GetIn == 1)
+                {
+                    if(spx < 1)
+                        spx = 1;
+                    spx += 0.25, mx++;
+                }
+                spx *= 0.97;
+                my = 0;
+                if(mx == 0)
+                {
+                    if(sword<40)
+                        spx = 0;
+                    else spx *= 0.97;
+                }
+                if(((GetAsyncKeyState('W') & 0x8000) ||
+                        (GetAsyncKeyState(VK_UP) & 0x8000) ||
+                        (GetAsyncKeyState(' ') & 0x8000)) &&
+                        GetIn == 1)
+                    my++;
+                if((GetAsyncKeyState('S') & 0x8000 ||
+                        GetAsyncKeyState(VK_DOWN) & 0x8000) &&
+                        GetIn == 1)
+                    my--;
+                if(GetAsyncKeyState('1') & 0x8000 && GetIn == 1)
+                    cho = 1;
+                if(GetAsyncKeyState('2') & 0x8000 && GetIn == 1)
+                    cho = 2;
+                if(GetAsyncKeyState('3') & 0x8000 && GetIn == 1)
+                    cho = 3;
+                if(GetAsyncKeyState('4') & 0x8000 && GetIn == 1)
+                    cho = 4;
+                if(GetAsyncKeyState('5') & 0x8000 && GetIn == 1)
+                    cho = 5;
+                if(GetAsyncKeyState('6') & 0x8000 && GetIn == 1)
+                    cho = 6;
+                if(GetAsyncKeyState('7') & 0x8000 && GetIn == 1)
+                    cho = 7;
+                if(GetAsyncKeyState('8') & 0x8000 && GetIn == 1)
+                    cho = 8;
+                if(GetAsyncKeyState('9') & 0x8000 && GetIn == 1)
+                    cho = 9;
+                if(GetAsyncKeyState('P') & 0x8000 && CanGet && GetIn == 1)
+                {
+                    if(CanGet)
+                        getin();
+                }
+                else
+                    can = 0;
+                if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] == 24)
+                {
+                    life += ((life + 5 > 20) ? (20 - life) : 5);
+                    beibao[cho][1]--;
+                }
+                else if(KEY_DOWN(VK_RBUTTON) && (beibao[cho][0] == 37||beibao[cho][0] == 55||beibao[cho][0] == 88||beibao[cho][0] == 89||beibao[cho][0] == 91))
+                {
+                    eat++;
+                    if(eat > 75)
+                    {
+                        eat = 0;
+                        if(beibao[cho][0] == 37)life += 2;
+                        else if(beibao[cho][0] == 88)life += 2;
+                        else if(beibao[cho][0] == 89)life += 3;
+                        else if(beibao[cho][0] == 91)life += 8;
+                        else life += 4;
+                        if(life > 20)
+                            life = 20;
+                        beibao[cho][1]--;
+                    }
+                }
+                else if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] != 24)
+                    key_++;
+                else
+                    key_ = 0;
+                if(key_ > 0)
+                    key_ = -10, fz = 1;
+                else
+                    fz = 0;
+                if(sword>0)sword--;
+                POINT p = GetMousePos();
+                p.x -= printx - 50;
+                p.y -= (printy - 30) / 2;
+                mpx = To_int(jx - 26 + p.x / 2);
+                mpy = To_int(jy - 14 + p.y);
+                if(KEY_DOWN(VK_LBUTTON))
+                {
+                    if(beibao[cho][0] == 41||beibao[cho][0] == 61)
+                    {
+                        bow++;
+                        if(bow > 0)
+                        {
+                            bow = -30;
+                            int U = getbeibao_2(44);
+                            int U2 = getbeibao_2(45);
+                            if(U == 0)
+                                U = U2;
+                            int U3 = getbeibao_2(46);
+                            if(U == 0)
+                                U = U3;
+                            if(U2 != 0 && U2 < U)
+                                U = U2;
+                            if(U3 != 0 && U3 < U)
+                                U = U3;
+                            if(U != 0)
+                            {
+                                if(beibao[cho][0] == 61)
+                                {
+                                    if(rand()%3==0)beibao[U][1]--;
+                                    if(beibao[U][0] == 44 || beibao[U][0] == 45)
+                                    {
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 2);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 2);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 2);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 2);
+                                    }
+                                    else
+                                    {
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 3);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 3);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 3);
+                                        make_jian(mpx+((rand()%40)+1)/10.0-2, y-25+((rand()%40)+1)/10.0-2, ((rand()%40)+1)/10.0-2, 20+((rand()%80)+1)/10.0, 3);
+                                    }
+                                }
+                                else
+                                {
+                                    double ttx=abs(x-mpx);
+                                    double tty=abs(y-mpy);
+                                    double total=ttx+tty+0.001;
+                                    double px=ttx/total;
+                                    double py=tty/total;
+                                    if(mpx-x<0)px*=-1;
+                                    if(mpy-y<0)py*=-1;
+                                    beibao[U][1]--;
+                                    if(beibao[U][0] == 44 || beibao[U][0] == 45)
+                                        make_jian(x, y-0.75, 30*px, 50*py, 2);
+                                    else
+                                        make_jian(x, y-0.75, 30*px, 50*py, 3);
+                                }
+                            }
+                        }
+                    }
+                    else if(abs(mpx - int(x + 0.5)) <= 3 && abs(mpy - int(y + 0.5)) <= 3)
+                    {
+                        wajue(mpx, mpy);
+                    }
+                    else
+                    {
+                        if(abs(mpx - int(x + 0.5)) > abs(mpy - int(y + 0.5)))
+                        {
+                            if(mpx - int(x + 0.5) > 0)
+                            {
+                                if(blockwj[s[int(x + 1.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x + 1.5), (y + 0.5));
+                                else if(blockwj[s[int(x + 2.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x + 2.5), (y + 0.5));
+                                else if(blockwj[s[int(x + 3.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x + 3.5), (y + 0.5));
+                            }
+                            else
+                            {
+                                if(blockwj[s[int(x - 0.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x - 0.5), (y + 0.5));
+                                else if(blockwj[s[int(x - 1.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x - 1.5), (y + 0.5));
+                                else if(blockwj[s[int(x - 2.5)][int(y + 0.5)]] > 0)
+                                    wajue(int(x - 2.5), (y + 0.5));
+                            }
+                        }
+                        else
+                        {
+                            if(mpy - int(y + 0.5) > 0)
+                            {
+                                if(blockwj[s[int(x + 0.5)][int(y + 1.5)]] > 0)
+                                    wajue(int(x + 0.5), (y + 1.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y + 2.5)]] > 0)
+                                    wajue(int(x + 0.5), (y + 2.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y + 3.5)]] > 0)
+                                    wajue(int(x + 0.5), (y + 3.5));
+                            }
+                            else
+                            {
+                                if(blockwj[s[int(x + 0.5)][int(y - 0.5)]] > 0)
+                                    wajue(int(x + 0.5), (y - 0.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y - 1.5)]] > 0)
+                                    wajue(int(x + 0.5), (y - 1.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] > 0)
+                                    wajue(int(x + 0.5), (y - 2.5));
+                            }
+                        }
+                    }
+                }
+                else if(bow < 0)
+                    bow++;
+                if(fz)
+                {
+                    if(mpx >= 0 && mpx < WORLD_WIDTH && mpy >= 0 && mpy < WORLD_HEIGHT &&
+                            abs(mpx - int(x + 0.5)) <= 3 && abs(mpy - int(y + 0.5)) <= 3)
+                    {
+                        if(s[mpx][mpy] == 9)
+                            craft_2();
+                        else if(s[mpx][mpy] == 40)
+                            openbox();
+                        else if(s[mpx][mpy] == 38)
+                        {
+                            swap_map();
+                        }
+                        else if(s[mpx][mpy] == 90)
+                        {
+                            // 床交互：设置重生点/入睡
+                            back_x = mpx;
+                            back_y = mpy;
+                            if(night >= 1)
+                            {
+                                // 夜晚：入睡跳过黑夜
+                                now_time = 0;
+                                night = 0;
+                                sky();
+                                shuaxin();
+                                Setpos(1, 31);
+                                Color(0);
+                                cout << " 已入睡，重生点已设置，天亮了                              ";
+                            }
+                            else
+                            {
+                                // 白天：仅设置重生点，无法入睡
+                                Setpos(1, 31);
+                                Color(0);
+                                cout << " 重生点已设置（白天无法入睡）                              ";
+                            }
+                        }
+                        else if(beibao[cho][0] == 25)
+                        {
+                            if(s[mpx][mpy] == 19)
+                            {
+                                beibao[cho][0] = 26;
+                                s[mpx][mpy] = 0;
+                                Clear();
+                            }
+                            if(s[mpx][mpy] == 32)
+                            {
+                                beibao[cho][0] = 35;
+                                s[mpx][mpy] = 0;
+                                Clear();
+                            }
+                        }
+                        else
+                            block_(mpx, mpy);
+                    }
+                    else
+                    {
+                        if(abs(mpx - int(x + 0.5)) > abs(mpy - int(y + 0.5)))
+                        {
+                            if(mpx - int(x + 0.5) > 0)
+                            {
+                                if(blockwj[s[int(x + 3.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x + 3.5), (y + 0.5));
+                                else if(blockwj[s[int(x + 2.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x + 2.5), (y + 0.5));
+                                else if(blockwj[s[int(x + 1.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x + 1.5), (y + 0.5));
+                            }
+                            else
+                            {
+                                if(blockwj[s[int(x - 2.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x - 2.5), (y + 0.5));
+                                else if(blockwj[s[int(x - 1.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x - 1.5), (y + 0.5));
+                                else if(blockwj[s[int(x - 0.5)][int(y + 0.5)]] == 0)
+                                    block_(int(x - 0.5), (y + 0.5));
+                            }
+                        }
+                        else
+                        {
+                            if(mpy - int(y + 0.5) > 0)
+                            {
+                                if(blockwj[s[int(x + 0.5)][int(y + 3.5)]] == 0)
+                                    block_(int(x + 0.5), (y + 3.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y + 2.5)]] == 0)
+                                    block_(int(x + 0.5), (y + 2.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y + 1.5)]] == 0)
+                                    block_(int(x + 0.5), (y + 1.5));
+                            }
+                            else
+                            {
+                                if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] > 0)
+                                    block_(int(x + 0.5), (y - 2.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y - 1.5)]] == 0)
+                                    block_(int(x + 0.5), (y - 1.5));
+                                else if(blockwj[s[int(x + 0.5)][int(y - 0.5)]] == 0)
+                                    block_(int(x + 0.5), (y - 0.5));
+                            }
+                        }
+                    }
+                }
+                if(gamemode == 1)
+                {
+                    if((s[int(x + 0.5)][int(y + 0.5)] >= 19 &&
+                            s[int(x + 0.5)][int(y + 0.5)] <= 22) ||
+                            (s[int(x + 0.5)][int(y + 0.5)] >= 32 &&
+                             s[int(x + 0.5)][int(y + 0.5)] <= 34))
+                    {
+                        if(wudi == 0)
+                            if(s[int(x + 0.5)][int(y + 0.5)] >= 32 &&
+                                    s[int(x + 0.5)][int(y + 0.5)] <= 34)
+                                life -= 4 * jianshang, wudi = 30;
+                        fell = y;
+                        if(my == 1)
+                            spy = -12;
+                        if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                            spy = 10;
+                        spy += g;
+                        spy *= 0.75;
+                        y += spy * 0.02;
+                        y_touch();
+                        y += spy * 0.02;
+                        y_touch();
+                        x += spx * 0.05;
+                        x_touch();
+                    }
+                    else
+                    {
+                        if(my == 1 && jump == 0)
+                            jump = 1, spy = -12;
+                        else if(my == 0 && jump == 1)
+                            jump = 2;
+                        else if(my == 1 && jump == 2)
+                            jump = 3, spy = -12;
+                        // else jump = 3;
+                        spy += g;
+                        spy *= 0.96;
+                        y += spy * 0.04;
+                        y_touch();
+                        y += spy * 0.04;
+                        y_touch();
+                        if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                        {
+                            x += spx * 0.04;
+                            if(blocktouch[s[int(x + 0.5)][int(y + 1)]] == 0 &&
+                                    abs(int(spy + 0.5)) <= 1)
+                                x -= spx * 0.04;
+                            x_touch();
+                        }
+                        else
+                        {
+                            x += spx * 0.04;
+                            x_touch();
+                            x += spx * 0.04;
+                            x_touch();
+                        }
+                    }
+                }
+                else
+                {
+                    spy = -my * 8;
+                    x += spx * 0.16;
+                    y += spy * 0.16;
+                }
+                if(x < 0)
+                    x = 0;
+                if(y < 0)
+                    y = 0;
+                if(x > WORLD_WIDTH - 1)
+                    x = WORLD_WIDTH - 1;
+                if(y > WORLD_HEIGHT - 1)
+                    gohome();
+                if(special_effect==2)
+                {
+                    if(abs(x - jx) < 0.5) jx = x;
+                    else jx += (x-jx)/10;
+                    if(abs(y - jy) < 0.5) jy = y;
+                    else jy += (y-jy)/10;
+                }
+                else if(special_effect==3)
+                {
+                    if(abs(x - jx) < 0.5) jx = x;
+                    else jx += (x-jx)/20;
+                    if(abs(y - jy) < 0.5) jy = y;
+                    else jy += (y-jy)/20;
+                }
+                else
+                {
+                    jx = x;
+                    jy = y;
+                }
+                if(jx < printx / 2)
+                    jx = printx / 2;
+                if(jy < printy / 2)
+                    jy = printy / 2;
+                if(jx > WORLD_WIDTH - printx / 2 - 1)
+                    jx = WORLD_WIDTH - printx / 2 - 1;
+                if(jy > WORLD_HEIGHT - printy / 2 - 1)
+                    jy = WORLD_HEIGHT - printy / 2 - 1;
+            }
+            if(tick % 10 == 0)
+                block_update();
+            POINT p = GetMousePos();
+            p.x -= printx - 50;
+            p.y -= (printy - 30) / 2;
+            mpy = To_int(jy - 14 + p.y);
+            mpx = To_int(jx - 26 + p.x / 2);
+            if(lx != x || ly != y)
+                setlight();
+            Print();
+            lx = int(x + 0.5), ly = int(y + 0.5);
+            Setpos(1, 33);
+            if(printy > 30)
+                Setpos(1, printy + 1);
+            Color(0);
+            if(life <= 0)
+                Start();
+            if(life < 20)
+                H++;
+            if(H > 300)
+                life++, H = 0;
+            if(life > 20 && !SetLife)
+                life = 20;
+            print_fast();
+            savetick++;
+            if(savetick>=3600)
+            {
+                savetick=0;
+                save(zzz);
+            }
+        }
+        //Sleep(1);
+    }
+}
+int main()
+{
+    // 设置控制台为UTF-8编码以支持中文显示
+    SetConsoleOutputCP(65001);
+    SetConsoleCP(65001);
+    try
+    {
+        did();
+        // 先设置缓冲区大小，再全屏，避免全屏后缓冲区过小
+        SetWindowSize(printx + 5, printy + 5);
+        SetConsoleToFullscreen();
+        HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+        if(hInput == INVALID_HANDLE_VALUE)
+        {
+            std::cerr << " 无法获取输入句柄\n";
+            return 1;
+        }
+        DWORD mode;
+        if(!GetConsoleMode(hInput, &mode))
+        {
+            std::cerr << "GetConsoleMode 失败\n";
+            return 1;
+        }
+        mode &= ~ENABLE_QUICK_EDIT_MODE;
+        hInput = GetStdHandle(STD_INPUT_HANDLE);
+        if(hInput == INVALID_HANDLE_VALUE)
+        {
+            std::cerr << " 无法获取输入句柄\n";
+            return 1;
+        }
+        if(!GetConsoleMode(hInput, &mode))
+        {
+            std::cerr << "GetConsoleMode 失败\n";
+            return 1;
+        }
+        mode &= ~ENABLE_QUICK_EDIT_MODE;
+        SetConsoleMode(hInput, mode);
+        InitFPSCounter();
+        init_buffer();
+        srand((unsigned)time(NULL));
+        HideCursor();
+        bool willclear = true;
+        while(1)
+        {
+            if(clock() - Clocknum >= 15)
+            {
+                Clocknum = clock();
+                if(willclear)
+                {
+                    willclear = false;
+                    Setpos(8, 6);
+                    cout << " #   #   ####    #   #   ####   #####  #####  ####     #    "
+                         "#####  #####";
+                    Setpos(8, 7);
+                    cout << " ## ##  #    #   #   #   #   #  #      #      #   #   # #   "
+                         "#        #";
+                    Setpos(8, 8);
+                    cout << "  ###   #    #   #   #   ####   #####  #      ####   #   #  "
+                         "#####    #";
+                    Setpos(8, 9);
+                    cout << "   #    #    #   #   #   #  #       #  #      #  #   #####  "
+                         "#        #";
+                    Setpos(8, 10);
+                    cout << "   #     ####     ###    #   #  #####  #####  #   #  #   #  "
+                         "#        #";
+                    Setpos(40, 12);
+                    cout << "Beta 1.3pre";
+                };
+                POINT p = GetMousePos();
+                mpx = To_int(p.x / 2 - 26);
+                mpy = To_int(p.y - 14);
+                if(mpx >= -2 && mpx <= 2 && mpy >= 8 && mpy <= 10)
+                {
+                    Color(1);
+                    Setpos(23, 23);
+                    cout << "  ----------";
+                    Setpos(23, 24);
+                    cout << " | 退出游戏 |";
+                    Setpos(23, 25);
+                    cout << "  ----------";
+                    if(KEY_DOWN(VK_LBUTTON))
+                    {
+                        return 0;
+                    }
+                }
+                else
+                {
+                    Color(0);
+                    Setpos(23, 23);
+                    cout << "  ----------";
+                    Setpos(23, 24);
+                    cout << " | 退出游戏 |";
+                    Setpos(23, 25);
+                    cout << "  ----------";
+                }
+                if(mpx >= -2 && mpx <= 2 && mpy >= 5 && mpy <= 7)
+                {
+                    Color(1);
+                    Setpos(23, 19);
+                    cout << "  ----------";
+                    Setpos(23, 20);
+                    cout << " |   模组   |";
+                    Setpos(23, 21);
+                    cout << "  ----------";
+                    if(KEY_DOWN(VK_LBUTTON))
+                    {
+                        for(int i = 6; i <= 10; i++)
+                        {
+                            Setpos(8, i);
+                            cout << "                                                        "
+                                 "                ";
+                        }
+                        Setpos(40, 12);
+                        cout << "            ";
+                        Setpos(23, 15);
+                        cout << "             ";
+                        Setpos(23, 16);
+                        cout << "             ";
+                        Setpos(23, 17);
+                        cout << "             ";
+                        Setpos(23, 19);
+                        cout << "             ";
+                        Setpos(23, 20);
+                        cout << "             ";
+                        Setpos(23, 21);
+                        cout << "             ";
+                        Setpos(23, 23);
+                        cout << "             ";
+                        Setpos(23, 24);
+                        cout << "             ";
+                        Setpos(23, 25);
+                        cout << "             ";
+                        Setpos(23, 6);
+                        cout << " 当前模组列表：";
+                        Setpos(23, 7);
+                        cout << " 点击启用模组（红色代表禁用，绿色代表启用）";
+                        while(1)
+                        {
+                            if(clock() - Clocknum >= 15)
+                            {
+                                if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                                {
+                                    while(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                                        continue;
+                                    willclear = 1;
+                                    break;
+                                }
+                                Color(0);
+                                Clocknum = clock();
+                                POINT p = GetMousePos();
+                                mpx = To_int(p.x / 2 - 26);
+                                mpy = To_int(p.y - 14);
+                                if(mpx >= -1 && mpx <= 4 && mpy >= 9 && mpy <= 11)
+                                {
+                                    if(oi)
+                                        Color(2);
+                                    else
+                                        Color(4);
+                                    Setpos(23, 23);
+                                    cout << "  ----------";
+                                    Setpos(23, 24);
+                                    cout << " |  OI风暴  |";
+                                    Setpos(23, 25);
+                                    cout << "  ----------";
+                                    if(KEY_DOWN(VK_LBUTTON))
+                                    {
+                                        willclear = true;
+                                        while(KEY_DOWN(VK_LBUTTON))
+                                            continue;
+                                        oi = 1 - oi;
+                                    }
+                                }
+                                else
+                                {
+                                    if(oi)
+                                        Color(9);
+                                    else
+                                        Color(10);
+                                    Setpos(23, 23);
+                                    cout << "  ----------";
+                                    Setpos(23, 24);
+                                    cout << " |  OI风暴  |";
+                                    Setpos(23, 25);
+                                    cout << "  ----------";
+                                }
+                                Sleep(1);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Color(0);
+                    Setpos(23, 19);
+                    cout << "  ----------";
+                    Setpos(23, 20);
+                    cout << " |   模组   |";
+                    Setpos(23, 21);
+                    cout << "  ----------";
+                }
+                if(mpx >= -2 && mpx <= 2 && mpy >= 1 && mpy <= 3)
+                {
+                    Color(1);
+                    Setpos(23, 15);
+                    cout << "  ----------";
+                    Setpos(23, 16);
+                    cout << " | 开始游戏 |";
+                    Setpos(23, 17);
+                    cout << "  ----------";
+                    if(KEY_DOWN(VK_LBUTTON))
+                    {
+                        willclear = true;
+                        while(KEY_DOWN(VK_LBUTTON))
+                            continue;
+                        while(1)
+                        {
+                            if(clock() - Clocknum >= 15)
+                            {
+                                if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                                {
+                                    while(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+                                        continue;
+                                    break;
+                                }
+                                Color(0);
+                                Clocknum = clock();
+                                if(willclear)
+                                {
+                                    for(int i = 6; i <= 10; i++)
+                                    {
+                                        Setpos(8, i);
+                                        cout << "                                                  "
+                                             "                      ";
+                                    }
+                                    Setpos(40, 12);
+                                    cout << "            ";
+                                    Setpos(23, 15);
+                                    cout << "             ";
+                                    Setpos(23, 16);
+                                    cout << "             ";
+                                    Setpos(23, 17);
+                                    cout << "             ";
+                                    Setpos(23, 19);
+                                    cout << "             ";
+                                    Setpos(23, 20);
+                                    cout << "             ";
+                                    Setpos(23, 21);
+                                    cout << "             ";
+                                    Setpos(23, 23);
+                                    cout << "             ";
+                                    Setpos(23, 24);
+                                    cout << "             ";
+                                    Setpos(23, 25);
+                                    cout << "             ";
+                                    Setpos(23, 3);
+                                    cout << " 当前存档：";
+                                    if(!read_savelist())
+                                        cout << " 无";
+                                    willclear = false;
+                                }
+                                POINT p = GetMousePos();
+                                bool abcde;
+                                mpx = To_int(p.x / 2 - 26);
+                                mpy = To_int(p.y - 14);
+                                for(int i = 0; i < read_s; i++)
+                                {
+                                    abcde = 0;
+                                    Setpos(15, 6 + i * 2);
+                                    if(mpy >= i * 2 - 8 && mpy <= i * 2 - 7)
+                                    {
+                                        Color(1);
+                                        if(KEY_DOWN(VK_LBUTTON))
+                                        {
+                                            abcde = true;
+                                            memset(painting, 114, sizeof(painting));
+                                            read(saves[i]);
+                                            zzz = saves[i];
+                                            game_loop();
+                                            bag=0;
+                                            Clear_2();
+                                            willclear = true;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        Color(0);
+                                    }
+                                    if(!abcde)
+                                        cout << saves[i];
+                                }
+                                if(mpx >= -6 && mpx <= -1 && mpy >= 13 && mpy <= 15)
+                                {
+                                    Color(1);
+                                    Setpos(18, 27);
+                                    cout << "  ----------";
+                                    Setpos(18, 28);
+                                    cout << " | 新建世界 |";
+                                    Setpos(18, 29);
+                                    cout << "  ----------";
+                                    if(KEY_DOWN(VK_LBUTTON) && read_s < 10)
+                                    {
+                                        make_newworld();
+                                        memset(painting, 114, sizeof(painting));
+                                        if(iscre)
+                                            game_loop();
+                                        bag=0;
+                                        Clear_2();
+                                        willclear = true;
+                                    }
+                                }
+                                else
+                                {
+                                    Color(0);
+                                    Setpos(18, 27);
+                                    cout << "  ----------";
+                                    Setpos(18, 28);
+                                    cout << " | 新建世界 |";
+                                    Setpos(18, 29);
+                                    cout << "  ----------";
+                                }
+                                if(mpx >= 3 && mpx <= 8 && mpy >= 13 && mpy <= 15)
+                                {
+                                    Color(1);
+                                    Setpos(28, 27);
+                                    cout << "  ----------";
+                                    Setpos(28, 28);
+                                    cout << " | 删除世界 |";
+                                    Setpos(28, 29);
+                                    cout << "  ----------";
+                                    if(KEY_DOWN(VK_LBUTTON))
+                                    {
+                                        delete_world();
+                                        willclear = true;
+                                    }
+                                }
+                                else
+                                {
+                                    Color(0);
+                                    Setpos(28, 27);
+                                    cout << "  ----------";
+                                    Setpos(28, 28);
+                                    cout << " | 删除世界 |";
+                                    Setpos(28, 29);
+                                    cout << "  ----------";
+                                }
+                                Sleep(1);
+                            }
+                        }
+                        willclear = true;
+                        Setpos(18, 27);
+                        cout << "                                    ";
+                        Setpos(18, 28);
+                        cout << "                                    ";
+                        Setpos(18, 29);
+                        cout << "                                    ";
+                        for(int i = 3; i < read_s; i++)
+                        {
+                            Setpos(15, 6 + i * 2);
+                            cout << "                                    ";
+                        }
+                        Setpos(23, 3);
+                        cout << "             ";
+                    }
+                }
+                else
+                {
+                    Color(0);
+                    Setpos(23, 15);
+                    cout << "  ----------";
+                    Setpos(23, 16);
+                    cout << " | 开始游戏 |";
+                    Setpos(23, 17);
+                    cout << "  ----------";
+                }
+            }
+            Sleep(1);
+        }
+        return 0;
+    }
+    catch(const std::exception &e)
+    {
+        cout << "error: " << e.what();
+        exit(1);
+    }
+    catch(...)
+    {
+        cout << "error: unknown exception";
+        exit(1);
+    }
+}
