@@ -1,6 +1,6 @@
 # 2DMC Wiki
 
-2DMC 是一款用 C++ 编写的 2D 版 Minecraft，运行于 Windows 控制台环境。世界尺寸为 10001×1001，通过宽字符批量渲染实现实时画面输出。本 Wiki 基于源代码 `beta1.5pre.cpp`（标题画面显示版本号 Beta 1.5pre）逐行核对编写。
+2DMC 是一款用 C++ 编写的 2D 版 Minecraft，运行于 Windows 控制台环境。世界尺寸为 10001×1001，通过宽字符批量渲染实现实时画面输出。本 Wiki 基于源代码 `beta1.6.cpp`（标题画面显示版本号 Beta 1.6）逐行核对编写。
 
 ---
 
@@ -41,8 +41,9 @@
 - **空间哈希网格**：实体管理使用 16×16 的哈希网格，实现 O(1) 的实体查找
 - **宽字符批量渲染**：通过 `WriteConsoleOutputW` 一次性写入整屏字符，配合双缓冲避免闪烁
 - **DFS 光照传播**：从光源出发递归扩散亮度，实心方块和平台方块（blocktouch≠0）衰减 3 级、非实心方块衰减 1 级
-- **双格式存档**：优先二进制 `.bin` 格式（`2DMCBIN` 魔数头 + 版本号 + 世界维度），失败自动回退到文本 `.txt` 格式；二进制存档使用原子写入（先写 `_new.bin` 再重命名）；支持旧版存档自动扩展新区域地形
-- **自动保存**：每 3600 帧自动在后台线程保存存档
+- **多线程增量存档**：v3 二进制格式（`2DMCBNK` 魔数头），后台写线程异步保存，脏列块追踪仅写入修改区域，Tag 化 META 序列化支持前向兼容；自动回退到 v2/文本格式；支持旧版存档自动扩展新区域地形
+- **自动保存**：每 3600 帧自动在后台线程异步保存存档，不阻塞主线程
+- **AI 状态机**：实体行为基于显式状态机（EntState 枚举），物理/状态迁移/行为分离，支持 11 种状态（空闲/游荡/追击/攻击/逃跑/引信/脚本/飞行/阶段/链式追踪/投射物）
 - **Perlin 噪声地形**：多倍频 2D Perlin 噪声（80/40/20/10 步长叠加 + fade 插值）生成山脉、洞穴、矿脉，下界地形同样由噪声驱动，附带雪地生物群系
 - **矿井生成系统**：地下随机生成 250 条矿井隧道，配有原木支撑柱、木板墙壁和木平台地板
 - **双维度系统**：主世界与下界独立存储，通过下界传送门切换
@@ -62,13 +63,13 @@
 ### 编译与运行
 
 ```bash
-g++ -std=c++17 -O2 -o 2DMC.exe beta1.5pre.cpp
+g++ -std=c++17 -O2 -o 2DMC.exe beta1.6.cpp
 ./2DMC.exe
 ```
 
 ### 启动流程
 
-1. 标题画面显示 `Beta 1.5pre`
+1. 标题画面显示 `Beta 1.6`
 2. 按 W 开始游戏，进入世界生成（Perlin 噪声地形 + 矿脉 + 树木 + 洞穴 + 矿井）
 3. 玩家出生在世界中心 x=5000，y 为地表高度
 
@@ -652,15 +653,26 @@ OI剑（ID 60）拥有独特的**冲刺攻击**机制：右键点击时，玩家
 世界数组: short s[WORLD_WIDTH][WORLD_HEIGHT]（10001×1001，约20MB）
 Beta 1.4 移除了 32×32 Chunk 系统，改用直接数组访问
 方块读写: s[x][y] 直接索引，带边界检查
+常量: constexpr int WORLD_WIDTH/HEIGHT + static_assert(>0) 编译期校验
+```
+
+### 脏列块追踪
+
+```
+列块划分: CHUNK_COLS=64 列为一组，NCHUNKS=(10000+63)/64=157 个列块
+脏标记: bool g_dirty[NCHUNKS] + g_dirty_meta
+标记函数: mark_dirty_col(c) / mark_dirty_range(a,b) / mark_all_dirty()
+调用点: 约25+处方块修改（光照更新、爆炸、实体破坏、玩家挖放、世界生成等）
+仅脏列块写入存档，大幅减少 I/O
 ```
 
 ### 实体空间哈希
 
 ```
-哈希网格: 每格 16×16（HASH_CELL=16）
+哈希网格: 每格 16×16（constexpr int HASH_CELL=16）
 哈希函数: hash_coord() 按 x/HASH_CELL、y/HASH_CELL 分桶并做边界钳制
 支持: O(1) 范围查询，实体移动时自动更新，查询时跳过 type<=0 的无效实体
-Beta 1.4 曾将 HASH_CELL 从 16 扩大至 32，Beta 1.5pre 回退为 16（提高桶粒度）
+实体销毁时正确调用 remove_entity_from_hash() 清理悬空引用（Beta 1.5 修复）
 ```
 
 ### 渲染系统
@@ -671,8 +683,32 @@ Beta 1.4 曾将 HASH_CELL 从 16 扩大至 32，Beta 1.5pre 回退为 16（提�
   - color_buffer[HEIGHT][WIDTH]: 颜色属性缓冲区
 输出: WriteConsoleOutputW 一次性写入整屏
 每字符占2个宽字符位（字符+空格）
-Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW 批量输出
+CHAR_INFO 数组 + Color2() 函数批量输出
+blockprint[]/blockcolor[] 渲染查表
 ```
+
+### AI 状态机
+
+```
+EntState 枚举（11种状态）:
+  ST_IDLE(空闲) / ST_WANDER(游荡) / ST_CHASE(追击) / ST_ATTACK(攻击)
+  ST_FLEE(逃跑) / ST_FUSE(苦力怕引信) / ST_SCRIPT(Boss脚本阶段)
+  ST_FLY(飞行) / ST_PHASE(阶段切换) / ST_FOLLOW_CHAIN(链式追踪) / ST_PROJECTILE(投射物)
+
+每帧执行顺序: 物理(ent_physics_ground) → 状态迁移(ent_update_state) → 行为(ent_behave)
+guaiwu 结构体新增 state 字段（unsigned char）
+static_assert(sizeof(guaiwu)==144) 保证存档二进制兼容
+```
+
+AI 分派函数：
+
+| 函数 | AI 值 | 适用实体 |
+|------|-------|---------|
+| `ai_ground()` | 1 | 僵尸/骷髅/苦力怕/蜘蛛/OI Boss |
+| `ai_projectile()` | 2 | 箭矢 |
+| `ai_flyboss()` | 3 | 世界吞噬者头部 |
+| `ai_boss3()` | 4 | 世界吞噬者体节/尾节 |
+| `ai_passive()` | 5 | 羊/猪 |
 
 ### 光照系统
 
@@ -702,7 +738,36 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 
 ## 存档系统
 
-### 二进制格式（.bin）
+### v3 二进制格式（.bin）— Beta 1.5 引入
+
+```
+文件头: 32字节
+  字节 0-7:   魔数 "2DMCBNK\0" (8字节)
+  字节 8-11:  版本 (int, 值=3)
+  字节 12-15: 世界宽度 WORLD_WIDTH (int)
+  字节 16-19: 世界高度 WORLD_HEIGHT (int)
+  字节 20-23: 列块宽度 CHUNK_COLS (int, 值=64)
+  字节 24-31: META偏移指针 (long long, 指向文件尾 META 区)
+列块区: 157个固定偏移列块，每块 CHUNK_COLS(64) × WORLD_HEIGHT(1001) × 5字节
+  - 每列块包含 s/s2/ep 三层数据（各2/2/1字节），可原地重写
+  - chunk_offset(c) = 32 + c × CHUNK_BYTES 计算列块固定偏移
+  - 末尾列块(第157块)仅17列（10001 - 156×64 = 17）
+META区: 文件尾，Tag化序列化（TAG_DOUBLES/INTS/BEIBAO/WEAR/SHITI/SHITI2/BOX/BOIMES/BOIMES2/GAMEMODE）
+  - 每个Tag: 1字节tag类型 + 4字节长度 + payload
+  - 未知tag自动跳过，保证前向兼容
+```
+
+v3 格式的核心优势：
+
+- **多线程异步写入**：后台写线程 `writer_loop()` 通过 `mutex` + `condition_variable` 同步，自动保存不阻塞主线程
+- **增量保存**：脏列块追踪系统（`g_dirty[]`）标记修改区域，仅写入脏列块，大幅减少 I/O
+- **崩溃安全**：新 META 追加到文件尾，提交后更新头指针；崩溃时旧 META 仍有效，不损坏存档
+- **前向兼容**：Tag 化 META 序列化，未知 tag 自动跳过，结构体布局变更不坏档
+- **实体逐字段序列化**：不再裸结构 `fwrite`，每个实体字段单独写入（`buf_entities()`）
+- **FileGuard RAII**：自动关闭 `FILE*`，防止资源泄漏
+- **信号处理**：`CTRL_CLOSE_EVENT`/`CTRL_SHUTDOWN_EVENT` 时先完整保存再关闭
+
+### v2 二进制格式（.bin）— 向后兼容
 
 ```
 头部: "2DMCBIN" 魔数 (7字节)
@@ -711,7 +776,7 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 数据: 完整世界方块数据
 ```
 
-二进制存档采用**原子写入**：先写入临时文件 `_new.bin`，写入成功后删除旧 `.bin` 并将 `_new.bin` 重命名为 `.bin`，避免写入过程中崩溃导致存档损坏。v2 格式在文件头中记录世界维度，支持不同世界尺寸的存档互通。
+加载时自动检测 v3 vs v2 格式（`file_is_v3()`），加载 v2 后调用 `mark_all_dirty()` 确保下次保存升级为 v3。
 
 ### 旧版存档兼容
 
@@ -719,6 +784,7 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 
 - **v1 存档**（固定 5001×1001）：自动识别旧格式，修复 ep 数组写入 bug（v1 误写为 5001×5001），读取后调用 `expand_world()` 为新区域（x: 5001-10000）生成地形
 - **v2 存档**：从文件头读取世界维度，通过 `fread_2d_compat()` 通用函数将旧尺寸数据映射到当前世界数组（过大忽略、过小保留原值）
+- **v3 存档**：从文件头读取世界维度和 META 偏移，逐列块读取方块数据，逐 Tag 解析 META（背包/装备/实体/箱子/生物群系等）
 - **文本存档**：按行读取 RLE 编码数据，超出当前世界宽度的数据自动截断；若旧存档世界比当前小，同样调用 `expand_world()` 生成新区域
 
 ### 文本格式（.txt）
@@ -727,9 +793,11 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 
 ### 存读逻辑
 
-- **保存**：优先尝试二进制格式 v2（原子写入），失败则回退文本格式
-- **读取**：优先尝试二进制格式，文件缺失或无效则回退文本格式；v1 存档自动兼容并扩展新区域
-- **自动保存**：游戏每 3600 帧（约1分钟）在后台线程（`detach`）自动保存存档，不阻塞主线程
+- **保存**：优先 v3 二进制格式（多线程异步写入脏列块 + META 追加），失败回退文本格式
+- **读取**：自动检测 v3/v2 格式，文件缺失或无效则回退文本格式；v1/v2 存档自动兼容并扩展新区域
+- **自动保存**：游戏每 3600 帧（约1分钟）调用 `save_world(nam, false)` 异步保存，不阻塞主线程
+- **同步保存**：退出游戏/切换维度时调用 `save_world(nam, true)` 阻塞等待写入完成
+- **生命周期**：`save_system_init()` → 游戏运行 → `save_system_flush()` 刷新队列 → `save_system_shutdown()` 关闭写线程
 - **世界扩展**：`expand_world()` 函数为旧存档的新区域生成完整地形（生物群系、Perlin 高度、矿石、洞穴、下界、远古残骸）
 
 ## 常见问题
@@ -779,7 +847,6 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 - "递归"物品（ID 52）无任何掉落来源，只能通过 `/give recursive` 获取
 - 世界吞噬者（类型9/10/11）无掉落物，击杀后不掉落任何物品
 - 苦力怕爆炸直接扣减生命值（绕过 `damage()` 函数），不受难度伤害倍率影响；直接接触时伤害为 8×0.05×50=20（满血玩家一击致命）
-- `/gamemode` 命令和 I 键切换时显示的"创造/生存"标签与实际模式相反（代码 `gamemode == 1 ? "创造" : "生存"`，但 gamemode=0 才是创造模式）
 - 箱子加载时物品 ID 校验上限为 `things[j] % 1000 > 91`，ID 0-91 物品可正常存取；暗影墙（ID 92）不可入箱（其本身也不可破坏、无获取途径）
 
 ### 性能优化方向
@@ -791,7 +858,7 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 
 ### 架构特点
 
-- 单文件设计，所有逻辑集中在 `beta1.5pre.cpp`（约 8700 行）
+- 单文件设计，所有逻辑集中在 `beta1.6.cpp`（约 9449 行）
 - 使用 Windows Console API 实现宽字符彩色渲染
 - 世界尺寸通过常量 `WORLD_WIDTH`/`WORLD_HEIGHT` 定义，支持灵活调整
 - Beta 1.4 移除了 Chunk 区块系统，世界数据直接以 `short s[][]` 二维数组存储
@@ -800,6 +867,9 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 - 矿井生成使用递归隧道算法配合 5×5 结构模板
 - 地形生成采用多倍频 2D Perlin 噪声（Beta 阶段引入，取代早期递归洞穴生成）
 - Beta 1.4 新增暗影洞穴生成（spawn_ebon_cave），使用腐化石块外壳 + 暗影墙内部结构
+- Beta 1.5 引入多线程增量存档系统（v3 `2DMCBNK` 格式，后台写线程 + 脏列块追踪 + Tag化 META）
+- Beta 1.6 引入 AI 状态机（`EntState` 枚举 11 种状态，物理→状态迁移→行为三阶段分离）
+- Beta 1.6 引入编译期安全检查（`constexpr` 常量 + `static_assert` 验证结构体大小与格式假设）
 
 ## 版本历史
 
@@ -919,7 +989,11 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 | 8.5 | beta1.4pre | **渲染系统重构**：引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW 批量输出替代逐字符 printf、新增 blockprint/blockcolor 方块渲染表、视口扩大（printx 50→70，printy 30→42）、HASH_CELL 从16扩大至32、标题仍显示"Beta 1.3pre" |
 | 8.5 | beta1.4pre2 | 继续渲染系统调试与优化、标题仍显示"Beta 1.3pre" |
 | 8.6 | beta1.4 | **新增神明吞噬者模式**（标题画面可切换，开启后世界吞噬者体节+30、速度×2.5、体节追踪速率1/7→1/3，每次进世界自动生成强化版Boss）、**远古残骸硬度调整**（9999→2000，使其可被挖掘）、暗影墙方块属性完善（不可破坏）、物品总数87→93、标题画面版本号更新为 Beta 1.4 |
-| 8.6 | beta1.5pre | **当前版本**（标题 Beta 1.5pre）。基于 beta1.4 同步全部 beta1.3 修复：**HASH_CELL 32→16**（哈希桶粒度细化）、**实体空间哈希健壮性**（查询跳过 type≤0 无效实体、st_kill 清理附属实体哈希残留、O+T 重置世界时清空哈希表且实体重置扩大至全部500槽位）、**稀有箱子 1/16 概率掉落金苹果**、**生物生成平衡**（夜晚怪物 ed/1.2→ed/3、下界 ed→ed/4、被动生物 ed/2→ed/5 且仅限露天地表或 y>840、不在水中生成）、**被动生物避水/游泳**（岸上遇水转向、水中限制下沉速度）、**修复箱子内物品合并丢失 bug**（c_thing/cc 槽位索引混淆）、**修复向上放方块判断反逻辑**（y-2.5 处 blockwj>0→==0）、**创造模式飞行不再累计摔落高度**（fell=y） |
+| 8.6 | beta1.5pre | 基于 beta1.4 同步全部 beta1.3 修复：**HASH_CELL 32→16**（哈希桶粒度细化）、**实体空间哈希健壮性**（查询跳过 type≤0 无效实体、st_kill 清理附属实体哈希残留、O+T 重置世界时清空哈希表且实体重置扩大至全部500槽位）、**稀有箱子 1/16 概率掉落金苹果**、**生物生成平衡**（夜晚怪物 ed/1.2→ed/3、下界 ed→ed/4、被动生物 ed/2→ed/5 且仅限露天地表或 y>840、不在水中生成）、**被动生物避水/游泳**（岸上遇水转向、水中限制下沉速度）、**修复箱子内物品合并丢失 bug**（c_thing/cc 槽位索引混淆）、**修复向上放方块判断反逻辑**（y-2.5 处 blockwj>0→==0）、**创造模式飞行不再累计摔落高度**（fell=y） |
+| 8.7 | beta1.5 | **多线程增量存档系统**：引入 v3 二进制格式（`2DMCBNK` 魔数头，32字节文件头 + 157个固定偏移列块 + Tag化 META区）、后台写线程 `writer_loop()` 通过 `mutex`+`condition_variable` 异步保存、**脏列块追踪**（`g_dirty[]` 数组标记修改区域，仅写入脏列块）、**崩溃安全**（新 META 追加到文件尾，提交后更新头指针，崩溃时旧 META 仍有效）、**Tag化 META 前向兼容**（未知 tag 自动跳过）、**实体逐字段序列化**（`buf_entities()` 取代裸结构 fwrite）、**FileGuard RAII**（自动关闭 FILE*）、**CTRL_CLOSE/CTRL_SHUTDOWN 信号处理**（关闭前完整保存）、**remove_entity_from_hash 修复**（实体销毁时正确清理哈希表悬空引用）、标题画面版本号更新为 Beta 1.5 |
+| 8.8 | beta1.6pre | **AI 状态机重构**：引入 `EntState` 枚举（11种状态：ST_IDLE/ST_WANDER/ST_CHASE/ST_ATTACK/ST_FLEE/ST_FUSE/ST_SCRIPT/ST_FLY/ST_PHASE/ST_FOLLOW_CHAIN/ST_PROJECTILE）、`guaiwu` 结构体新增 `state` 字段（unsigned char）、AI 执行顺序分离为 `ent_physics_ground()` → `ent_update_state()` → `ent_behave()` 三阶段、**编译期安全**：`constexpr` 替代 `const`（CHUNK_COLS/NCHUNKS/BIN3_MAGIC/CHUNK_BYTES 等）、`static_assert(sizeof(guaiwu)==144)` 保证存档二进制兼容、`static_assert(sizeof(short)==2 && sizeof(int)==4)` 保证格式假设、标题仍显示"Beta 1.5" |
+| 8.8 | beta1.6pre2 | 中间重构版本。基于 beta1.5 清理代码（移除 constexpr/static_assert/EntState 的 beta1.6pre 变更，回退为 `const int`），保留 v3 存档系统和 remove_entity_from_hash 修复，标题仍显示"Beta 1.5" |
+| 8.9 | beta1.6 | **当前版本**。合并 beta1.6pre 的 AI 状态机与编译期安全特性：恢复 `constexpr`/`static_assert`/`EntState` 枚举、`guaiwu.state` 字段、AI 三阶段分离（物理→状态迁移→行为）、标题画面版本号更新为 **Beta 1.6**（约9449行） |
 
 ---
 
@@ -937,4 +1011,4 @@ Beta 1.4: 引入 CHAR_INFO 数组 + Color2() 函数，通过 WriteConsoleOutputW
 
 ---
 
-*本 Wiki 基于源代码 `beta1.5pre.cpp` 逐行核对编写，所有数据均来自代码实际实现。*
+*本 Wiki 基于源代码 `beta1.6.cpp` 逐行核对编写，所有数据均来自代码实际实现。*
