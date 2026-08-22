@@ -21,6 +21,7 @@
 #ifdef _WIN32
     #include <windows.h>
     #include <io.h>
+    #include <share.h>
 #else
     #include <sys/stat.h>
     #include <sys/types.h>
@@ -3524,7 +3525,7 @@ static bool g_world_active = false;
 static SaveJob g_job;
 
 static void save_system_shutdown();
-static void save_world(const string &nam, bool blocking);
+static void save_world(const string &nam, bool blocking, bool force_full = false);
 #ifdef _WIN32
 static BOOL WINAPI console_ctrl_handler(DWORD type);
 #endif
@@ -3563,11 +3564,30 @@ static bool file_is_v3(const string &path)
     return ok;
 }
 
+#ifdef _WIN32
+// 用独立句柄把文件截断到指定长度（绕开 CRT 流状态），保证存档尾部的旧 META 不残留
+static bool truncate_file_to(const string &path, long long end_pos)
+{
+    HANDLE h = CreateFileA(path.c_str(), GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                           OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if(h == INVALID_HANDLE_VALUE)
+        return false;
+    LARGE_INTEGER li;
+    li.QuadPart = end_pos;
+    BOOL ok = SetFilePointerEx(h, li, NULL, FILE_BEGIN);
+    if(ok)
+        ok = SetEndOfFile(h);
+    CloseHandle(h);
+    return ok == TRUE;
+}
+#endif
+
 static bool write_job(SaveJob &job)
 {
     if(job.full)
     {
-        FileGuard fg(fopen(job.path.c_str(), "wb"));
+        FileGuard fg(_fsopen(job.path.c_str(), "wb", _SH_DENYWR));
         if(!fg.fp)
             return false;
         FILE *fp = fg.fp;
@@ -3588,37 +3608,70 @@ static bool write_job(SaveJob &job)
         fwrite(job.meta.data(), 1, job.meta.size(), fp);
         return true;
     }
-    FileGuard fg(fopen(job.path.c_str(), "r+b"));
-    if(!fg.fp)
-        return false;
-    FILE *fp = fg.fp;
-    size_t off = 0;
-    for(size_t k = 0; k < job.chunks.size(); k++)
+    long long want_end = -1;
     {
-        int c = job.chunks[k];
-        size_t bytes = (size_t)chunk_col_count(c) * WORLD_HEIGHT * 5;
-        _fseeki64(fp, chunk_offset(c), SEEK_SET);
-        fwrite(job.chunkbuf.data() + off, 1, bytes, fp);
-        off += bytes;
-    }
-    if(!job.meta.empty())
-    {
-        // 新 META 追加到文件尾，提交后再更新文件头指针，崩溃时旧 META 仍有效
-        fseek(fp, 0, SEEK_END);
-        long long meta_pos = _ftelli64(fp);
-        fwrite(job.meta.data(), 1, job.meta.size(), fp);
-        fflush(fp);
-        _fseeki64(fp, 24, SEEK_SET);
-        fwrite(&meta_pos, 8, 1, fp);
-        fflush(fp);
-        _fseeki64(fp, meta_pos + (long long)job.meta.size(), SEEK_SET);
-        fflush(fp);
+        FileGuard fg(_fsopen(job.path.c_str(), "r+b", _SH_DENYWR));
+        if(!fg.fp)
+            return false;
+        FILE *fp = fg.fp;
+        size_t off = 0;
+        for(size_t k = 0; k < job.chunks.size(); k++)
+        {
+            int c = job.chunks[k];
+            size_t bytes = (size_t)chunk_col_count(c) * WORLD_HEIGHT * 5;
+            _fseeki64(fp, chunk_offset(c), SEEK_SET);
+            fwrite(job.chunkbuf.data() + off, 1, bytes, fp);
+            off += bytes;
+        }
+        if(!job.meta.empty())
+        {
+            // 新 META 先追加到文件尾并提交文件头指针（崩溃时旧 META 仍有效）
+            fseek(fp, 0, SEEK_END);
+            long long meta_pos = _ftelli64(fp);
+            fwrite(job.meta.data(), 1, job.meta.size(), fp);
+            fflush(fp);
+            _fseeki64(fp, 24, SEEK_SET);
+            fwrite(&meta_pos, 8, 1, fp);
+            fflush(fp);
+            // 压缩：把新 META 搬到列块区正后方，文件头改指新位置，截掉中间全部旧 META。
+            // （旧实现截断点取 EOF，永远等于没截，旧 META 无限堆积导致存档膨胀）
+            if(meta_pos > CHUNKS_END)
+            {
+                _fseeki64(fp, CHUNKS_END, SEEK_SET);
+                fwrite(job.meta.data(), 1, job.meta.size(), fp);
+                fflush(fp);
+                long long new_off = CHUNKS_END;
+                _fseeki64(fp, 24, SEEK_SET);
+                fwrite(&new_off, 8, 1, fp);
+                fflush(fp);
+                want_end = CHUNKS_END + (long long)job.meta.size();
+                _fseeki64(fp, want_end, SEEK_SET);
+                fflush(fp);
 #ifdef _WIN32
-        HANDLE hf = (HANDLE)_get_osfhandle(_fileno(fp));
-        if(hf != INVALID_HANDLE_VALUE)
-            SetEndOfFile(hf);
+                HANDLE hf = (HANDLE)_get_osfhandle(_fileno(fp));
+                if(hf != INVALID_HANDLE_VALUE && hf != NULL)
+                    SetEndOfFile(hf);
 #endif
+            }
+        }
     }
+#ifdef _WIN32
+    // 兜底：文件关闭后用独立句柄校验实际长度，仍有残留则强制截断
+    if(want_end > 0)
+    {
+        long long cur_end = -1;
+        {
+            FileGuard vg(fopen(job.path.c_str(), "rb"));
+            if(vg.fp)
+            {
+                fseek(vg.fp, 0, SEEK_END);
+                cur_end = _ftelli64(vg.fp);
+            }
+        }
+        if(cur_end > want_end)
+            truncate_file_to(job.path, want_end);
+    }
+#endif
     return true;
 }
 
@@ -3706,7 +3759,7 @@ static BOOL WINAPI console_ctrl_handler(DWORD type)
 #endif
 
 // blocking=true：等写完再返回（退出/换世界前用）；false：交给后台线程
-static void save_world(const string &nam, bool blocking)
+static void save_world(const string &nam, bool blocking, bool force_full)
 {
     save_system_init();
     // 玩家位置/背包等状态几乎每帧都在变，META 每次都随存档写入
@@ -3714,7 +3767,7 @@ static void save_world(const string &nam, bool blocking)
     string path = nam + ".bin";
     SaveJob job;
     job.path = path;
-    job.full = !file_is_v3(path);
+    job.full = force_full || !file_is_v3(path);
     if(job.full)
     {
         for(int c = 0; c < NCHUNKS; c++)
@@ -3940,7 +3993,26 @@ static bool load_world(const string &nam)
         n = fread(mg, 1, 8, fg.fp);
     }
     if(n >= 8 && memcmp(mg, BIN3_MAGIC, 8) == 0)
-        return load_binary_v3(path.c_str());
+    {
+        if(!load_binary_v3(path.c_str()))
+            return false;
+        // 正常存档 = 列块区 + 一份 META；明显超出说明有历史残留旧 META，
+        // 尾部截断清不掉文件中间的残留，必须全量重写压缩
+        long long fsz = 0;
+        {
+            FileGuard sg(fopen(path.c_str(), "rb"));
+            if(sg.fp)
+            {
+                fseek(sg.fp, 0, SEEK_END);
+                fsz = _ftelli64(sg.fp);
+            }
+        }
+        if(fsz > CHUNKS_END + 2LL * 1024 * 1024)
+            save_world(nam, true, true);
+        else
+            save_world(nam, true);
+        return true;
+    }
     if(n >= 7 && memcmp(mg, BIN_MAGIC, 7) == 0)
     {
         if(!load_binary(path.c_str()))
