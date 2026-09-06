@@ -3060,14 +3060,21 @@ void Start()
         // 床被挖走，重生到世界中心地表
         x = WORLD_WIDTH / 2;
         y = WORLD_HEIGHT - 2;
+        bool found = false;
         for(int j = 1; j < WORLD_HEIGHT; j++)
         {
             if(blocktouch[s[WORLD_WIDTH / 2][j]] >= 1)
             {
                 y = j - 2;
+                found = true;
                 break;
             }
         }
+        // 纯地牢模式下 MAP() 只在 x>=9000 生成关卡，世界中心那一列全是空气，
+        // 扫描不会 break，y 停在 WORLD_HEIGHT-2 —— 玩家被丢进离地牢 4000 格的虚空。
+        // 找不到落脚点就回地牢入口（第1关起始房，与 MAP() 的初始出生点一致）
+        if(!found)
+            x = 9007, y = 507;
     }
     // 重置玩家速度
     spx = 0;
@@ -4086,6 +4093,7 @@ int gj;
 int Step;
 void thing_fall(int many_, int get);   // 前向声明：st_kill 中掉落暗影鳞片
 void enter_level(int n);              // 前向声明：死亡后重进关卡
+void damage(double dmg, int fromx, bool noKnockback);   // 前向声明：爆炸伤害必须走统一入口
 void st_kill(int l)
 {
     if(shiti[l].type == 4 && (shiti[l].nbt == 1 || shiti[l].nbt == 3))
@@ -4097,8 +4105,11 @@ void st_kill(int l)
             {
                 double boomdmg = (8 - jl(abs(x - shiti[l].gx), abs(y - shiti[l].gy))) * 0.5;
                 if(hasTalent(T_EXPLODE)) boomdmg *= 0.5;   // 爆炸减伤
-                life -= boomdmg * jianshang;
-                wudi = 45;
+                // 必须走 damage()：直接扣 life 会绕过护甲吸收、金盾/破甲修复天赋、
+                // ed 难度修正，也绕过 damage() 里的地牢死亡处理 ——
+                // 致命一击会掉进 game_loop 的 life<=0 兜底，把玩家丢进虚空
+                damage(boomdmg, int(shiti[l].gx), true);
+                wudi = max(wudi, 45);
             }
         }
     }
@@ -5234,8 +5245,14 @@ static bool ai_flyboss(int l, double old_gx, double old_gy)
     shiti[l].spgy *= 0.98;
     if(abs(x - shiti[l].gx) < 0.5 && abs(y - shiti[l].gy) < 0.5 && wudi <= 0)
     {
-        life -= shiti[l].hurt * jianshang;
-        wudi = 45;
+        // 走 damage()：直接扣 life 会绕过护甲吸收、天赋、ed 难度修正，
+        // 也绕过 damage() 里的地牢死亡处理（致命一击会把玩家丢进虚空）
+        damage(shiti[l].hurt, int(shiti[l].gx), true);
+        wudi = max(wudi, 45);
+        // 玩家死亡时 enter_level() 会清掉关卡区内所有怪物，本槽可能已被置零；
+        // 继续跑下去 st_move 会把死索引推进 entity_hash，永远清不掉
+        if(shiti[l].type == 0)
+            return false;
     }
     return true;
 }
@@ -7491,9 +7508,11 @@ void make_newworld()
                         nameerr = " 存档栏位已满，请先删除一个 ", errname = zzz;
                     else
                     {
+                        // 必须在 MAP() 之前：MAP() 会执行 life = lifeMax，而 lifeMax 此刻
+                        // 还是上一个存档天赋加成后的值，之后才降回 200 → 新世界血量溢出
+                        reset_dungeon_state();   // 新开档：重置关卡解锁/天赋/金币/能量
                         MAP();
                         mark_all_dirty();
-                        reset_dungeon_state();   // 新开档：重置关卡解锁/天赋/金币/能量
                         save(zzz);
                         save_savelist(zzz);
                         iscre = true;
@@ -7857,6 +7876,11 @@ void reset_dungeon_state()
     hujiazhi = armorMax;
     coin = 0;
     lvl_x0 = lvl_x1 = lvl_y0 = lvl_y1 = 0;
+    // 上限被降回初始值后必须同步当前值：调用方可能在 reset 之前就写过了
+    // （MAP() 会执行 life = lifeMax，用的还是上一个存档天赋加成后的旧上限），
+    // 不同步就会让新世界以 275/200 这类溢出状态开局
+    life = lifeMax;
+    energy = energyMax;
 }
 // 房间几何：房间(L,c) 左上角 rx0=levelStartX+c*22+1, ry0=levelStartY+L*18+1；内部18x12；层间4行走廊
 static int roomX0(int L, int c) { return levelStartX + c * 20 + 1; }   // 房间紧贴水平排列，无通道
@@ -7970,7 +7994,13 @@ void enter_level(int n)
     int maxC = 1;
     for(int L = 0; L < layCount; L++) maxC = max(maxC, layRooms[L]);
     // 关卡地形是否已存在（新建世界时已预生成并随存档保存）
-    bool built = (s[levelStartX + 1][levelStartY + 1] == 10);
+    // 探测格必须是起始房自己的左上角（基岩，door_set 永不触碰）。
+    // 原来探测 s[levelStartX+1][levelStartY+1]：只有第1-4关 layOff[0]==0 时那才是房间墙，
+    // 第5-10关 layOff[0]==1（起始房左上角在 levelStartX+21），外围墙只覆盖列 levelStartX
+    // 和行 levelStartY，所以探测格恒为 0 → 每次进关都重跑 build_level_terrain：
+    // 进度清零、门全重置、起始补给箱重复生成（无限刷木剑/金币/护甲药水）、
+    // box 向量堆积重复 Box_、每次多刷 NPC 而旧 NPC 被保留 → 实体槽位泄漏到 500 上限
+    bool built = (s[roomX0(0, layOff[0])][roomY0(0)] == 10);
     if(!built)
     {
         // 旧存档兼容：首次进入时现场建造
@@ -7983,6 +8013,11 @@ void enter_level(int n)
             if(L == 0 && c == layOff[0]) continue;
             int rx0 = roomX0(L, c), ry0 = roomY0(L);
             roomState[L][c] = (s[rx0 + 9][ry0 + 13] == 0) ? 2 : 0;
+            // 必须把门恢复成可通行态：锁战时 door_set(L,c,1) 把顶门和底门都设成了
+            // 基岩(blockwj[10]=-1 不可挖)，而本函数原来只重算 roomState、不开门。
+            // 战斗激活又要求玩家站在房间内部，于是玩家死在哪个房间，
+            // 那个房间就再也进不去也过不去（房间紧贴堆叠、无走廊）→ 竖向链路卡死
+            door_set(L, c, roomState[L][c] == 2 ? 0 : 2);
         }
     // 清除关卡区域战斗怪物（保留NPC与随从）
     for(int i = 0; i < 500; i++)
@@ -8180,9 +8215,13 @@ void update_level()
                         }
                     }
         // 限制怪物不飞出房间；NPC(14-22)排除
+        // 必须带上房间范围过滤（紧邻的分离循环和 alive 统计都有）：
+        // 否则全世界任何怪物每帧都被瞬移进当前房间，alive 永不为 0，门永久锁死
         for(int i = 0; i < 500; i++)
             if(shiti[i].type > 0 && shiti[i].AI != 2 &&
-                    (shiti[i].type < 14 || shiti[i].type > 22))
+                    (shiti[i].type < 14 || shiti[i].type > 22) &&
+                    shiti[i].gx > lvl_x0 && shiti[i].gx < lvl_x1 &&
+                    shiti[i].gy > lvl_y0 && shiti[i].gy < lvl_y1)
             {
                 if(shiti[i].gx < lvl_x0 + 1) shiti[i].gx = lvl_x0 + 1;
                 if(shiti[i].gx > lvl_x1 - 1) shiti[i].gx = lvl_x1 - 1;
@@ -8217,6 +8256,9 @@ void update_level()
         if(alive == 0 && roomWavesDone >= roomWavesTotal)
         {
             // 房间清空：开门 + 奖励
+            // 兜底清除：alive 只统计房间矩形内的怪，分离/击退可能把残余推到墙外，
+            // 留着的话下一次激活会永远差一只，门再也打不开
+            clear_room_monsters(curLayer, curCol);
             roomState[curLayer][curCol] = 2;
             roomActive = false;
             door_set(curLayer, curCol, 0);
@@ -8252,9 +8294,12 @@ void update_level()
         }
         return;
     }
-    // 通关判定：最终房已清且玩家越过其底部走廊
+    // 通关判定：最终房已清且玩家走到底部出口
+    // fry1 就是关卡外圈基岩行 H1，清空后只在第 9/10 列开出 2 格门，门外是虚空。
+    // 原来要求 y > fry1+2，玩家必须摔出关卡 3 格才算通关；房间内部恒在 fry1 之上，
+    // 所以判定到门这一行就够了
     int fry1 = roomY0(layCount - 1) + 13;
-    if(roomState[layCount - 1][bossCol] == 2 && y > fry1 + 2)
+    if(roomState[layCount - 1][bossCol] == 2 && y >= fry1)
     {
         // 通关当前大关：解锁下一关，天赋三选一，满状态进入下一关
         levelUnlocked = max(levelUnlocked, min(currentLevel + 1, 10));
@@ -8862,10 +8907,14 @@ void game_loop()
                     night = 0;
                     Clear();
                     memset(beibao, 0, sizeof(beibao));
-                    back_x = 10, back_y = 145;
-                    life = lifeMax;
-                    hujiazhi = armorMax;
+                    // 与新建世界一致：不重置的话 inDungeon/currentLevel/roomActive/
+                    // levelUnlocked/talents/coin/lifeMax 全部残留，roomActive 会让
+                    // update_level 继续为旧关卡刷波次到新的第1关起始房。
+                    // 必须在 Start()（内部执行 life = lifeMax）之前，否则用的是旧上限
+                    reset_dungeon_state();
+                    back_x = 9007, back_y = 507;   // 纯地牢模式：重生点就是第1关起始房
                     Start();
+                    enter_level(1);
                 }
                 if((GetAsyncKeyState('E') & 0x8000) && GetIn == 1)
                 {
@@ -9461,7 +9510,26 @@ void game_loop()
             Setpos(1, printy + 1);   // HUD生命行光标定位（print_fast依赖；Setpos(1,33)被其覆盖，省1次调用）
             Color(0);
             if(life <= 0)
-                Start();
+            {
+                // 兜底路径：正常死亡都走 damage()，那里已经处理了地牢重生。
+                // Start() 不重置 inDungeon，纯地牢模式下会把玩家丢到世界中心的空列里，
+                // 所以这里照 damage() 的地牢分支处理
+                if(inDungeon || currentLevel > 0)
+                {
+                    int lvl = currentLevel > 0 ? currentLevel : 1;
+                    life = lifeMax;
+                    hujiazhi = armorMax;
+                    energy = energyMax;
+                    spx = 0;
+                    spy = 0;
+                    wudi = 60;
+                    enter_level(lvl);
+                    memset(painting, 114, sizeof(painting));
+                    shuaxin();
+                }
+                else
+                    Start();
+            }
             if(life < lifeMax)
                 H++;
             if(H > 300)
