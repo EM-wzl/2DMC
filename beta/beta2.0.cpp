@@ -38,6 +38,25 @@ short s2[WORLD_WIDTH][WORLD_HEIGHT];
 short light[WORLD_WIDTH][WORLD_HEIGHT];
 int painting[102][102][2];
 bool ep[WORLD_WIDTH][WORLD_HEIGHT];
+// painting 的「强制重画」哨兵必须逐元素赋值：memset 是按字节填的，
+// memset(painting, 114, ...) 得到的是 0x72727272、memset(painting, 1145, ...) 是
+// 0x79797979，而不是 114/1145。目前没出问题只是因为这两个字节模式恰好也不等于
+// 任何真实值（方块 id、1500+实体、2000+爆炸），属于碰巧成立。
+// memset(painting, 0/-1, ...) 的几处不用改：全 0 和全 0xFF 本来就是 int 的 0 和 -1
+inline void painting_fill(int v)
+{
+    std::fill(&painting[0][0][0], &painting[0][0][0] + 102 * 102 * 2, v);
+}
+// 火把朝向要探测下方和左方邻格，而 dx/dy 会取到世界边缘：
+// dy==WORLD_HEIGHT-1 时 s[dx][1001] 别名到 s[dx+1][0]（天空），
+// dx==0 时 s[-1][dy] 是数组之前的真越界读。
+// 越界一律按固体处理：贴着世界边缘的火把本来就没有可依附的空气，画成竖直形最合理
+inline bool torch_open(int nx, int ny)
+{
+    if(nx < 0 || nx >= WORLD_WIDTH || ny < 0 || ny >= WORLD_HEIGHT)
+        return false;
+    return s[nx][ny] == 0 || s[nx][ny] == 11;
+}
 
 // 增量保存：脏列块追踪（仅游戏线程写，快照时消费）
 constexpr int CHUNK_COLS = 64;
@@ -274,7 +293,7 @@ int wear[6], fbnq[12] = {1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 int l_beibao[30][2]= {{0,0},{1,0}};
 short page = 1;
 int printx = 70, printy = 42, boxlen = 0;
-int print_set,st_num=300;
+int st_num=300;
 bool run = 1, can = 0, start = 0, yes = 0, SetLife = 0, CanGet = 1, oi = false,f3=0,key_d_Y,
      checkhp = 0,bag,issword,godeater;
 int l, bosshp = 0, slow_update = 0, eat = 0, weidu = 1, savetick = 0,special_effect=1,rl=0,boss3hp = 0;
@@ -293,6 +312,8 @@ int armorMax = 200;                                 // 护甲上限（开局200�
 int oxygen = 900;                                   // 氧气系统（水中消耗，满值900）
 int l_oxy = 10;                                     // 上次显示的氧气泡数
 int l_savefail = -1;                                // 上次显示的存档失败状态（-1=未初始化）
+// HUD 一次性提示行，定义在 print_bag() 之前；damage() 等调用点出现在定义之前，故前置声明
+ostream& hud_msg();
 int l_hujia = -1;                                   // 上次显示的护甲值
 int l_lvlinfo = -1;                                 // 上次显示的关卡进度组合值
 int gunCD = 0;                                      // 枪械射击冷却
@@ -324,9 +345,9 @@ int talents[32] = {0};                               // 已获得天赋数组
 int talentCount = 0;                                  // 已获得天赋数量
 int maxTalentSlots = 8 + 3;                          // 最大天赋槽(8+3额外)
 // 天赋ID定义
-#define T_LIFE 0        // 生命+4
-#define T_ARMOR 1       // 护甲+1
-#define T_ENERGY 2      // 能量+100
+#define T_LIFE 0        // 生命上限+25
+#define T_ARMOR 1       // 护甲上限+50
+#define T_ENERGY 2      // 能量上限+50
 #define T_KILLEN 3      // 击败回蓝
 #define T_KILLHP 4      // 击败回血
 #define T_POTION 5      // 药水强化
@@ -372,8 +393,11 @@ struct guaiwu
     bool ch,isnotouch,islife2,issd;
     unsigned char state;    // AI 状态机当前状态（EntState），0=ST_IDLE
 };
-// v1/v2 存档按裸结构 fread，结构体大小必须保持 144（state 落在尾部对齐填充内）
-static_assert(sizeof(guaiwu) == 144, "guaiwu 大小变化会破坏旧版二进制存档兼容");
+// 这里曾经有 static_assert(sizeof(guaiwu) == 144)：v1/v2 存档按裸结构 fread，
+// 布局一变就读错。那两个 loader 已经删掉了，现在实体序列化是逐字段走
+// ENT_D/ENT_I/ENT_B/ENT_U8 这几个成员指针数组，sizeof 只用在 memset 上，
+// 所以布局不再有约束。真正需要守住的是「新增字段必须同时加进对应的 ENT_* 数组」，
+// 这一点编译期断言表达不了，改字段时自己记得
 struct boomthings
 {
     int x, y, color;
@@ -502,9 +526,14 @@ const int f_plu=FOREGROUND_INTENSITY;
 const int b_plu=BACKGROUND_INTENSITY;
 void Color2(int a,int posid,WORD &In_fo)
 {
-    if(a == 0 || a == 8 || a == -8)
+    // 与 Color() 同样的缺口：13/14 没有分支时 In_fo 保持上一次的颜色
+    if(a == 0 || a == 8 || a == -8 || a == 15)
         In_fo=(f_plu | f_red |
                                 f_gre | f_blu);
+    if(a == 13)
+        In_fo=(f_plu | f_red | f_blu);
+    if(a == 14)
+        In_fo=(f_plu | f_red | f_gre);
     if(a == -10 || a == 1 || a == -18)
         In_fo=(f_plu | f_gre |
                                 f_blu);
@@ -641,10 +670,20 @@ In_fo=(b_blu | f_plu | f_blu);
 }
 void Color(int a)
 {
-    if(a == 0 || a == 8 || a == -8)
+    // 13/14/15 原来没有分支：Color(14) 是静默空操作，关卡 HUD 于是沿用前一个颜色
+    // （它上一行正好是 Color(0) 的白），完全没有高亮效果
+    if(a == 0 || a == 8 || a == -8 || a == 15)
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
                                 FOREGROUND_INTENSITY | FOREGROUND_RED |
                                 FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if(a == 13)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_BLUE);
+    if(a == 14)
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
+                                FOREGROUND_INTENSITY | FOREGROUND_RED |
+                                FOREGROUND_GREEN);
     if(a == -10 || a == 1 || a == -18)
         SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
                                 FOREGROUND_INTENSITY | FOREGROUND_GREEN |
@@ -1128,27 +1167,6 @@ void hujia_update()
     if(hujiazhi > armorMax)
         hujiazhi = armorMax;
 }
-void st(int type, int x, int y, int ra2)
-{
-    if(s[x][y] == 1 || s[x][y] == 54)
-        s[x][y] = type;
-    if((s[x + 1][y] == 1 || s[x + 1][y] == 54) && rand() % ra2 == 0)
-        s[x + 1][y] = type;
-    if((s[x - 1][y] == 1 || s[x - 1][y] == 54) && rand() % ra2 == 0)
-        s[x - 1][y] = type;
-    if((s[x + 1][y + 1] == 1 || s[x + 1][y + 1] == 54) && rand() % ra2 == 0)
-        s[x + 1][y + 1] = type;
-    if((s[x - 1][y - 1] == 1 || s[x - 1][y - 1] == 54) && rand() % ra2 == 0)
-        s[x - 1][y - 1] = type;
-    if((s[x + 1][y - 1] == 1 || s[x + 1][y - 1] == 54) && rand() % ra2 == 0)
-        s[x + 1][y - 1] = type;
-    if((s[x - 1][y + 1] == 1 || s[x - 1][y + 1] == 54) && rand() % ra2 == 0)
-        s[x - 1][y + 1] = type;
-    if((s[x][y + 1] == 1 || s[x][y + 1] == 54) && rand() % ra2 == 0)
-        s[x][y + 1] = type;
-    if((s[x][y - 1] == 1 || s[x][y - 1] == 54) && rand() % ra2 == 0)
-        s[x][y - 1] = type;
-}
 int last_l;   // 世界吞噬者链式生成：上一节实体下标
 // 全局 l 是本函数的输出槽：调用方（make_npc 等）在返回后读它拿到新实体下标，
 // 槽位满时 l == 500。因此 l 绝不能被当作循环变量，也不能跨任何可能分配实体的调用保存
@@ -1160,7 +1178,9 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
     if(l >= 500)
         return;
     if(iseof==1)shiti[l].conl= last_l,shiti[last_l].conr=l;
-    if(iseof==2)shiti[l].conl= l,shiti[last_l].conr=l;
+    // iseof==2 是头，没有前驱：原来还写了 shiti[last_l].conr=l，而 last_l 是上一次
+    // make_st 留下的陈旧值（首次调用为 0），会把某个无关键实体的 conr 改成头下标
+    if(iseof==2)shiti[l].conl= l;
     if(iseof==3)shiti[l].conl= last_l,shiti[last_l].conr=l,shiti[l].conr=l;
     shiti[l].maxHP = hp, shiti[l].HP = hp, shiti[l].hurt = hur,
              shiti[l].type = typ, shiti[l].gx = tx, shiti[l].gy = ty;
@@ -1280,8 +1300,13 @@ void Color3(int blockco,int i,int j)
 }
 void printbuf(const string string_in,int i,int j)
 {
-	charInfo[j*(xlen)+i*2].Char.AsciiChar =string_in[0];
-   	charInfo[j*(xlen)+i*2+1].Char.AsciiChar =string_in[1];
+    // blockprint[] 的初始化只到 104，105-149 是空串，而下面无条件取 [0]/[1]
+    // —— 对空 std::string 取下标是 UB。阶段3 的放置白名单已经挡住了 105-113
+    // 这些物品 id，但 s[][] 里的值还可能来自损坏的存档，所以守卫放在这里
+    char c0 = string_in.size() >= 1 ? string_in[0] : ' ';
+    char c1 = string_in.size() >= 2 ? string_in[1] : ' ';
+	charInfo[j*(xlen)+i*2].Char.AsciiChar = c0;
+   	charInfo[j*(xlen)+i*2+1].Char.AsciiChar = c1;
 }
 void pr_mouse(int i,int j)
 {
@@ -1319,9 +1344,9 @@ void pr_mouse(int i,int j)
     else if(s[dx][dy] == 16)
     {
         Color3(-1,i,j);
-        if(s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11)
+        if(torch_open(dx, dy + 1))
         {
-            if(!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
+            if(!torch_open(dx - 1, dy))
                 printbuf("/<",i,j);
             else
                 printbuf(">\\",i,j);
@@ -1441,9 +1466,9 @@ void Updateblock(bool ismap,int i,int j)
     else if(s[dx][dy] == 16)
     {
         Color3(-1,i,j);
-        if(s[dx][dy + 1] == 0 || s[dx][dy + 1] == 11)
+        if(torch_open(dx, dy + 1))
         {
-            if(!(s[dx - 1][dy] == 0 || s[dx - 1][dy] == 11))
+            if(!torch_open(dx - 1, dy))
                 printbuf("/ ",i,j);
             else
                 printbuf(" \\",i,j);
@@ -1931,6 +1956,14 @@ void printformap()
             {
                 painting[i][j][0] = sdprint[i][j][0];
                 painting[i][j][1] = sdprint[i][j][1];
+                // Ubformap 判定关卡地面/空白背景时读的是全局 dx/dy，而只有上面的
+                // 采样循环会更新它 —— 走到这里时 dx/dy 还停在最后一格
+                // (i=printx, j=printy) 最后一次子采样的值，于是整张地图的空气格
+                // 全都套用右下角那一格的黑白判定（在地牢里按 M 就是整片同色）。
+                // 按同样的公式从 i,j 重算本格坐标；取 sf x sf 的中心格，
+                // 缩小时才代表得了这一格覆盖的区域
+                dx = int(jx + i * sf - printx * 0.5 + sf / 2 + 0.5);
+                dy = int(jy + j * sf - printy * 0.5 + sf / 2 + 0.5);
                 Ubformap(sdprint[i][j][0], sdprint[i][j][1],i,j);
             }
         }
@@ -1966,9 +1999,14 @@ void openmap()
             p = GetMousePos();
             mpx = To_int(p.x / 2 - 26);
             mpy = To_int(p.y - 14);
-            if(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+            if(GetAsyncKeyState('M') & 0x8000 ||
+                    GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             {
-                while(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+                // 同函数其他键都带 & 0x8000，只有 ESC 漏了。最低位只表示「上次读取
+                // 以来按下过」，而 game_loop 里等 M 松键的循环不轮询 ESC ——
+                // 按住 M 的同时轻点 ESC，地图会在打开的瞬间自己关掉
+                while(GetAsyncKeyState('M') & 0x8000 ||
+                        GetAsyncKeyState(VK_ESCAPE) & 0x8000)
                     continue;
                 jx = rx, jy = ry;
                 break;
@@ -2611,6 +2649,13 @@ static bool load_binary_v3(const char *filename)
     if(w != WORLD_WIDTH || h != WORLD_HEIGHT || cc != CHUNK_COLS ||
             meta_offset < CHUNKS_END)
         return false;
+    // 区块是直接 fread 进全局 s/s2/ep 的，中途失败时前面的区块已经被覆盖，
+    // 菜单报「存档损坏」而内存里的世界已经半新半旧。头里的 meta_offset 可以是
+    // 任意值，所以先在动世界之前量一次真实文件长度，把截断档直接挡掉
+    _fseeki64(fp, 0, SEEK_END);
+    long long fsz = _ftelli64(fp);
+    if(fsz < CHUNKS_END)
+        return false;
     for(int c = 0; c < NCHUNKS; c++)
     {
         int c0 = c * CHUNK_COLS;
@@ -3124,24 +3169,28 @@ int getbeibao_2(int type)
     return 0;
 }
 int ls[101][2];
+// 先统计、再扣除。原来是边扫边把凑到的格子清零，凑不够时直接 return 0，
+// 已经清掉的那几格不会恢复 —— 四个调用方都靠 ls[101][2] 快照回滚才没出事，
+// 但「失败不改动背包」本该是函数自己的契约
 int getbeibao_3(int type, int nd)
 {
-    int nw = 0, m = nd;
+    int nw = 0;
     for(int i = 1; i <= 100; i++)
+        if(beibao[i][1] > 0 && beibao[i][0] == type)
+            nw += beibao[i][1];
+    if(nw < nd)
+        return 0;
+    int m = nd;
+    for(int i = 1; i <= 100 && m > 0; i++)
     {
         if(beibao[i][1] > 0 && beibao[i][0] == type)
         {
-            nw += beibao[i][1];
-            if(nw >= nd)
-            {
-                beibao[i][1] -= m;
-                return 1;
-            }
-            else
-                m -= beibao[i][1], beibao[i][1] = 0;
+            int take = min(m, beibao[i][1]);
+            beibao[i][1] -= take;
+            m -= take;
         }
     }
-    return 0;
+    return 1;
 }
 // 桶类转换（水桶/岩浆桶倒出、空桶舀起）：消耗一个、产出一个。
 // 原来直接改写整格的 id 而不动数量，堆叠 >1 时 N 个水桶倒一次水变成 N 个空桶
@@ -3349,13 +3398,22 @@ void wajue(int sx, int sy)
 int sword=0;
 void make_eow()
 {
-    int spwan_x=x+rand()%31-15;
-    make_st(9,20,12,spwan_x,y+30,0,2);
+    // 生成点必须钳到世界内：/tp 到边缘（或玩家本就贴着底/左右边界）时
+    // x±15 与 y+30 会落到 s[][] 之外，40 个分段的 gx/gy 全部非法。
+    // ai_boss3 不索引 s[] 所以不会立刻崩，但 AI==4 从不跑 ai1_despawn_check，
+    // 这些实体于是永久残留、再也清不掉
+    int spwan_x = x + rand() % 31 - 15;
+    int spwan_y = y + 30;
+    if(spwan_x < 1) spwan_x = 1;
+    if(spwan_x > WORLD_WIDTH - 2) spwan_x = WORLD_WIDTH - 2;
+    if(spwan_y < 1) spwan_y = 1;
+    if(spwan_y > WORLD_HEIGHT - 2) spwan_y = WORLD_HEIGHT - 2;
+    make_st(9,20,12,spwan_x,spwan_y,0,2);
     for(int i=1; i<=38+godeater*30; i++)
     {
-        make_st(10,20,8,spwan_x,y+30,0,1);
+        make_st(10,20,8,spwan_x,spwan_y,0,1);
     }
-    make_st(11,20,5,spwan_x,y+30,0,3);
+    make_st(11,20,5,spwan_x,spwan_y,0,3);
 }
 void block_(int xxx, int yyy)
 {
@@ -4046,7 +4104,11 @@ void block_update()
     {
         for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
         {
-            if(i <= 0 || j <= 0 || i >= WORLD_WIDTH - 1 || j >= WORLD_HEIGHT - 1)
+            // 应用趟的边界必须比上面两趟扫描宽一圈：扫描在 i∈[1,W-2]、j∈[1,H-2] 内
+            // 写 getnew[i±1][j] 和 getnew[i][j+1]，也就是会写到 i==0、i==W-1、j==H-1。
+            // 沿用同一个守卫的话这些格子算出来就被丢掉，流体在最底行/首列/末列永不沉降。
+            // 扫描趟不能跟着放宽——它们要读 s[i±1][j] 和 s[i][j+1]
+            if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT)
                 continue;
             if(getnew[i][j] > 3)
                 s[i][j] = getnew[i][j];
@@ -4190,7 +4252,7 @@ int gj;
 int Step;
 void thing_fall(int many_, int get);   // 前向声明：st_kill 中掉落暗影鳞片
 void enter_level(int n);              // 前向声明：死亡后重进关卡
-void damage(double dmg, int fromx, bool noKnockback);   // 前向声明：爆炸伤害必须走统一入口
+void damage(double dmg, double fromx, bool noKnockback);   // 前向声明：爆炸伤害必须走统一入口
 void st_kill(int l)
 {
     if(shiti[l].type == 4 && (shiti[l].nbt == 1 || shiti[l].nbt == 3))
@@ -4205,7 +4267,7 @@ void st_kill(int l)
                 // 必须走 damage()：直接扣 life 会绕过护甲吸收、金盾/破甲修复天赋、
                 // ed 难度修正，也绕过 damage() 里的地牢死亡处理 ——
                 // 致命一击会掉进 game_loop 的 life<=0 兜底，把玩家丢进虚空
-                damage(boomdmg, int(shiti[l].gx), true);
+                damage(boomdmg, shiti[l].gx, true);
                 wudi = max(wudi, 45);
             }
         }
@@ -4213,44 +4275,56 @@ void st_kill(int l)
     if(shiti[l].AI == 4)
     {
         thing_fall(rand() % 2 + 1, 105);   // 掉落暗影鳞片（beta1.8同步）
+        // 世界吞噬者是一条 conl/conr 双向链：conl==自己 表示头，conr==自己 表示尾。
+        // 一段死亡时，邻居若是头/尾就整条清掉，否则把邻居提升为新的头/尾（断成两截）。
+        // 提升前必须确认邻居槽里真的是活的身体段(type 10)：空槽被写成 type 9/11 会
+        // 凭空多出一个位于原点、AI==0 的幽灵实体 —— 没有 AI 会跑它，槽位永不回收，
+        // 而且照样被渲染出来。
+        // 邻居下标也要判范围：conl/conr 是 int 且原样来自存档，损坏的存档会让
+        // shiti[conl] 变成越界读，提升那一步更是越界写一整个 guaiwu
+        int nl = shiti[l].conl, nr = shiti[l].conr;
+        bool nl_ok = nl >= 0 && nl < 500;
+        bool nr_ok = nr >= 0 && nr < 500;
         if(l==shiti[l].conl)
         {
-            if(shiti[shiti[l].conr].type==11)
+            if(nr_ok && shiti[nr].type==11)
             {
-                remove_entity_from_hash(shiti[l].conr, shiti[shiti[l].conr].gx, shiti[shiti[l].conr].gy);
-                shiti[shiti[l].conr] = {0};
+                remove_entity_from_hash(nr, shiti[nr].gx, shiti[nr].gy);
+                shiti[nr] = {0};
             }
-            else
+            else if(nr_ok && shiti[nr].type==10)
             {
-                shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
+                shiti[nr].type=9,shiti[nr].conl=nr;
             }
         }
         else if(l==shiti[l].conr)
         {
-            if(shiti[shiti[l].conl].type==9)
+            if(nl_ok && shiti[nl].type==9)
             {
-                remove_entity_from_hash(shiti[l].conl, shiti[shiti[l].conl].gx, shiti[shiti[l].conl].gy);
-                shiti[shiti[l].conl] = {0};
+                remove_entity_from_hash(nl, shiti[nl].gx, shiti[nl].gy);
+                shiti[nl] = {0};
             }
-            else
+            else if(nl_ok && shiti[nl].type==10)
             {
-                shiti[shiti[l].conl].type=11,shiti[shiti[l].conl].conr=shiti[l].conl;
+                shiti[nl].type=11,shiti[nl].conr=nl;
             }
         }
         else
         {
-            if(shiti[shiti[l].conl].type==9)
+            if(nl_ok && shiti[nl].type==9)
             {
-                remove_entity_from_hash(shiti[l].conl, shiti[shiti[l].conl].gx, shiti[shiti[l].conl].gy);
-                shiti[shiti[l].conl] = {0};
+                remove_entity_from_hash(nl, shiti[nl].gx, shiti[nl].gy);
+                shiti[nl] = {0};
             }
-            else shiti[shiti[l].conl].type=11,shiti[shiti[l].conl].conr=shiti[l].conl;
-            if(shiti[shiti[l].conr].type==11)
+            else if(nl_ok && shiti[nl].type==10)
+                shiti[nl].type=11,shiti[nl].conr=nl;
+            if(nr_ok && shiti[nr].type==11)
             {
-                remove_entity_from_hash(shiti[l].conr, shiti[shiti[l].conr].gx, shiti[shiti[l].conr].gy);
-                shiti[shiti[l].conr] = {0};
+                remove_entity_from_hash(nr, shiti[nr].gx, shiti[nr].gy);
+                shiti[nr] = {0};
             }
-            else shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
+            else if(nr_ok && shiti[nr].type==10)
+                shiti[nr].type=9,shiti[nr].conl=nr;
         }
     }
     if(shiti[l].type == 8)
@@ -4306,17 +4380,22 @@ void st_kill_fall(int l)
     {
         thing_fall(rand() % 3 + 1, 89);
     }
+    // 「真正的击杀」判定：type 1-13 里的怪物，排除箭矢(4，HP 恒为 0)和被动动物(12/13)。
+    // 剑的范围攻击会对 2 格内任何非 boss 实体调 st_kill_fall，所以打中飞行中的
+    // 敌方箭矢也会走到这里 —— 下面三处奖励必须共用这一个判定，否则又会漏掉 type 4
+    bool real_kill = shiti[l].type >= 1 && shiti[l].type <= 13 &&
+                     shiti[l].type != 4 && shiti[l].type != 12 && shiti[l].type != 13;
     // 击杀掉落金币 (30% 概率 1-3 金币)
-    if(shiti[l].type >= 1 && shiti[l].type <= 13 && shiti[l].type != 4 && shiti[l].type != 12 && shiti[l].type != 13)
+    if(real_kill)
     {
         if(rand() % 100 < 30)
             add_coins(1 + rand() % 3);
     }
     // 天赋：击败回蓝 / 击败回血
-    if(hasTalent(T_KILLEN)) energy = min(energyMax, energy + 5);
-    if(hasTalent(T_KILLHP)) life += 1;
+    if(real_kill && hasTalent(T_KILLEN)) energy = min(energyMax, energy + 5);
+    if(real_kill && hasTalent(T_KILLHP)) life += 1;
     // 基础机制：击杀怪物概率回蓝/回血（匹配200血/200蓝体系）
-    if(shiti[l].type >= 1 && shiti[l].type <= 13 && shiti[l].type != 12 && shiti[l].type != 13)
+    if(real_kill)
     {
         if(rand() % 100 < 30)                       // 30%回蓝
             energy = min(energyMax, energy + 8 + rand() % 8);
@@ -4327,7 +4406,7 @@ void st_kill_fall(int l)
     }
     st_kill(l);
 }
-void damage(double dmg,int fromx,bool noKnockback = false)
+void damage(double dmg,double fromx,bool noKnockback = false)
 {
     if(wudi == 0)
     {
@@ -4352,6 +4431,9 @@ void damage(double dmg,int fromx,bool noKnockback = false)
         life -= dmg;
         if(!noKnockback)
         {
+            // fromx 必须是小数：调用方传的是 shiti[i].gx。截断成 int 后方向会反转 ——
+            // 攻击者 gx=100.9、玩家 x=100.5 时 fromx=100，100<100.5 成立，
+            // spx 变成 +6，把玩家击向攻击者而不是击退
             spx=((fromx<x)*2-1)*6;
             spy=-8;
         }
@@ -4361,9 +4443,7 @@ void damage(double dmg,int fromx,bool noKnockback = false)
             {
                 // 纯地牢模式死亡：重新回到当前关第一个房间（满状态重开本关）
                 int lvl = currentLevel > 0 ? currentLevel : 1;
-                Setpos(1, 31);
-                Color(0);
-                cout << " 你死了！重新挑战第 " << lvl << " 关                          ";
+                hud_msg() << " 你死了！重新挑战第 " << lvl << " 关                          ";
                 life = lifeMax;
                 hujiazhi = armorMax;
                 energy = energyMax;
@@ -4371,7 +4451,7 @@ void damage(double dmg,int fromx,bool noKnockback = false)
                 spy = 0;
                 wudi = 60;
                 enter_level(lvl);
-                memset(painting, 114, sizeof(painting));
+                painting_fill(114);
                 shuaxin();
             }
             else
@@ -4788,13 +4868,20 @@ static bool ent_physics_ground(int l)
             if(shiti[l].direction != 0) shiti[l].direction = 0;
             else shiti[l].direction = (rand() % 2) * 2 - 1;
         }
-        if(shiti[l].direction == -1) dire = 0;
-        else dire = 1;
+        // dire 的约定由下面的台阶探测式 gx - ((dire)*2-1) 和追击分支共同确立：
+        // dire==1 表示向左、dire==0 表示向右。漫游时 spgx += 0.004*direction，
+        // 所以 direction==-1 才是向左 —— 原来这里映射反了，向左漫游的怪探测的是
+        // 身后那一格，永远看不到前方的台阶，也就永远不会起跳
+        if(shiti[l].direction == -1) dire = 1;
+        else dire = 0;
     }
+    // 起跳时的水平助推同样要顺着 dire 的约定（dire==1 向左），所以是减号。
+    // 原来用加号，与探测式相反：漫游分支因为 dire 也反了而碰巧正确，
+    // 追击分支则一直是把怪往回推
     if(gj == 1)
-        shiti[l].spgx += ((dire) * 2 - 1) * 0.4;
+        shiti[l].spgx -= ((dire) * 2 - 1) * 0.4;
     else if(gj == 2)
-        shiti[l].spgx += ((dire) * 2 - 1) * 0.6;
+        shiti[l].spgx -= ((dire) * 2 - 1) * 0.6;
     eb = ent_block(l, ex, ey);
     if(eb >= 19 && eb <= 22)
         shiti[l].gx += shiti[l].spgx * 0.5;
@@ -4864,7 +4951,7 @@ static void ai1_script(int l, double old_gx, double old_gy)
                 double ttx, tty, total, px, py;
                 ttx = abs(x - shiti[l].gx);
                 tty = abs(y - shiti[l].gy);
-                total = ttx + tty;
+                total = ttx + tty + 0.001;
                 px = ttx / total;
                 py = tty / total;
                 if(x - shiti[l].gx < 0) px *= -1;
@@ -4910,7 +4997,7 @@ static void ai1_script(int l, double old_gx, double old_gy)
                 double ttx, tty, total, px, py;
                 ttx = abs(x - shiti[l].gx);
                 tty = abs(y - shiti[l].gy);
-                total = ttx + tty;
+                total = ttx + tty + 0.001;
                 px = ttx / total;
                 py = tty / total;
                 if(x - shiti[l].gx < 0) px *= -1;
@@ -4986,9 +5073,13 @@ static bool ai1_attacks(int l, double old_gx, double old_gy)
                 shiti[l].spgx = ((x < shiti[l].gx) * 2 - 1) * 0.05;
             else if(jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) <= 10)
                 shiti[l].spgx = 0;
+            // *3 是整段距离的系数，不能塞进 jl 的第二个参数里 ——
+            // jl(a,b)=sqrt(a²+b²)，写在腿上得到的是 sqrt(dx²+9dy²)：
+            // 与玩家同高的骷髅无论多远都没有距离惩罚，而有竖直偏移的
+            // 反而要多攒约 90 帧才放箭
             if(shiti[l].CD <=
                     -120 + (shiti[l].sd * 2.5 -
-                            jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y) * 3)))
+                            jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y)) * 3))
             {
                 shiti[l].CD = 0;
                 double ang = atan2(y - shiti[l].gy, x - shiti[l].gx);
@@ -5205,7 +5296,9 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     {
         for(int LL = 0; LL < 500; LL++)
         {
-            if(shiti[LL].type > 0 && LL != l)
+            // 同枪械子弹：NPC(14-22) 不可被攻击，箭撞上去只会被吸收
+            if(shiti[LL].type > 0 && LL != l &&
+                    !(shiti[LL].type >= 14 && shiti[LL].type <= 22))
             {
                 if(abs(shiti[LL].gx - shiti[l].gx) < 1 &&
                         abs(shiti[LL].gy - shiti[l].gy) < 1 && shiti[LL].AI != 2)
@@ -5247,7 +5340,11 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     {
         for(int LL = 0; LL < 500; LL++)
         {
-            if(shiti[LL].type > 0 && LL != l && shiti[LL].AI != 2)
+            // NPC(14-22) 不可被攻击（见 ai_passive），血量又是 999999，
+            // 所以子弹撞上 NPC 只会被白白吸收（有 T_BOUNCE/T_CRITPEN 时更是每帧啃它一口）。
+            // 这里按 type 排除而不是按 AI==5，羊/猪同样是 AI==5，得留着能射
+            if(shiti[LL].type > 0 && LL != l && shiti[LL].AI != 2 &&
+                    !(shiti[LL].type >= 14 && shiti[LL].type <= 22))
             {
                 if(abs(shiti[LL].gx - shiti[l].gx) < 0.9 &&
                         abs(shiti[LL].gy - shiti[l].gy) < 0.9)
@@ -5419,7 +5516,7 @@ static bool ai_flyboss(int l, double old_gx, double old_gy)
     {
         // 走 damage()：直接扣 life 会绕过护甲吸收、天赋、ed 难度修正，
         // 也绕过 damage() 里的地牢死亡处理（致命一击会把玩家丢进虚空）
-        damage(shiti[l].hurt, int(shiti[l].gx), true);
+        damage(shiti[l].hurt, shiti[l].gx, true);
         wudi = max(wudi, 45);
         // 玩家死亡时 enter_level() 会清掉关卡区内所有怪物，本槽可能已被置零；
         // 继续跑下去 st_move 会把死索引推进 entity_hash，永远清不掉
@@ -6405,7 +6502,7 @@ void movethings(int upd)
                     beibao[cc][1] = 0;
                 else if(beibao[cc][1] > 0)
                     beibao[cc][1] -= 1;
-                craft_update(1);
+                craft_update(upd);
                 while(GetAsyncKeyState('Q') & 0x8000 && AN < 40)
                     AN++, Sleep(1);
             }
@@ -6563,8 +6660,6 @@ void moveinbox()
         // movethings 用的是 <31，两边必须一致
         if(c_thing < 31 && c_thing > -30 && (c_thing < -4 || c_thing > 0))
         {
-            Setpos(0, 0);
-            cout << 29 + c_thing << "   " << mpy << "  ";
             if(GetAsyncKeyState('Q') & 0x8000)
             {
                 cc = c_thing;
@@ -6933,10 +7028,13 @@ void zz_rl_2(int Y, int need1, int type1,int get, int sl)
 void openbox()
 {
     Color(-7);
-    bag=1;
     open_ = findbox(mpx, mpy);
+    // 早退必须在 bag=1 之前：调用方按方块 id 40 放行，而 findbox 匹配的是箱子里存的
+    // bx/by，两者一旦失配就 return —— 原来会把 bag 永久留在 1，此后 Setpos/GetMousePos
+    // 对正常游戏画面也套用 UI 偏移，所有鼠标和 HUD 坐标全部错位
     if(open_ == -1)
         return;
+    bag=1;
     Setpos(7, 2);
     printf("====================================================================="
            "===");
@@ -6968,7 +7066,7 @@ void openbox()
         {
             while(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
                 continue;
-            memset(painting, 114, sizeof(painting));
+            painting_fill(114);
             bag=0;
             break;
         }
@@ -7006,7 +7104,7 @@ void craft_2()
         Sleep(1);
     }
     setlight();
-    memset(painting, 114, sizeof(painting));
+    painting_fill(114);
 }
 void craft_3()
 {
@@ -7034,7 +7132,7 @@ void craft_3()
         Sleep(1);
     }
     setlight();
-    memset(painting, 114, sizeof(painting));
+    painting_fill(114);
 }
 void craft_1()
 {
@@ -7745,12 +7843,29 @@ void make_newworld()
         Sleep(1);
     }
 }
+// HUD 一次性提示行。Print() 用 WriteConsoleOutput 重画第 0..printy 行，写在这段里的
+// 文字在同一帧末尾就被抹掉 —— 「能量不足！」「重生点已设置」「进入第 N 关」全都写在
+// 第 31 行，所以从来没被看见过。printy+5 是 blit 区之外唯一空闲的行：
+// +1 生命/护甲、+2 能量/金币、+3 F3、+4 物品栏，都被 print_fast 每帧重写。
+// 存档失败横幅是持久状态、优先级更高，它生效期间一次性提示让位（否则会把横幅冲掉，
+// 玩家就看不到存档已经失败）。返回空流而不是让每个调用点判空，写法仍是 hud_msg() << ...
+ostream& hud_msg()
+{
+    static ostream sink(nullptr);
+    if(!g_last_save_ok) return sink;
+    Setpos(1, printy + 5);
+    Color(0);
+    return cout;
+}
 void print_bag()
 {
-    // 物品栏必须在WriteConsoleOutput渲染区域（行0~printy）之外，否则每帧被方块渲染覆盖
+    // 物品栏必须在WriteConsoleOutput渲染区域（行0~printy）之外，否则每帧被方块渲染覆盖。
+    // 原来这里 printf("   \n")：CRT 的文本模式会把 \n 翻译成 CRLF，光标被推到下一行，
+    // 于是物品实际落在 printy+5（控制台窗口最后一行），printy+4 上只剩 3 个空格 ——
+    // 既让 printy+5 无处可用，又会把写在 printy+4 的存档失败横幅前几个字符抹掉。
     Setpos(1, printy + 4);
     Color(0);
-    printf("   \n");
+    printf("   ");
     for(int i = 1; i <= 9; i++)
     {
         if(cho == i)
@@ -7768,6 +7883,10 @@ void print_bag()
 }
 int l_cho=10;
 int l_energy = -1, l_coin = -1;
+// F3 行的重绘缓存，哨兵值表示「下一帧必须重画」。放在文件作用域是为了能在进入世界时
+// 和 l_life/l_energy 一起重置：函数内 static 会在 game_loop() 重入后存活，
+// 于是在相同坐标新建世界时坐标行什么都不显示
+int l_f3x = -999999, l_f3y = -999999, l_f3sp = -1;
 void print_fast()
 {
     // 关卡进度组合值：关/层/波/余怪（变化时触发整行重绘）
@@ -7810,7 +7929,8 @@ void print_fast()
         Setpos(1, printy + 2);
         Color(0);
         int bw = int(20.0 * energy / (energyMax > 0 ? energyMax : 1));
-        if(bw < 0) bw = 0; if(bw > 20) bw = 20;
+        if(bw < 0) bw = 0;
+        if(bw > 20) bw = 20;
         cout << "  能量：" << int(energy) << "/" << int(energyMax) << " ";
         for(int i = 0; i < 20; i++) cout << (i < bw ? "█" : "·");
         printf("   金币：%d                  ", tcoins);
@@ -7835,7 +7955,6 @@ void print_fast()
         cout << "                ";
         l_oxy = 10;
     }
-    print_set=0;
     bool isbagp=0;
     for(int i=1; i<=25; i++)
     {
@@ -7844,23 +7963,17 @@ void print_fast()
     }
     if(l_cho!=cho)isbagp=1;
     l_cho=cho;
-    if(print_set==0)
-    {
-        if(isbagp)
-        {
-            print_bag();
-        }
-    }
-    else
-    {
-        if(tick%5==0)print_bag();
-    }
+    // 原来这里先无条件 print_set=0 再 if(print_set==0)，else 分支（每 5 tick 重画
+    // 物品栏）永远进不去；而 print_set 全文再没有别的写入点，属于残留变量，一并删掉。
+    // 保留的是按变化重画，也正是目前实际的行为
+    if(isbagp)
+        print_bag();
     Color(0);
-    Setpos(1, 35);
-    if(printy > 30)
-        Setpos(1, printy + 3);
-    if(printy > 30)
-        Setpos(1, printy + 3);
+    // F3 行同样必须落在 blit 区(0..printy)之外；小渲染尺寸退回第 35 行。
+    // 原来这里连着写了三次 Setpos（一次 35、两次重复的 printy+3），合并成一个变量，
+    // 下面羊/猪统计也要用它
+    int f3row = printy > 30 ? printy + 3 : 35;
+    Setpos(1, f3row);
     if(GetAsyncKeyState('Y') & 0x8000)
     {
         key_d_Y=1;
@@ -7868,20 +7981,28 @@ void print_fast()
     else if(key_d_Y==1)
     {
         f3=1-f3,key_d_Y=0;
-        if(f3==0)printf("                     ");
+        if(f3==0)
+        {
+            // 坐标占 F3 行左段、羊/猪统计占右段，两段都要清；
+            // 再把缓存置回哨兵，保证下次打开必然重画
+            printf("                     ");
+            Setpos(30, f3row);
+            printf("                    ");
+            Setpos(1, f3row);
+            l_f3x = -999999, l_f3y = -999999, l_f3sp = -1;
+        }
     }
     // F3坐标/生物统计：值变化才直写控制台（原每帧2次cout+Setpos，双缓冲下帧内直写越少越好）
     {
-        static int l_f3x = -999999, l_f3y = -999999, l_sp = -1;
         int f3x = int(x - WORLD_WIDTH / 2 + 0.5), f3y = int(WORLD_HEIGHT - 1 - y);
         if(f3)
         {
             if(f3x != l_f3x || f3y != l_f3y)
                 cout << " " << "x:" << f3x << " y:" << f3y << "          ";
-        }
-        l_f3x = f3x, l_f3y = f3y;
-        if(f3)
-        {
+            // 缓存只在 f3 打开时更新。原来无条件赋值，于是「开 F3 → 关 F3 →
+            // 原地不动再开 F3」时 l_f3x/l_f3y 已经等于当前坐标，
+            // 坐标行一直空白，直到玩家移动才重画
+            l_f3x = f3x, l_f3y = f3y;
             int sheep_count = 0, pig_count = 0;
             for(int i = 0; i < 500; i++)
             {
@@ -7889,11 +8010,13 @@ void print_fast()
                 else if(shiti[i].type == 13) pig_count++;
             }
             int sp = sheep_count * 1000 + pig_count;
-            if(sp != l_sp)
+            if(sp != l_f3sp)
             {
-                Setpos(20, 1);
+                // 原来写在 Setpos(20,1)：第 1 行在 blit 区内，每帧被方块渲染覆盖，
+                // 这个统计从来没被看见过。挪到 F3 行右段（坐标最长占到第 27 列）
+                Setpos(30, f3row);
                 cout << "羊:" << sheep_count << " 猪:" << pig_count << "   ";
-                l_sp = sp;
+                l_f3sp = sp;
             }
         }
     }
@@ -8046,7 +8169,9 @@ void fire_gun(int gt)
     {
         for(int gi = 0; gi < shots; gi++)
         {
-            double ang = baseAng + (gi - shots / 2.0) * 0.12;
+            // shots 恒为奇数、gi 取 0..shots-1，中心弹丸的下标是 (shots-1)/2.0。
+            // 原来用 shots/2.0，整个扇形偏 -0.06 弧度，没有一发正对准星
+            double ang = baseAng + (gi - (shots - 1) / 2.0) * 0.12;
             int crit = (rand() % 100 < gun_crit(gt)) ? 1 : 0;
             make_bullet(x, y - 0.75, 60 * cos(ang), 60 * sin(ang), dmg, crit);
         }
@@ -8117,7 +8242,8 @@ void reset_dungeon_state()
     life = lifeMax;
     energy = energyMax;
 }
-// 房间几何：房间(L,c) 左上角 rx0=levelStartX+c*22+1, ry0=levelStartY+L*18+1；内部18x12；层间4行走廊
+// 房间几何：房间(L,c) 顶墙左上角 rx0=levelStartX+c*20+1, ry0=levelStartY+L*14+1；
+// 含墙 20x14，内部可活动区 18x12（rx0+1..rx0+18, ry0+1..ry0+12）；房间紧贴排列，无走廊
 static int roomX0(int L, int c) { return levelStartX + c * 20 + 1; }   // 房间紧贴水平排列，无通道
 static int roomY0(int L) { return levelStartY + L * 14 + 1; }          // 房间紧贴竖直堆叠，无通道
 // 门控制：mode 0=全开 1=全关 2=默认（顶开底关）
@@ -8286,7 +8412,7 @@ void enter_level(int n)
     roomActive = false;
     roomWavesDone = 0; roomWavesTotal = 0; roomWaveCD = 0; roomWavesLeft = 0;
     mark_all_dirty();
-    memset(painting, 114, sizeof(painting));
+    painting_fill(114);
     hujia_update();               // 刷新护甲值（存档加载/死亡重进后wear恢复）
     setlight();
 }
@@ -8348,12 +8474,10 @@ static void chest_auto_open()
                 box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
             s[cx][cy] = 0;
             mark_dirty_col(cx);
-            Setpos(1, 31);
-            Color(0);
             if(got > 0)
-                cout << " 打开宝箱，获得 " << got << " 件物品！                ";
+                hud_msg() << " 打开宝箱，获得 " << got << " 件物品！                ";
             else
-                cout << " 打开了空宝箱                                          ";
+                hud_msg() << " 打开了空宝箱                                          ";
         }
     }
 }
@@ -8364,9 +8488,11 @@ void update_level()
     chest_auto_open();
     // 计算玩家所在房间（内部矩形）
     int pi = To_int(x), pj = To_int(y);
+    int maxC = 1;
+    for(int L = 0; L < layCount; L++) maxC = max(maxC, layRooms[L]);
     int pL = -1, pc = -1;
     if(pj > levelStartY && pj < levelStartY + layCount * 14 - 1 &&
-            pi > levelStartX && pi < levelStartX + 8 * 20)
+            pi > levelStartX && pi < levelStartX + maxC * 20)
     {
         int L = (pj - levelStartY) / 14;
         int cc = (pi - levelStartX) / 20;
@@ -8399,9 +8525,7 @@ void update_level()
         lvl_x1 = lvl_x0 + 19; lvl_y1 = lvl_y0 + 13;
         spawn_level_wave();
         roomWavesDone = 1;
-        Setpos(1, 31);
-        Color(0);
-        cout << " 怪物来袭！清空房间才能开门                             ";
+        hud_msg() << " 怪物来袭！清空房间才能开门                             ";
     }
     if(roomActive)
     {
@@ -8497,9 +8621,7 @@ void update_level()
                     int idx = alloc_box(cx, cy);
                     fill_level_chest(idx, currentLevel, 1);
                 }
-                Setpos(1, 31);
-                Color(0);
-                cout << " 房间清空！宝箱已出现，从底部出口离开本关                ";
+                hud_msg() << " 房间清空！宝箱已出现，从底部出口离开本关                ";
             }
             else if(rand() % 100 < 35)
             {
@@ -8510,9 +8632,7 @@ void update_level()
                     int idx = alloc_box(cx, cy);
                     fill_level_chest(idx, currentLevel, 0);
                 }
-                Setpos(1, 31);
-                Color(0);
-                cout << " 房间清空！获得一个宝箱                                 ";
+                hud_msg() << " 房间清空！获得一个宝箱                                 ";
             }
         }
         return;
@@ -8528,9 +8648,7 @@ void update_level()
         levelUnlocked = max(levelUnlocked, min(currentLevel + 1, 10));
         show_talent_pick();
         int next = (currentLevel >= 10) ? 1 : currentLevel + 1;
-        Setpos(1, 31);
-        Color(0);
-        cout << " 通关！进入第 " << next << " 关                              ";
+        hud_msg() << " 通关！进入第 " << next << " 关                              ";
         enter_level(next);   // 下一关继承上一关的血量/护甲/蓝量
     }
 }
@@ -9052,7 +9170,7 @@ void game_loop()
     Clear();
     setlight();
     int bow = 0;
-    memset(painting, 1145, sizeof(painting));
+    painting_fill(1145);
     // HUD缓存全部置-1：强制首帧重绘（修复开局看不见物品栏/HUD）
     l_life = -1;
     l_hujia = -1;
@@ -9062,6 +9180,7 @@ void game_loop()
     l_cho = -1;
     l_oxy = -1;
     l_savefail = -1;
+    l_f3x = -999999, l_f3y = -999999, l_f3sp = -1;
     for(int i = 1; i <= 25; i++)
         l_beibao[i][0] = -1, l_beibao[i][1] = -1;
     run = 1;
@@ -9080,8 +9199,13 @@ void game_loop()
                 g_last_frame_ms = nowms;
                 Clocknum = clock();
                 GetIn += (GetIn >= 1 ? 0 : 1);
-                keybd_event(VK_MENU, 0, 0, 0);               // 按下
-                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
+                // 每帧无条件注入 Alt 按下+抬起会清掉全局 Alt 状态，
+                // 游戏运行期间 Alt+Tab / Alt+F4 全部失效。玩家真的按着 Alt 时跳过注入
+                if(!(GetAsyncKeyState(VK_MENU) & 0x8000))
+                {
+                    keybd_event(VK_MENU, 0, 0, 0);               // 按下
+                    keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
+                }
                 UpdateFPS();
                 HideCursor();
             for(int S = 1; S <= setfps; S++)
@@ -9120,7 +9244,7 @@ void game_loop()
                         }
                         clamp_camera();   // SET() 可能改大了 printx/printy
                         setlight();
-                        memset(painting, 114, sizeof(painting));
+                        painting_fill(114);
                         Print();
                     }
                     anx = 1;
@@ -9167,19 +9291,22 @@ void game_loop()
                     craft_1();
                     setlight();
                     hujia_update();
-                    memset(painting, 114, sizeof(painting));
+                    painting_fill(114);
                 }
-                else
-                    anx = 0;
-                if((GetAsyncKeyState('M')) && GetIn == 1)
+                // anx 是上面 ESC 分支的防抖标志，E/M 这两个 else 原来会把它清零：
+                // SET() 是在 ESC 仍被按住时返回的，标志随即被冲掉 → 下一帧重新
+                // 进入 SET()，而它立刻 break，于是 clamp_camera + setlight +
+                // 整屏重绘每帧跑一次，直到松开 ESC
+                if((GetAsyncKeyState('M') & 0x8000) && GetIn == 1)
                 {
-                    while(GetAsyncKeyState('M'))
+                    // 必须带 & 0x8000：GetAsyncKeyState 的最低位只表示「上次调用
+                    // 以来按下过」，ESC 菜单打开时轻点 M 没人消费它，菜单关闭后的
+                    // 第一帧 openmap() 就会自己弹出来
+                    while(GetAsyncKeyState('M') & 0x8000)
                         continue;
                     openmap();
                     setlight();
                 }
-                else
-                    anx = 0;
                 if(GetAsyncKeyState('I') & 0x8000)
                 {
                     while(GetAsyncKeyState('I') & 0x8000)
@@ -9336,9 +9463,7 @@ void game_loop()
                         }
                         else
                         {
-                            Setpos(1, 31);
-                            Color(0);
-                            cout << " 能量不足！                                    ";
+                            hud_msg() << " 能量不足！                                    ";
                         }
                     }
                 }
@@ -9486,16 +9611,12 @@ void game_loop()
                                 night = 0;
                                 sky();
                                 shuaxin();
-                                Setpos(1, 31);
-                                Color(0);
-                                cout << " 已入睡，重生点已设置，天亮了                              ";
+                                hud_msg() << " 已入睡，重生点已设置，天亮了                              ";
                             }
                             else
                             {
                                 // 白天：仅设置重生点，无法入睡
-                                Setpos(1, 31);
-                                Color(0);
-                                cout << " 重生点已设置（白天无法入睡）                              ";
+                                hud_msg() << " 重生点已设置（白天无法入睡）                              ";
                             }
                         }
                         else if(s[mpx][mpy] == 16 && mpx == portal_x && mpy == portal_y)
@@ -9510,6 +9631,10 @@ void game_loop()
                                 }
                                 else
                                 {
+                                    // 这两处 Setpos(1,31) 故意保留：下面紧跟一个
+                                    // 最长 10 秒的阻塞轮询，期间不会调用 Print()，
+                                    // 所以第 31 行在整个选关过程中是看得见的
+                                    // （与周围那些一次性提示不同，那些当帧就被 blit 抹掉）
                                     Setpos(1, 31);
                                     Color(0);
                                     cout << " 选择关卡(已解锁1-" << levelUnlocked
@@ -9535,16 +9660,12 @@ void game_loop()
                                     if(pickLevel > levelUnlocked) pickLevel = levelUnlocked;
                                     currentLevel = pickLevel;
                                     enter_level(currentLevel);
-                                    Setpos(1, 31);
-                                    Color(0);
-                                    cout << " 进入第 " << currentLevel << " 关卡！                              ";
+                                    hud_msg() << " 进入第 " << currentLevel << " 关卡！                              ";
                                 }
                             }
                             else
                             {
-                                Setpos(1, 31);
-                                Color(0);
-                                cout << " 你已经在关卡中                                    ";
+                                hud_msg() << " 你已经在关卡中                                    ";
                             }
                         }
                         else if(s[mpx][mpy] == 102)
@@ -9707,7 +9828,7 @@ void game_loop()
                         y = WORLD_HEIGHT - 2;
                         spx = 0; spy = 0;
                         enter_level(currentLevel > 0 ? currentLevel : 1);
-                        memset(painting, 114, sizeof(painting));
+                        painting_fill(114);
                         shuaxin();
                     }
                     else if(s[back_x][back_y] == 90)
@@ -9775,7 +9896,7 @@ void game_loop()
                     spy = 0;
                     wudi = 60;
                     enter_level(lvl);
-                    memset(painting, 114, sizeof(painting));
+                    painting_fill(114);
                     shuaxin();
                 }
                 else
@@ -9789,14 +9910,16 @@ void game_loop()
                 life = lifeMax;
             print_fast();
             // 存档写失败必须让玩家看见：原来完全静默，游戏一直表现得像已保存。
-            // 用 printy+4（在 Print() 的 blit 区 0..printy 之外，否则同帧被抹掉），
-            // 且只在状态变化时写一次，避免每帧 Setpos+cout
+            // 用 printy+5（在 Print() 的 blit 区 0..printy 之外，否则同帧被抹掉；
+            // +1 生命、+2 能量、+3 F3、+4 物品栏都被 print_fast 每帧重写），
+            // 且只在状态变化时写一次，避免每帧 Setpos+cout。
+            // 该行与 hud_msg() 的一次性提示共用，所以 hud_msg() 在失败期间让位
             {
                 int sfail = g_last_save_ok ? 0 : 1;
                 if(sfail != l_savefail)
                 {
                     l_savefail = sfail;
-                    Setpos(1, printy + 4);
+                    Setpos(1, printy + 5);
                     if(sfail)
                     {
                         Color(10);
@@ -9986,7 +10109,7 @@ int main()
                                         if(KEY_DOWN(VK_LBUTTON))
                                         {
                                             abcde = true;
-                                            memset(painting, 114, sizeof(painting));
+                                            painting_fill(114);
                                             if(read(saves[i]))
                                             {
                                                 zzz = saves[i];
@@ -10023,7 +10146,7 @@ int main()
                                     if(KEY_DOWN(VK_LBUTTON) && read_s < 10)
                                     {
                                         make_newworld();
-                                        memset(painting, 114, sizeof(painting));
+                                        painting_fill(114);
                                         if(iscre)
                                         {
                                             enter_level(1);   // 新世界直接进入第1关
@@ -10079,7 +10202,9 @@ int main()
                         cout << "                                    ";
                         Setpos(18, 29);
                         cout << "                                    ";
-                        for(int i = 3; i < read_s; i++)
+                        // 从 i=0 开始清：存档名画在第 6+i*2 行，原来的 i=3 从第 12 行
+                        // 才起清，离开菜单后第 6/8/10 行仍留着上一次的存档名
+                        for(int i = 0; i < read_s; i++)
                         {
                             Setpos(15, 6 + i * 2);
                             cout << "                                    ";
@@ -10101,7 +10226,9 @@ int main()
             }
             Sleep(1);
         }
-        save_system_shutdown();
+        // 上面是 while(1) 且没有 break，这里原本不可达。退出时的 flush + join
+        // 由 atexit(save_system_shutdown) 负责（该函数幂等），不要在这里假装有一条
+        // 正常退出路径
         return 0;
     }
     catch(const std::exception &e)
