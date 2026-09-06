@@ -43,7 +43,8 @@ bool ep[WORLD_WIDTH][WORLD_HEIGHT];
 constexpr int CHUNK_COLS = 64;
 constexpr int NCHUNKS = (WORLD_WIDTH + CHUNK_COLS - 1) / CHUNK_COLS;
 bool g_dirty[NCHUNKS];
-bool g_dirty_meta = true;
+// ctrl 处理器跑在系统线程上，会与游戏线程同时读写这个标志 → 必须原子
+atomic<bool> g_dirty_meta{true};
 inline void mark_dirty_col(int c)
 {
     if(c < 0)
@@ -291,6 +292,7 @@ int lifeMax = 200;                                  // 生命上限（开局200�
 int armorMax = 200;                                 // 护甲上限（开局200）
 int oxygen = 900;                                   // 氧气系统（水中消耗，满值900）
 int l_oxy = 10;                                     // 上次显示的氧气泡数
+int l_savefail = -1;                                // 上次显示的存档失败状态（-1=未初始化）
 int l_hujia = -1;                                   // 上次显示的护甲值
 int l_lvlinfo = -1;                                 // 上次显示的关卡进度组合值
 int gunCD = 0;                                      // 枪械射击冷却
@@ -355,6 +357,11 @@ struct Box_
 {
     unsigned short things[27], bx, by;
 };
+// 箱子空槽（墓碑）标记，必须是世界坐标取不到的值。原来用 5005，而
+// WORLD_WIDTH=10000、默认出生点 x = WORLD_WIDTH/2 = 5000：玩家在出生点右侧
+// 5 格放箱子就会被当成墓碑回收并 memset(things) → 箱内物品销毁，且原方块
+// s=40 保留却没有对应 Box_，findbox 永久返回 -1，变成打不开的死箱子。
+constexpr unsigned short BOX_TOMBSTONE = 0xFFFF;
 vector<Box_> box;
 struct guaiwu
 {
@@ -2199,8 +2206,10 @@ static bool g_writer_run = false;
 static bool g_job_pending = false;
 static bool g_job_active = false;
 static bool g_shutdown_done = false;
-static bool g_world_active = false;
+static atomic<bool> g_world_active{false};   // ctrl 线程与游戏线程都会读它
 static SaveJob g_job;
+// 写线程写、游戏线程读（HUD 提示），必须原子
+static atomic<bool> g_last_save_ok{true};
 
 static void save_system_shutdown();
 static void save_world(const string &nam, bool blocking, bool force_full = false);
@@ -2281,9 +2290,18 @@ static bool write_job(SaveJob &job)
         memcpy(hdr + 16, &h, 4);
         memcpy(hdr + 20, &cc, 4);
         memcpy(hdr + 24, &mo, 8);
-        fwrite(hdr, 1, BIN3_HDR, fp);
-        fwrite(job.chunkbuf.data(), 1, job.chunkbuf.size(), fp);
-        fwrite(job.meta.data(), 1, job.meta.size(), fp);
+        // 逐个校验写入字节数：磁盘满/短写时若照样 return true，调用方会清掉脏标记，
+        // 这些区块从此再也不会重新保存（游戏显示已保存，实际数据丢了）
+        if(fwrite(hdr, 1, BIN3_HDR, fp) != BIN3_HDR)
+            return false;
+        if(!job.chunkbuf.empty() &&
+                fwrite(job.chunkbuf.data(), 1, job.chunkbuf.size(), fp) != job.chunkbuf.size())
+            return false;
+        if(!job.meta.empty() &&
+                fwrite(job.meta.data(), 1, job.meta.size(), fp) != job.meta.size())
+            return false;
+        if(fflush(fp) != 0 || ferror(fp))
+            return false;
         return true;
     }
     long long want_end = -1;
@@ -2297,31 +2315,40 @@ static bool write_job(SaveJob &job)
         {
             int c = job.chunks[k];
             size_t bytes = (size_t)chunk_col_count(c) * WORLD_HEIGHT * 5;
-            _fseeki64(fp, chunk_offset(c), SEEK_SET);
-            fwrite(job.chunkbuf.data() + off, 1, bytes, fp);
+            if(_fseeki64(fp, chunk_offset(c), SEEK_SET) != 0)
+                return false;
+            if(fwrite(job.chunkbuf.data() + off, 1, bytes, fp) != bytes)
+                return false;
             off += bytes;
         }
+        if(ferror(fp))
+            return false;
         if(!job.meta.empty())
         {
             // 新 META 先追加到文件尾并提交文件头指针（崩溃时旧 META 仍有效）
-            fseek(fp, 0, SEEK_END);
+            if(fseek(fp, 0, SEEK_END) != 0)
+                return false;
             long long meta_pos = _ftelli64(fp);
-            fwrite(job.meta.data(), 1, job.meta.size(), fp);
-            fflush(fp);
+            // 只有新 META 完整落盘后才能提交头部指针，否则头会指向半截 META
+            if(meta_pos < 0 ||
+                    fwrite(job.meta.data(), 1, job.meta.size(), fp) != job.meta.size() ||
+                    fflush(fp) != 0 || ferror(fp))
+                return false;
             _fseeki64(fp, 24, SEEK_SET);
-            fwrite(&meta_pos, 8, 1, fp);
-            fflush(fp);
+            if(fwrite(&meta_pos, 8, 1, fp) != 1 || fflush(fp) != 0 || ferror(fp))
+                return false;
             // 压缩：把新 META 搬到列块区正后方，文件头改指新位置，截掉中间全部旧 META。
             // （旧实现截断点取 EOF，永远等于没截，旧 META 无限堆积导致存档膨胀）
             if(meta_pos > CHUNKS_END)
             {
                 _fseeki64(fp, CHUNKS_END, SEEK_SET);
-                fwrite(job.meta.data(), 1, job.meta.size(), fp);
-                fflush(fp);
+                if(fwrite(job.meta.data(), 1, job.meta.size(), fp) != job.meta.size() ||
+                        fflush(fp) != 0 || ferror(fp))
+                    return false;
                 long long new_off = CHUNKS_END;
                 _fseeki64(fp, 24, SEEK_SET);
-                fwrite(&new_off, 8, 1, fp);
-                fflush(fp);
+                if(fwrite(&new_off, 8, 1, fp) != 1 || fflush(fp) != 0 || ferror(fp))
+                    return false;
                 want_end = CHUNKS_END + (long long)job.meta.size();
                 _fseeki64(fp, want_end, SEEK_SET);
                 fflush(fp);
@@ -2364,10 +2391,22 @@ static void writer_loop()
         SaveJob job = std::move(g_job);
         g_job_pending = false;
         g_job_active = true;
+        g_done_cv.notify_all();   // 任务已被取走，等着覆盖它的 save_world 可以继续
         lk.unlock();
-        write_job(job);
+        bool ok = write_job(job);
         lk.lock();
         g_job_active = false;
+        g_last_save_ok = ok;
+        if(!ok)
+        {
+            // 写失败（存档名含 \ / : * ? < > |、磁盘满、只读、被杀软锁住）：
+            // save_world 已经提前清掉脏标记，必须重新标脏，否则这些区块
+            // 再也不会被保存，而游戏一直显示已保存 → 永久丢档
+            for(size_t k = 0; k < job.chunks.size(); k++)
+                g_dirty[job.chunks[k]] = true;
+            if(!job.meta.empty())
+                g_dirty_meta = true;
+        }
         g_done_cv.notify_all();
     }
 }
@@ -2421,6 +2460,11 @@ static void save_system_shutdown()
 }
 
 #ifdef _WIN32
+// 保存必须就地跑在 ctrl 线程上，不能只置标志交给主循环：关窗时游戏很可能正卡在
+// openmap()/craft_1()/SET() 这类自带 while(1) 的模态界面里，主循环轮不到检查标志，
+// 而系统只给约 5 秒就强杀进程 → 丢档。跨线程安全的前提有三条：
+// g_world_active 为真期间 zzz 不会被改写（只有建档/读档界面改它）、
+// g_dirty_meta 与 g_world_active 已是 atomic、save_world 内部全程持 g_save_mtx。
 static BOOL WINAPI console_ctrl_handler(DWORD type)
 {
     if(type == CTRL_CLOSE_EVENT || type == CTRL_SHUTDOWN_EVENT ||
@@ -2431,6 +2475,15 @@ static BOOL WINAPI console_ctrl_handler(DWORD type)
             save_world(zzz, true);
         save_system_shutdown();
         return TRUE;
+    }
+    if(type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT)
+    {
+        // 原来直接返回 FALSE：进程被终止，挂起的存档任务和本次进度一起丢掉。
+        // 补一次保存后仍返回 FALSE，让 CRT 默认处理器继续走 exit()，
+        // 由 atexit(save_system_shutdown) 完成 flush + join，终止语义不变。
+        if(g_world_active && !zzz.empty())
+            save_world(zzz, true);
+        return FALSE;
     }
     return FALSE;
 }
@@ -2446,6 +2499,12 @@ static void save_world(const string &nam, bool blocking, bool force_full)
     SaveJob job;
     job.path = path;
     job.full = force_full || !file_is_v3(path);
+    // 快照、清脏标记、入队必须互斥：写线程失败时会重新标脏 g_dirty，
+    // 若与这里的清零并发，重试标记可能被抹掉
+    unique_lock<mutex> lk(g_save_mtx);
+    // 上一个任务还没被写线程取走就覆盖会把它整个丢掉：它的 chunk 脏标记
+    // 已经清了，那些改动再也找不回来
+    g_done_cv.wait(lk, [] { return !g_job_pending; });
     if(job.full)
     {
         for(int c = 0; c < NCHUNKS; c++)
@@ -2473,7 +2532,6 @@ static void save_world(const string &nam, bool blocking, bool force_full)
     }
     if(job.chunks.empty() && job.meta.empty())
         return;
-    unique_lock<mutex> lk(g_save_mtx);
     g_job = std::move(job);
     g_job_pending = true;
     g_save_cv.notify_one();
@@ -2523,10 +2581,16 @@ static bool load_binary_v3(const char *filename)
         return false;
     int w, h, cc;
     long long meta_offset;
+    int v;
+    memcpy(&v, hdr + 8, 4);
     memcpy(&w, hdr + 12, 4);
     memcpy(&h, hdr + 16, 4);
     memcpy(&cc, hdr + 20, 4);
     memcpy(&meta_offset, hdr + 24, 8);
+    // 版本号原来完全不校验：magic 和尺寸碰巧对得上的异版本文件会被当成 v3 解析，
+    // 把布局不同的数据 memcpy 进全局状态
+    if(v != BIN3_VERSION)
+        return false;
     if(w != WORLD_WIDTH || h != WORLD_HEIGHT || cc != CHUNK_COLS ||
             meta_offset < CHUNKS_END)
         return false;
@@ -2641,6 +2705,10 @@ static bool load_binary_v3(const char *filename)
                         for(int j = 0; j < 27; j++)
                             if(b.things[j] % 1000 > 113)
                                 b.things[j] = 0;
+                        // 旧档的墓碑标记是 (5005, 0)，迁移到新标记，
+                        // 否则这些空槽永远无法被 alloc_box 复用
+                        if(b.bx == 5005 && b.by == 0)
+                            b.bx = BOX_TOMBSTONE, b.by = BOX_TOMBSTONE;
                         box.push_back(b);
                     }
                 }
@@ -2794,8 +2862,8 @@ char saves[100][55];
 int read_s;
 bool read_savelist()
 {
-    for(int i = 0; i <= 50; i++)
-        for(int j = 0; j <= 53; j++)
+    for(int i = 0; i < 100; i++)
+        for(int j = 0; j < 55; j++)
             saves[i][j] = '\0';
     read_s = 0;
     FileGuard fg(fopen("savelist.txt", "r"));
@@ -2830,8 +2898,13 @@ bool save_savelist(string add_)
         {
             if(fscanf(fg.fp, "%d", &save_s) != 1)
                 save_s = 0;
-            if(save_s > 99)
-                save_s = 99;
+            // 与 read_savelist/delete_savelist 统一钳到 [0,100]：原来这里夹到 99，
+            // 有 100 个存档时新建世界会丢掉第 100 条（.bin 还在但列表进不去）；
+            // 也没有下限钳位，文件里是负数时会写出负的 save_s+1 把整份列表搞坏
+            if(save_s < 0)
+                save_s = 0;
+            if(save_s > 100)
+                save_s = 100;
             for(int i = 0; i < save_s; i++)
             {
                 if(fscanf(fg.fp, "%54s", saves[i]) != 1)
@@ -2842,6 +2915,8 @@ bool save_savelist(string add_)
             }
         }
     }
+    if(save_s >= 100)
+        return false;   // 列表已满：再追加就会写出读不回来的第 101 条
     FileGuard fg2(fopen("savelist.txt", "w"));
     if(fg2.fp == NULL)
         return false;
@@ -2864,6 +2939,8 @@ bool delete_savelist(string add_)
         if(fg.fp != NULL)
         {
             if(fscanf(fg.fp, "%d", &save_s) != 1)
+                save_s = 0;
+            if(save_s < 0)
                 save_s = 0;
             if(save_s > 100)
                 save_s = 100;
@@ -2912,7 +2989,7 @@ int alloc_box(int xxx, int yyy)
 {
     for(int i = 0; i < boxlen; i++)
     {
-        if(box[i].bx == 5005)
+        if(box[i].bx == BOX_TOMBSTONE && box[i].by == BOX_TOMBSTONE)
         {
             box[i].bx = (unsigned short)xxx;
             box[i].by = (unsigned short)yyy;
@@ -3133,7 +3210,7 @@ void wajue(int sx, int sy)
                 int uu;
                 if(del != -1)
                 {
-                    box[del].bx = 5005, box[del].by = 0;
+                    box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
                     for(int i = 0; i <= 24; i++)
                     {
                         if(box[del].things[i] % 1000 == 0 ||
@@ -3280,7 +3357,7 @@ void block_(int xxx, int yyy)
             bool pus = 1;
             for(int i = 0; i < boxlen && pus; i++)
             {
-                if(box[i].bx == 5005)
+                if(box[i].bx == BOX_TOMBSTONE && box[i].by == BOX_TOMBSTONE)
                 {
                     box[i].bx = xxx, box[i].by = yyy;
                     pus = false;
@@ -7238,18 +7315,27 @@ void did()
 int lenth_ = 0;
 bool bw;
 int keydown[129];
+// 世界名会直接拼成文件路径（nam + ".bin"）。调用方扫的是 VK 码 36-125，
+// 其中混着 \ / : * ? < > | . 和方向键、F1-F12、小键盘（小键盘 1 会追加成 '`'），
+// 任一都会让 fopen 静默失败——配合存档写入检查，世界从此永不落盘；
+// "..\..\x" 还能写出存档目录。所以只放行 [A-Za-z0-9_]。
+static bool valid_name_char(char c)
+{
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+           (c >= 'a' && c <= 'z') || c == '_';
+}
 void getkeydown(char getzf)
 {
-    if(GetAsyncKeyState(getzf) & 0x8000 && lenth_ <= 50)
+    if(GetAsyncKeyState(getzf) & 0x8000 && lenth_ < 50)
     {
         keydown[(int)(getzf)]++;
         if(keydown[(int)(getzf)] == 1 ||
                 (keydown[(int)(getzf)] >= 30 && keydown[(int)(getzf)] % 2 == 0))
         {
-            if(getzf >= 65 && getzf <= 90 && bw == false)
-                zzz += getzf + 32, lenth_++;
-            else
-                zzz += getzf, lenth_++;
+            char add = (getzf >= 65 && getzf <= 90 && bw == false)
+                       ? char(getzf + 32) : getzf;
+            if(valid_name_char(add))
+                zzz += add, lenth_++;
         }
     }
     else
@@ -7328,6 +7414,7 @@ void make_newworld()
     int brtick = 0;
     zzz.clear();
     lenth_ = 0;   // 与 zzz 同步：否则重进本界面时 lenth_ 残留，退格会 erase 到 begin() 之前
+    string nameerr, errname;
     while(1)
     {
         if(clock() - Clocknum >= 15)
@@ -7357,6 +7444,8 @@ void make_newworld()
             }
             else
                 keydown[(int)('\b')] = 0;
+            if(zzz != errname)   // 名字一改就说明玩家看到了提示，撤掉它
+                nameerr.clear(), errname = zzz;
             Setpos(15, 13);
             cout << " 存档名：（由大小写字母和数字组成，不超过50字符）";
             Setpos(15, 15);
@@ -7365,6 +7454,11 @@ void make_newworld()
                 cout << "_        ";
             else
                 cout << "     ";
+            Setpos(15, 17);
+            Color(10);
+            cout << nameerr;
+            cout << "                                        ";
+            Color(0);
             POINT p = GetMousePos();
             mpx = To_int(p.x / 2 - 26);
             mpy = To_int(p.y - 14);
@@ -7380,13 +7474,31 @@ void make_newworld()
                 cout << "  ----------";
                 if(KEY_DOWN(VK_LBUTTON) && lenth_ > 0)
                 {
-                    MAP();
-                    mark_all_dirty();
-                    reset_dungeon_state();   // 新开档：重置关卡解锁/天赋/金币/能量
-                    save(zzz);
-                    save_savelist(zzz);
-                    iscre = true;
-                    return;
+                    // 重名不拦的后果是双重的：save_world 打开已有 .bin 会把它截断
+                    // （旧世界直接销毁），save_savelist 又无条件追加一条，
+                    // 菜单上出现两个同名条目而其中一个已经空了
+                    read_savelist();
+                    bool dup = false;
+                    for(int i = 0; i < read_s; i++)
+                        if(zzz == saves[i])
+                        {
+                            dup = true;
+                            break;
+                        }
+                    if(dup)
+                        nameerr = " 已有同名世界，换一个名字 ", errname = zzz;
+                    else if(read_s >= 10)
+                        nameerr = " 存档栏位已满，请先删除一个 ", errname = zzz;
+                    else
+                    {
+                        MAP();
+                        mark_all_dirty();
+                        reset_dungeon_state();   // 新开档：重置关卡解锁/天赋/金币/能量
+                        save(zzz);
+                        save_savelist(zzz);
+                        iscre = true;
+                        return;
+                    }
                 }
             }
             else
@@ -7960,7 +8072,7 @@ static void chest_auto_open()
             int got = 0;
             if(del != -1)
             {
-                box[del].bx = 5005, box[del].by = 0;
+                box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
                 for(int i = 0; i <= 24; i++)
                 {
                     int item = box[del].things[i] % 1000;
@@ -8660,6 +8772,7 @@ void game_loop()
     l_coin = -1;
     l_cho = -1;
     l_oxy = -1;
+    l_savefail = -1;
     for(int i = 1; i <= 25; i++)
         l_beibao[i][0] = -1, l_beibao[i][1] = -1;
     run = 1;
@@ -8783,7 +8896,14 @@ void game_loop()
                 if(GetAsyncKeyState('N') & 0x8000 && GetIn == 1)
                     shuaxin();
                 if(GetAsyncKeyState('U') & 0x8000 && GetIn == 1)
+                {
+                    // 松键边沿触发（与 E/M/I 一致）：原来每帧轮询且不等松键，
+                    // 又处在 for(S=1;S<=setfps;S++) 内，按住 U 每秒最多产生约 60 个
+                    // 存档任务，而每个都强制重建整份 META（约 240KB），写线程跟不上
+                    while(GetAsyncKeyState('U') & 0x8000)
+                        Sleep(1);
                     save_world(zzz, false);
+                }
                 if(((GetAsyncKeyState('A') & 0x8000) ||
                         (GetAsyncKeyState(VK_LEFT) & 0x8000)) &&
                         GetIn == 1)
@@ -9349,6 +9469,25 @@ void game_loop()
             if(life > lifeMax && !SetLife)
                 life = lifeMax;
             print_fast();
+            // 存档写失败必须让玩家看见：原来完全静默，游戏一直表现得像已保存。
+            // 用 printy+4（在 Print() 的 blit 区 0..printy 之外，否则同帧被抹掉），
+            // 且只在状态变化时写一次，避免每帧 Setpos+cout
+            {
+                int sfail = g_last_save_ok ? 0 : 1;
+                if(sfail != l_savefail)
+                {
+                    l_savefail = sfail;
+                    Setpos(1, printy + 4);
+                    if(sfail)
+                    {
+                        Color(10);
+                        cout << " 存档写入失败！进度没有保存（检查磁盘空间/存档名/杀毒软件） ";
+                    }
+                    else
+                        cout << "                                                          ";
+                    Color(0);
+                }
+            }
             savetick++;
             if(savetick>=3600)
             {
