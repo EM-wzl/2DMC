@@ -173,7 +173,16 @@ string name[150] = {"air",
                     "big_health_potion",
                     "coin",
                     "gacha_machine",
-                    "level_gold_ore"
+                    "level_gold_ore",
+                    "smithing_table",
+                    "shadow_scale",
+                    "shadow_helmet",
+                    "shadow_chestplate",
+                    "shadow_leggings",
+                    "shadow_boots",
+                    "Light's_Bane",
+                    "demon_bow",
+                    "magiluminescence"
                    };
 map<string, int> thing;
 int blockwj[150] = {0,    200, 200, 400, 600, 100, 0,   0,  0,  200, -1, 0,
@@ -185,7 +194,13 @@ int blockwj[150] = {0,    200, 200, 400, 600, 100, 0,   0,  0,  200, -1, 0,
                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,
                     0,0,0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0,-1,300
                    };
-int blocktouch[150] = {0,1,0,1,1,1,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,2,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1};
+int blocktouch[150] = {0,1,0,1,1,1,0,0,0,0,1,0,1,0,0,0,0,0,1,
+                       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+                       0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+                       0,0,0,0,0,1,1,0,0,2,1,1,1,
+                       0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                       0,0,0,0,0,0,0,0,
+                       0,1,0,0,0,0,0,0,0,1,1};
 int blocklv[150] = {0, 2, 1,  2,  3,  1,  0,  0,  0,  2,  114, 0, 4, 0, 0,
                     0, 1, 0,  0,  10, 10, 10, 10, 15, -1, 0,   0, 0, 0, 0,
                     0, 0, 10, 10, 10, 0,  0,  5,  0,  2,  0,   0, 0, 0, 0,
@@ -200,7 +215,8 @@ const string blockprint[150]={
 "--","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ",
 "  ","  ","&&","&&","  ","  ","  ","==","##","##","  ","  ","  ","  ","  ","  ","  ","  ","  ","  ",
 "  ","  ","  ","  ","  ","  ","  ","++","  ","  ","--","  ","  ",
-"<>","  ","++","++","**","<>","==","++","$$","<>","GG"
+"<>","  ","++","++","**","<>","==","++","$$","<>","GG",
+"<>"
 };
 const int blockcolor[150]={
 0,-7,-5,7,-37,-12,0,0,0,-15,0,0,11,0,0,0,0,0,0,-21,
@@ -208,7 +224,8 @@ const int blockcolor[150]={
 -5,0,0,0,0,0,0,0,0,0,0,0,0,-1,-36,0,0,0,0,0,
 0,0,8,-38,0,0,0,-43,-45,-44,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,-8,0,0,-9,0,-3,
--35,9,14,14,13,11,14,12,14,-35,6
+-35,9,14,14,13,11,14,12,14,-35,6,
+-44
 };
 string test[150] =
 {
@@ -235,7 +252,8 @@ string test[150] =
     " \b金头盔"," \b金胸甲"," \b金护腿"," \b金靴子",
     " \b下界头盔"," \b下界胸甲"," \b下界护腿"," \b下界靴子",
     " \b羊毛"," \b羊肉"," \b猪肉"," \b床"," \b金苹果",
-    " \b腐化瘀墙"," \b关卡传送门"," \b能量药水"," \b手枪"," \b冲锋枪"," \b霰弹枪"," \b狙击枪"," \b子弹"," \b大回血药"," \b金币"," \b扭蛋机"," \b关卡金矿"
+    " \b腐化瘀墙"," \b关卡传送门"," \b能量药水"," \b手枪"," \b冲锋枪"," \b霰弹枪"," \b狙击枪"," \b子弹"," \b大回血药"," \b金币"," \b扭蛋机"," \b关卡金矿",
+    " \b锻造台"," \b暗影鳞片"," \b暗影头盔"," \b暗影胸甲"," \b暗影护腿"," \b暗影靴子"," \b魔光剑"," \b恶魔弓"," \b魔光护符"," \b护甲药水"
 };
 string stname[150] = { " 僵尸"," 箭"," 骷髅"," 苦力怕"," OI"," 蜘蛛"," 僵尸猪灵"," 递归"," 世界吞噬者-头部"," 世界吞噬者-体节"," 世界吞噬者-尾部"," 羊"," 猪"," ",
                        " 商人"," 工匠"," 占星师"," 雇佣兵"," 牧师"," 地牢商人"," 被关押NPC"," 奸商"," 小偷猫"," 传送门"
@@ -264,11 +282,17 @@ int bed, GetIn = 1, ed = 6000, sun = 1, back_x = 10, now_wait = 0, wait = 0,
          TheTime = 0, back_y = 145, Clocknum = 0, jump = 0, dx, dy, my, tall,
          ks = 0, mx, fz, cho = 1, key_ = 0, bx, by, fell = 0, co = 0, H = 0,
          anx = 0, mpx, mpy, lx, ly, wjlv = 1, playerCD = 0, tick = 0,l_life,
-         setfps = 1, gongji = 1, gongjicd = 20, hujiazhi = 0, wudi = 0;
+         setfps = 1, gongji = 1, gongjicd = 20, hujiazhi = 200, wudi = 0;
 double jx = 1, jy = 50, x = 1, y = 50, g = 0.7, spx = 0, spy = 0, wj = 0,
-       FIX = 1, jianshang = 0, life = 20, boss2hp;
+       FIX = 1, jianshang = 1, life = 200, boss2hp;
 // 元气骑士地牢系统 - 新增全局变量
-double energy = 100, energyMax = 100;               // 能量系统
+double energy = 100, energyMax = 100;               // 能量系统（蓝量）
+int lifeMax = 200;                                  // 生命上限（开局200）
+int armorMax = 200;                                 // 护甲上限（开局200）
+int oxygen = 900;                                   // 氧气系统（水中消耗，满值900）
+int l_oxy = 10;                                     // 上次显示的氧气泡数
+int l_hujia = -1;                                   // 上次显示的护甲值
+int l_lvlinfo = -1;                                 // 上次显示的关卡进度组合值
 int gunCD = 0;                                      // 枪械射击冷却
 int currentGunType = 0;                              // 当前手持枪械类型: 0=无 95=手枪 96=冲锋枪 97=霰弹 98=狙击
 int coin = 0;                                        // 持有金币
@@ -284,6 +308,14 @@ bool roomActive = false;                               // 当前房间是否在�
 int lvl_x0, lvl_x1, lvl_y0, lvl_y1;                  // 当前房间坐标范围
 int levelStartX, levelStartY;                         // 地牢起始坐标
 int portal_x = 20, portal_y = -1;                     // 主世界关卡传送门位置
+// ---- 分叉地牢布局 ----
+// 层0=起始安全房；中间层房间数1/2/3/4递增（一条路、两条路...）；末层=最终房
+int curLayer = 0, curCol = 0;                         // 当前所在房间层/列
+int layCount = 0;                                     // 总层数
+int layRooms[12] = {0};                               // 每层房间数
+int layOff[12] = {0};                                 // 每层起始列（居中偏移）
+int roomState[12][8] = {{0}};                         // 房间状态：0=未清 1=战斗中 2=已清
+int bossCol = 0;                                      // 末层房间所在列
 clock_t catStealCD = 0;                               // 小偷猫偷窃冷却(到点时间)
 int talents[32] = {0};                               // 已获得天赋数组
 int talentCount = 0;                                  // 已获得天赋数量
@@ -310,7 +342,7 @@ int maxTalentSlots = 8 + 3;                          // 最大天赋槽(8+3额�
 #define T_FULLCRIT 18   // 满血暴击
 #define T_MINION 19     // 随从强化
 const char* talent_names[24] = {
-    "生命+4","护甲+1","能量+100","击败回蓝","击败回血","药水强化",
+    "生命上限+25","护甲上限+50","能量上限+50","击败回蓝","击败回血","药水强化",
     "爆炸减伤","岩浆免疫","子弹弹射","暴击穿透","散弹增加","攻速加快",
     "精准暴击","近战扩大","商店半价","金盾","疾步生甲","破甲修复",
     "满血暴击","随从强化","","","",""
@@ -448,14 +480,10 @@ void Setpos(float x, float y)
     if(bag==1)pos.X+=(printx-50),pos.Y+=(printy-30)/2;
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
 }
-void Setpos2(float x, float y)
-{
-    COORD pos;
-    pos.X = To_int(x) + 1, pos.Y = To_int(y);
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), pos);
-}
 int xlen=142,ylen=43;
-CHAR_INFO charInfo[8005];
+// 容量按 SET() 允许的渲染上限取值：printx<=90 → xlen=2*90+2=182，printy<=46 → ylen=47，
+// Color3/printbuf 的最大下标 = (ylen-1)*xlen + printx*2 + 1 = 8553
+CHAR_INFO charInfo[182 * 47 + 8];
 const int f_red=FOREGROUND_RED;
 const int b_red=BACKGROUND_RED;
 const int f_gre=FOREGROUND_GREEN;
@@ -838,22 +866,6 @@ void Clear()
         }
     }
 }
-void Clear_formap()
-{
-    for(int i = 0; i < WORLD_WIDTH; i++)
-    {
-        for(int j = 0; j <= 180; j++)
-        {
-            if(s[i][j] == 0)
-                s[i][j] = 11;
-        }
-        for(int j = 950; j <= 999; j++)
-        {
-            if(s[i][j] == 0||s[i][j] == 19)
-                s[i][j] = 32;
-        }
-    }
-}
 void Clear_2()
 {
     Color(0);
@@ -946,700 +958,6 @@ void boom_loop()
     }
     Clear();
 }
-short noise_result[WORLD_WIDTH][WORLD_HEIGHT];
-double fade(double td)
-{
-    return 6 * td*td*td*td*td - 15 * td*td*td*td + 10 * td*td*td;
-}
-struct grads
-{
-    double nx,ny;
-};
-const int NOISE_GX = WORLD_WIDTH / 10 + 10;
-grads noise_g[NOISE_GX][201];
-grads grad[10]= {{1,1},{1,0},{0,1},{-1,-1},{-1,0},{-1,-1},{0,-1},{1,-1}};
-const int x_len=WORLD_WIDTH-1,y_len=WORLD_HEIGHT-1;
-void spawn_dots(short steplen,short eff)
-{
-    srand(time(NULL));
-    for(int i=1; i<=x_len/steplen; i++)
-    {
-        for(int j=100/steplen; j<=y_len/steplen; j++)
-        {
-            noise_g[i][j]=grad[rand()%8];
-            noise_g[i][j].nx*=eff;
-            noise_g[i][j].ny*=eff;
-        }
-    }
-}
-void fill_noise(short steplen)
-{
-    for(int i=1; i<=x_len; i++)
-    {
-        for(int j=100; j<=y_len; j++)
-        {
-            double ste___=steplen;
-            int x0,y0,x1,y1;
-            double ax=i/ste___,ay=j/ste___;
-            x0=i/(steplen),x1=x0+1;
-            y0=j/(steplen),y1=y0+1;
-            grads dots[4];
-            dots[0]= {ax-x0,ay-y0};
-            dots[1]= {ax-x0,ay-y1};
-            dots[2]= {ax-x1,ay-y0};
-            dots[3]= {ax-x1,ay-y1};
-            double commit00=noise_g[x0][y0].nx*dots[0].nx+noise_g[x0][y0].ny*dots[0].ny;
-            double commit01=noise_g[x0][y1].nx*dots[1].nx+noise_g[x0][y1].ny*dots[1].ny;
-            double commit10=noise_g[x1][y0].nx*dots[2].nx+noise_g[x1][y0].ny*dots[2].ny;
-            double commit11=noise_g[x1][y1].nx*dots[3].nx+noise_g[x1][y1].ny*dots[3].ny;
-            double fade_dx = fade(ax-x0);
-            double fade_dy = fade(ay-y0);
-            noise_result[i][j]+=(commit00 * (1 - fade_dx) * (1 - fade_dy)+
-                                 commit10 * fade_dx * (1 - fade_dy)+
-                                 commit01 * (1 - fade_dx) * fade_dy+
-                                 commit11 * fade_dx * fade_dy)*50;
-        }
-    }
-}
-void spawn_noise_nether()
-{
-    memset(noise_g,0,sizeof(noise_g));
-    memset(noise_result,0,sizeof(noise_result));
-    spawn_dots(80,4);
-    fill_noise(80);
-    spawn_dots(40,3);
-    fill_noise(40);
-    spawn_dots(20,2);
-    fill_noise(20);
-    spawn_dots(10,1);
-    fill_noise(10);
-}
-void spawn_noise_cave()
-{
-    memset(noise_g,0,sizeof(noise_g));
-    memset(noise_result,0,sizeof(noise_result));
-    spawn_dots(50,4);
-    fill_noise(50);
-    spawn_dots(30,3);
-    fill_noise(40);
-    spawn_dots(20,2);
-    fill_noise(20);
-    spawn_dots(10,1);
-    fill_noise(10);
-    for(int i=1; i<=x_len; i++)
-    {
-        for(int j=100; j<=y_len; j++)
-        {
-            noise_result[i][j]*=0.5;
-        }
-    }
-}
-short zs[WORLD_WIDTH + 5];
-double zs_ls[WORLD_WIDTH + 5];
-void perlin(const int pl, const int rad)
-{
-    const int muc = x_len / pl + 2;
-    short cz[muc];
-    for(int i = 0; i < muc; i++)
-    {
-        cz[i]=rand()%(rad);
-    }
-    for(int i = 0; i <= x_len; i++)
-    {
-        int dpl=i/pl;
-        double di=i*1.0/pl;
-        double commit0=cz[dpl]*(di-dpl);
-        double commit1=cz[dpl+1]*(di-(dpl+1));
-        double fade_dx = fade(di-dpl);
-        zs_ls[i] += (commit0 * (1-fade_dx) +
-                     commit1 * fade_dx)*2+rad/2;
-    }
-}
-float Cosine_Interpolate(float a, float b, float x)
-{
-    float ft = x * 3.1415927;
-    float f = (1 - cos(ft)) * 0.5;
-    return a * (1 - f) + b * f;
-}
-void perlin_2(const double pl, const int rad, const int startt, const int endd,
-              const int plu = 0)
-{
-    const int muc = x_len / pl + 2;
-    short cz[muc];
-    for(int i = 0; i < muc; i++)
-    {
-        cz[i] = rand() % (rad)+plu;
-        if(i == startt / ((int)(pl)) - 1)
-            cz[i] = 0;
-        if(i == endd / ((int)(pl)))
-            cz[i] = 0;
-    }
-    for(int i = startt / ((int)(pl)) * ((int)(pl)) - (int)(pl);
-            i <= endd / ((int)(pl)) * ((int)(pl)); i++)
-    {
-        if(i < 0 || i > x_len)
-            continue;
-        zs_ls[i] += Cosine_Interpolate(cz[i / ((int)(pl))], cz[i / ((int)(pl)) + 1],
-                                       (i - i / ((int)(pl)) * ((int)(pl))) / pl) +
-                    0.5;
-    };
-}
-void result()
-{
-    for(int i = 0; i <= x_len; i++)
-    {
-        int v = (int)(zs_ls[i] + 0.5);
-        if(v < 0) v = 0;
-        if(v > WORLD_HEIGHT - 50) v = WORLD_HEIGHT - 50;
-        zs[i] = (short)v;
-    }
-}
-void stt(int i, int j, int step)
-{
-    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 8)
-        return;
-    // 只替换石头并向石头内扩散，避免雪块飘进空气/洞穴形成浮空雪
-    if(s[i][j] != 1)
-        return;
-    s[i][j] = 53;
-    if(rand() % 4 == 0)
-        stt(i + 1, j, step + 1);
-    if(rand() % 4 == 0)
-        stt(i - 1, j, step + 1);
-    if(rand() % 4 == 0)
-        stt(i, j + 1, step + 1);
-    if(rand() % 4 == 0)
-        stt(i, j - 1, step + 1);
-    if(rand() % 4 == 0)
-        stt(i + 1, j + 1, step + 1);
-    if(rand() % 4 == 0)
-        stt(i + 1, j - 1, step + 1);
-    if(rand() % 4 == 0)
-        stt(i - 1, j + 1, step + 1);
-    if(rand() % 4 == 0)
-        stt(i - 1, j - 1, step + 1);
-}
-// 洞穴雕刻后清理悬空雪块：自下而上扫描，下方为空气的雪直接移除
-void sweep_floating_snow(int from_x)
-{
-    if(from_x < 1)
-        from_x = 1;
-    if(from_x > WORLD_WIDTH - 1)
-        return;
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        for(int j = WORLD_HEIGHT - 2; j >= 1; j--)
-        {
-            if(s[i][j] == 53 && s[i][j + 1] == 0)
-                s[i][j] = 0;
-        }
-    }
-}
-void Make_water(short i, short j, short step)
-{
-    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 110)
-        return;
-    if(step > 105)if(rand()%3){
-	s[i][j] = 1;return;}
-	s[i][j] = 19;
-	if(s[i][j+1]==0)
-        Make_water(i, j+1, step +1);
-    if(s[i+1][j]==0)
-        Make_water(i + 1, j, step +1);
-    if(s[i-1][j]==0)
-        Make_water(i - 1, j, step +1);
-}
-void Make_lava(int i, int j, int step)
-{
-    if(i < 0 || j < 0 || i >= WORLD_WIDTH || j >= WORLD_HEIGHT || step > 70)
-        return;
-    if(step > 65)if(rand()%3){
-	s[i][j] = 1;return;}
-	s[i][j] = 32;
-	if(s[i][j+1]==0)
-        Make_lava(i, j+1, step +1);
-    if(s[i+1][j]==0)
-        Make_lava(i + 1, j, step +1);
-    if(s[i-1][j]==0)
-        Make_lava(i - 1, j, step +1);
-}
-void noodle_cave(int i, int j)
-{
-    int move_ = 0;
-    if(rand() % 2 == 0)
-    {
-        int deep_ = rand() % 60 + 30;
-        int wei_ = rand() % 5 + 3;
-        bool dir = rand() % 2;
-        for(int uu = 0; uu <= deep_; uu++)
-        {
-        	if(uu==0||uu==deep_)
-        	{
-        		for(int kk = wei_/4; kk <= wei_*3/4; kk++)
-            	{
-                	if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
-                	        j + uu > WORLD_HEIGHT - 2)
-                	    return;
-                	s[i + kk + move_][j + uu] = 0;}
-			}
-        	else{
-            for(int kk = 0; kk <= wei_; kk++)
-            {
-                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
-                        j + uu > WORLD_HEIGHT - 2)
-                    return;
-                s[i + kk + move_][j + uu] = 0;
-            }}
-            if(dir == 0 && rand() % 8 == 0)
-                move_ += 2;
-            else if(rand() % (2 + dir * 10) == 0)
-                move_++;
-            if(dir == 1 && rand() % 8 == 0)
-                move_ -= 2;
-            else if(rand() % (2 + (1 - dir) * 10) == 0)
-                move_--;
-            if(rand() % 20 == 0)
-                dir = 1 - dir;
-            if(rand() % 15 == 0)
-                wei_++;
-            if(rand() % 15 == 0)
-                wei_--;
-        }
-    }
-    else
-    {
-        int len_ = rand() % 60 + 20;
-        int wei_ = rand() % 4 + 1;
-        for(int kk = 1; kk <= wei_ / 2; kk++)
-        {
-            if(i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
-                return;
-            s[i - 1][j + kk] = 0;
-        }
-        for(int uu = 0; uu <= len_; uu++)
-        {
-            for(int kk = 0; kk <= wei_; kk++)
-            {
-                if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
-                        j + kk + move_ > WORLD_HEIGHT - 2)
-                    return;
-                s[i + uu][j + kk + move_] = 0;
-            }
-            if(rand() % 6 == 0)
-                move_++;
-            if(rand() % 6 == 0)
-                move_--;
-            if(rand() % 12 == 0)
-                wei_++;
-            if(rand() % 12 == 0)
-                wei_--;
-        }
-        for(int kk = 1; kk <= wei_ / 2; kk++)
-        {
-            if(i - 1 < 0 || j + kk < 0 || i - 1 >= WORLD_WIDTH || j + kk + move_ > WORLD_HEIGHT - 2)
-                return;
-            s[i - 1][j + kk + move_] = 0;
-        }
-    }
-}
-void Make_deep(int i)
-{
-    int j;
-    if(rand() % 2 == 0)
-    {
-        j = 100;
-        while(s[i][j] == 0 && j <300)
-        {
-            j++;
-        }
-        if(s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)return;
-    }
-    else
-        j = rand() % 940 + 50;
-    int move_ = 0;
-    int deep_ = rand() % 100 + 20;
-    int wei_ = rand() % 6 + 3;
-    for(int uu = 0; uu <= deep_+1; uu++)
-    {
-        if(uu==deep_+1)
-        {
-            for(int kk = int(wei_/4.0+0.5); kk <= int(wei_/4.0*3.0+0.5); kk++)
-            {
-                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
-                        j + uu > WORLD_HEIGHT - 2)
-                    return;
-                s[i + kk + move_][j + uu] = 0;
-            }
-        }
-        else
-        {
-            for(int kk = 0; kk <= wei_; kk++)
-            {
-                if(i + kk + move_ < 0 || j + uu < 0 || i + kk + move_ >= WORLD_WIDTH ||
-                        j + uu > WORLD_HEIGHT - 2)
-                    return;
-                s[i + kk + move_][j + uu] = 0;
-            }
-        }
-        if(rand() % 6 == 0)
-            move_++;
-        if(rand() % 6 == 0)
-            move_--;
-        if(rand() % 15 == 0)
-            wei_++;
-        if(rand() % 15 == 0)
-            wei_--;
-    }
-}
-void make_skycave(int i)
-{
-    int j;
-    j = 100;
-    while(s[i][j] == 0 && j <300)
-    {
-       j++;
-    }
-    if(s[i][j] >= 19 && s[i][j] <= 23 || s[i][j] == 2|| s[i][j] == 24)return;
-    int move_ = 0;
-    int deep_ = rand() % 40 + 35;
-    int wei_ = rand() % 5 + 4;
-    bool dir = rand() % 2;
-    for(int uu = 0; uu <= deep_; uu++)
-    {
-    	if(uu==deep_)
-        {
-            for(int kk = wei_/4; kk <= wei_*3/4; kk++)
-        	{
-            if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
-                    j + kk + move_ >= WORLD_HEIGHT)
-                return;
-            s[i + kk + move_][j + uu] = 0;
-        	}
-        }else{
-        for(int kk = 0; kk <= wei_; kk++)
-        {
-            if(i + uu < 0 || j + kk + move_ < 0 || i + uu >= WORLD_WIDTH ||
-                    j + kk + move_ >= WORLD_HEIGHT)
-                return;
-            s[i + kk + move_][j + uu] = 0;
-        }}
-        if(dir == 0 && rand() % 8 == 0)
-            move_ += 2;
-        else if(rand() % (2 + dir * 10) == 0)
-            move_++;
-        if(dir == 1 && rand() % 8 == 0)
-            move_ -= 2;
-        else if(rand() % (2 + (1 - dir) * 10) == 0)
-            move_--;
-        if(rand() % 15 == 0)
-            dir = 1 - dir;
-        if(rand() % 15 == 0)
-            wei_++;
-        if(rand() % 15 == 0)
-            wei_--;
-    }
-}
-const int STRU_GX = WORLD_WIDTH / 5 + 20;
-short stru[STRU_GX][201];
-short maxlenth=10;
-const char struc[10][10][10]=
-{
-    {   {0,0,0,0,0},
-        {-1,-1,67,-1,-1},
-        {-1,-1,2,-1,-1},
-        {-1,-1,2,-1,-1},
-        {-2,-2,-2,-2,-2},
-    },
-    {   {0,0,0,0,0},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-2,-2,-2,-2,-2},
-    },
-    {   {0,0,0,0,0},
-        {0,0,0,-1,-1},
-        {0,0,-1,-1,-1},
-        {0,-1,-1,-1,-1},
-        {0,66,66,66,66},
-    },
-    {   {-1,-1,-1,-1,-2},
-        {-1,-1,-1,-2,0},
-        {-1,-1,-2,0,0},
-        {-1,-2,0,0,0},
-        {-2,0,0,0,0},
-    },
-
-    {   {0,0,0,0,0},
-        {-1,-1,0,0,0},
-        {-1,-1,-1,0,0},
-        {-1,-1,-1,-1,0},
-        {66,66,66,66,0},
-    },
-    {   {-2,-1,-1,-1,-1},
-        {0,-2,-1,-1,-1},
-        {0,0,-2,-1,-1},
-        {0,0,0,-2,-1},
-        {0,0,0,0,-2},
-    },
-
-    {   {0,0,0,0,0},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {66,66,66,66,66},
-    },
-    {   {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-1,-1,-1,-1,-1},
-        {-2,-2,-2,-2,-2},
-    },
-};
-void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr);
-void make_straight(bool isl,short leng,short i,short j)
-{
-    if(leng> maxlenth)return;
-    if(stru[i][j]!=0)return;
-    stru[i][j]=1;
-    if(isl==0)
-    {
-        if(rand()%3==0)
-        {
-            if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
-            else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);
-        }
-        else make_straight(isl,leng+1,i+1,j);
-    }
-    if(isl==1)
-    {
-        if(rand()%3==0)
-        {
-            if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
-            else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);
-        }
-        else make_straight(isl,leng+1,i-1,j);
-    }
-}
-void make_up_down(short isl,short leng,short i,short j,bool isu,short tlr)
-{
-    if(leng> maxlenth)return;
-    if(stru[i][j]!=0)return;
-    if(tlr==1)
-    {
-        if(isu)
-        {
-            if(isl)stru[i][j]=4;
-            else stru[i][j]=6;
-            if(stru[i][j-1]==0)stru[i][j-1]=3;
-        }
-        else
-        {
-            if(isl)stru[i][j]=5;
-            else stru[i][j]=3;
-            if(stru[i][j+1]==0)stru[i][j+1]=6;
-        }
-    }
-    else
-    {
-        if(isu)
-        {
-            if(isl)stru[i][j]=4;
-            else stru[i][j]=6;
-            if(stru[i][j-1]==0)stru[i][j-1]=5;
-        }
-        else
-        {
-            if(isl)stru[i][j]=5;
-            else stru[i][j]=3;
-            if(stru[i][j+1]==0)stru[i][j+1]=4;
-        }
-    }
-    if(isl==2)stru[i][j]=7+isu;
-    if(isl==0)
-    {
-        if(rand()%3==0)
-        {
-            if(rand()%2==0)make_up_down(rand()%3,leng+1,i+1,j+1,1,isl);
-            else make_up_down(rand()%3,leng+1,i+1,j-1,0,isl);
-        }
-        make_straight(isl,leng+1,i+1,j);
-    }
-    if(isl==1)
-    {
-        if(rand()%3==0)
-        {
-            if(rand()%2==0)make_up_down(rand()%3,leng+1,i-1,j+1,1,isl);
-            else make_up_down(rand()%3,leng+1,i-1,j-1,0,isl);
-        }
-        make_straight(isl,leng+1,i-1,j);
-    }
-    if(isl==2)
-    {
-        make_straight(isl,leng+1,i-1,j);
-        make_straight(isl,leng+1,i+1,j);
-    }
-}
-void make_mineshaft()
-{
-    memset(stru,0,sizeof(stru));
-    for(int i=1; i<=300; i++)
-    {
-        int ddx=rand()%(WORLD_WIDTH/5-50)+25,ddy=rand()%150+40;
-        maxlenth=20+rand()%16;
-        make_straight(1,0,ddx,ddy);
-        make_straight(0,0,ddx+1,ddy);
-    }
-    for(int jj=1; jj<=(WORLD_HEIGHT-1)/5-10; jj++)
-    {
-        for(int ii=10; ii<=(WORLD_WIDTH-1)/5-2; ii++)
-        {
-            if(stru[ii][jj]==1)
-            {
-                if(rand()%5<2)
-                {
-                    if(blocktouch[s[ii*5+2][jj*5]]==1);
-                    else
-                    {
-                        int ddy=5;
-                        stru[ii][jj]=2;
-                        while(blocktouch[s[ii*5+2][jj*5+ddy]]==0)s[ii*5+2][jj*5+ddy]=2,ddy++;
-                    }
-                }
-                else stru[ii][jj]=2;
-            }
-            for(int j=0; j<=4; j++)
-            {
-                for(int i=0; i<=8; i++)
-                {
-                    int ddx=ii*5+j,ddy=jj*5+i;
-                    if(stru[ii][jj]>0)
-                    {
-                        if(struc[stru[ii][jj]-1][i][j]==0)continue;
-                        if(struc[stru[ii][jj]-1][i][j]==-2)
-                        {
-                            if(blocktouch[s[ddx][ddy]]==0)s[ddx][ddy]=67;
-                            continue;
-                        }
-                        if(struc[stru[ii][jj]-1][i][j]==-1)
-                        {
-                            if(blocktouch[s[ddx][ddy]]==1||(s[ddx][ddy]>=19&&s[ddx][ddy]<=22)||(s[ddx][ddy]>=32&&s[ddx][ddy]<=34))s[ddx][ddy]=0;
-                            continue;
-                        }
-                        s[ddx][ddy]=struc[stru[ii][jj]-1][i][j];
-                    }
-                }
-            }
-        }
-    }
-}
-int alloc_box(int xxx, int yyy);
-void fill_box_loot(int idx);
-void add_box_item(int idx, int item, int count);
-void spawn_ebon_cave(int spawn_x,int spawn_y)
-{
-	const int s_out=60+rand()%9,s_mid=s_out-8-rand()%3,s_in=rand()%3+5;
-	int s_up,s_down;
-	for(int i=spawn_y-s_out;i<=spawn_y+s_out;i++)
-	{
-		for(int j=spawn_x-s_out;j<=spawn_x+s_out;j++)
-	{
-		s_up=spawn_y-(s_out/2.5)+abs(j-spawn_x)/4-4,s_down=spawn_y+(s_out/2.5)-abs(j-spawn_x)/4+2;
-		if(jl(i-spawn_y,j-spawn_x)<s_in-1)s[j][i]=68;
-		else if(jl(i-spawn_y,j-spawn_x)<s_in&&rand()%2==0)s[j][i]=68;
-		else if(jl(i-spawn_y,j-spawn_x)<s_mid-2){
-		if(i<s_up)s[j][i]=68;
-		else if(i<s_up+rand()%3&&rand()%2==0)s[j][i]=68;
-		else if(i>s_down)s[j][i]=68;
-		else if(i>s_down-rand()%3&&rand()%2==0)s[j][i]=68;
-		else s[j][i]=92;}
-		else if(jl(i-spawn_y,j-spawn_x)<s_mid&&rand()%2==0&&i<=s_up&&i>=s_down)s[j][i]=92;
-		else if(jl(i-spawn_y,j-spawn_x)<s_out-2&&abs(i-spawn_y)>3+rand()%3)s[j][i]=68;
-		else if(jl(i-spawn_y,j-spawn_x)<s_out&&rand()%2==0&&abs(i-spawn_y)>3+rand()%3)s[j][i]=68;
-		else if(jl(i-spawn_y,j-spawn_x)<s_out-2)s[j][i]=92;
-	}
-	}
-	s[spawn_x][spawn_y] = 40;
-    int idx = alloc_box(spawn_x, spawn_y);
-    add_box_item(idx, 37, rand()%10+10);
-}
-void try_spawn()
-{
-	for(int i=1;i<=WORLD_WIDTH/250;i++)
-	{
-		spawn_ebon_cave(i*250-180+rand()%110,300+rand()%630);
-	}
-}
-void make_lake(int i,bool isunder)
-{
-    int j=50;
-    bool islava;
-    if(rand()%2==0)islava=1;
-    else islava=0;
-    int wei_=rand()%13+5;
-    int dep=rand()%3+2;
-    int now_high=1,low=0;
-    if(isunder==0)
-    {
-        for(int uu = i-7,kk; uu <= i+wei_-7; uu++)
-        {
-            kk=50;
-            while(kk < WORLD_HEIGHT - 2)
-            {
-                kk++;
-                if((s[uu][kk] >= 19 && s[uu][kk] <= 23))
-                {
-                    return;
-                }
-                if(s[uu][kk]!=0)
-                {
-                    low=max(low,kk);
-                    break;
-                }
-            }
-        }
-        if(low==0)return;
-        j=low;
-    }
-    else j=rand()%700+200;
-    for(int uu = i-7; uu <= i+wei_-7; uu++)
-    {
-        for(int kk = j-2; kk <= j+1; kk++)
-        {
-            s[uu][kk]=0;
-        }
-        for(int kk = j-8; kk <= j-3; kk++)
-        {
-            if(s[uu][kk]==25||s[uu][kk]==2)s[uu][kk]=0;
-        }
-    }
-    for(int uu = i-8; uu <= i+wei_-6; uu++)
-    {
-        if(uu>=i-7&&uu<=i+wei_-7)
-        {
-            for(int kk = j; kk <= j+now_high; kk++)
-            {
-                if(islava==1)s[uu][kk]=32;
-                else s[uu][kk]=19;
-            }
-        }
-        for(int kk = j+now_high+1-(!(uu>=i-7&&uu<=i+wei_-7))*2; kk <= j+now_high+2; kk++)
-        {
-            if(islava==1||j>=200)s[uu][kk]=1;
-            else s[uu][kk]=5;
-        }
-        if(uu>=i-7&&uu<=i+wei_-7)
-        {
-            if(uu<=i-7+wei_/2&&now_high<dep)
-            {
-                if(rand()%5!=0)now_high++;
-            }
-            if(uu>i-7+wei_/2&&now_high>0)
-            {
-                if(rand()%5!=0)now_high--;
-            }
-        }
-    }
-}
 int night = 0, will_night = 0, will_light = 0;
 int now_time = 0;
 struct LightPos
@@ -1652,10 +970,12 @@ void dfs(int i, int j, int lt, int v)
     if(blocktouch[s[i][j]] == true)v = 3;
     else v = 1;
     light[i][j] = lt;
-    if(lt - v > light[i + 1][j])dfs(i + 1, j, lt - v, v);
-    if(lt - v > light[i - 1][j])dfs(i - 1, j, lt - v, v);
-    if(lt - v > light[i][j + 1])dfs(i, j + 1, lt - v, v);
-    if(lt - v > light[i][j - 1])dfs(i, j - 1, lt - v, v);
+    int nl = lt - v;
+    if(nl <= 0) return;
+    if(i + 1 < WORLD_WIDTH && nl > light[i + 1][j]) dfs(i + 1, j, nl, v);
+    if(i - 1 >= 0 && nl > light[i - 1][j]) dfs(i - 1, j, nl, v);
+    if(j + 1 < WORLD_HEIGHT && nl > light[i][j + 1]) dfs(i, j + 1, nl, v);
+    if(j - 1 >= 0 && nl > light[i][j - 1]) dfs(i, j - 1, nl, v);
 }
 void setlight()
 {
@@ -1781,44 +1101,11 @@ void atime()
 }
 void hujia_update()
 {
-    hujiazhi = 0;
-    // 胸甲 wear[1]: 铁27/金80/钻石57/下界84
-    if(wear[1] == 27)
-        hujiazhi += 6;
-    else if(wear[1] == 80)
-        hujiazhi += 5;
-    else if(wear[1] == 57)
-        hujiazhi += 8;
-    else if(wear[1] == 84)
-        hujiazhi += 9;
-    // 护腿 wear[2]: 铁28/金81/钻石58/下界85
-    if(wear[2] == 28)
-        hujiazhi += 5;
-    else if(wear[2] == 81)
-        hujiazhi += 4;
-    else if(wear[2] == 58)
-        hujiazhi += 6;
-    else if(wear[2] == 85)
-        hujiazhi += 7;
-    // 头盔 wear[3]: 铁29/金79/钻石56/下界83
-    if(wear[3] == 29)
-        hujiazhi += 2;
-    else if(wear[3] == 79)
-        hujiazhi += 1;
-    else if(wear[3] == 56)
-        hujiazhi += 3;
-    else if(wear[3] == 83)
-        hujiazhi += 4;
-    // 靴子 wear[4]: 铁30/金82/钻石59/下界86
-    if(wear[4] == 30)
-        hujiazhi += 2;
-    else if(wear[4] == 82)
-        hujiazhi += 1;
-    else if(wear[4] == 59)
-        hujiazhi += 3;
-    else if(wear[4] == 86)
-        hujiazhi += 4;
-    jianshang = 1 - hujiazhi * 0.04;
+    // 纯护甲值系统：护甲装备不再提供护甲/减伤
+    // 护甲值(hujiazhi)开局200，受伤时吸收伤害并扣减，不自然恢复，仅道具恢复
+    jianshang = 1;
+    if(hujiazhi > armorMax)
+        hujiazhi = armorMax;
 }
 void st(int type, int x, int y, int ra2)
 {
@@ -1841,28 +1128,7 @@ void st(int type, int x, int y, int ra2)
     if((s[x][y - 1] == 1 || s[x][y - 1] == 54) && rand() % ra2 == 0)
         s[x][y - 1] = type;
 }
-void st_nether(int type, int x, int y, int ra2)
-{
-    if(s2[x][y] == 39)
-        s2[x][y] = type;
-    if((s2[x + 1][y] == 39) && rand() % ra2 == 0)
-        s2[x + 1][y] = type;
-    if((s2[x - 1][y] == 39) && rand() % ra2 == 0)
-        s2[x - 1][y] = type;
-    if((s2[x + 1][y + 1] == 39) && rand() % ra2 == 0)
-        s2[x + 1][y + 1] = type;
-    if((s2[x - 1][y - 1] == 39) && rand() % ra2 == 0)
-        s2[x - 1][y - 1] = type;
-    if((s2[x + 1][y - 1] == 39) && rand() % ra2 == 0)
-        s2[x + 1][y - 1] = type;
-    if((s2[x - 1][y + 1] ==39) && rand() % ra2 == 0)
-        s2[x - 1][y + 1] = type;
-    if((s2[x][y + 1] ==39) && rand() % ra2 == 0)
-        s2[x][y + 1] = type;
-    if((s2[x][y - 1] ==39) && rand() % ra2 == 0)
-        s2[x][y - 1] = type;
-}
-int water = 0,last_l;
+int last_l;   // 世界吞噬者链式生成：上一节实体下标
 void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
 {
     l = 0;
@@ -1900,7 +1166,7 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
     {
         shiti[l].direction = shiti[l].HP;
         if(nbtt == 10)
-            boss2hp = 689;
+            boss2hp = hp;              // 血条与实际血量一致
         shiti[l].sd = 200, shiti[l].AI = 3;
     }
     else if(typ >= 9)
@@ -1910,481 +1176,45 @@ void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
     add_entity_to_hash(l, tx, ty);
     last_l=l;
 }
-void MAP_nether()
-{
-    HideCursor();
-    int a, moun = 0;
-    double now = 0;
-    int wmax = 0, wh = 0;
-    tall = 900;
-    memset(s2, 0, sizeof(s2));
-    for(int i = 0; i < WORLD_WIDTH; i++)
-    {
-        if(rand() % 15 == 0)
-            tall++;
-        if(rand() % 15 == 1)
-            tall--;
-        if(water <= 0)
-        {
-            if(rand() % 120 == 0)
-                water = 30 + rand() % 30, wmax = water, wh = tall + 1;
-        }
-        else if(water > wmax / 2)
-        {
-            tall += rand() % 2 + 1;
-            water--;
-        }
-        else
-        {
-            tall -= rand() % 2 + 1;
-            if(!(tall + 1 > wh && water == 1))
-                water--;
-        }
-        if(moun <= 0)
-        {
-            if(rand() % 150 == 0 && water <= 0)
-                moun = 14;
-        }
-        else if(moun > 7)
-            tall -= rand() % 2 + 1, moun--;
-        else if(moun <= 7)
-            tall += rand() % 2 + 1, moun--;
-        if(tall < 0)
-            tall = 0;
-        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
-        {
-            s2[i][j] = 39;
-        }
-        if(water > 0)
-        {
-            for(int j = tall + 1; j >= wh; j--)
-            {
-                s2[i][j] = 32;
-            }
-        }
-        if(rand() % 15 == 2 && water <= 0 && i >= 2 && i < WORLD_WIDTH - 2)
-        {
-            a = tall;
-            s2[i][tall] = 2;
-            tall--;
-            s2[i][tall] = 2;
-            tall--;
-            s2[i][tall] = 2;
-            while(rand() % 2 == 0)
-            {
-                tall--;
-                s2[i][tall] = 2;
-            }
-            if(rand() % 2 == 0)
-            {
-                s2[i - 1][tall - 1] = 23;
-                s2[i][tall - 1] = 23;
-                s2[i + 1][tall - 1] = 23;
-                s2[i - 1][tall] = 23;
-                s2[i + 1][tall] = 23;
-                s2[i - 1][tall - 2] = 23;
-                s2[i][tall - 2] = 23;
-                s2[i + 1][tall - 2] = 23;
-            }
-            else
-            {
-                s2[i - 1][tall - 1] = 23;
-                s2[i - 2][tall - 1] = 23;
-                s2[i][tall - 1] = 23;
-                s2[i + 1][tall - 1] = 23;
-                s2[i + 2][tall - 1] = 23;
-                s2[i - 2][tall] = 23;
-                s2[i - 1][tall] = 23;
-                s2[i + 1][tall] = 23;
-                s2[i + 2][tall] = 23;
-                s2[i - 2][tall - 2] = 23;
-                s2[i - 1][tall - 2] = 23;
-                s2[i][tall - 2] = 23;
-                s2[i + 1][tall - 2] = 23;
-                s2[i + 2][tall - 2] = 23;
-                s2[i - 1][tall - 3] = 23;
-                s2[i][tall - 3] = 23;
-                s2[i + 1][tall - 3] = 23;
-            }
-            tall = a;
-        }
-    }
-    Setpos(21, 13);
-    cout << " 正在创建下界...   ";
-    spawn_noise_nether();
-    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
-    {
-        if(i%(WORLD_WIDTH/10)==5){
-        Setpos2(70+i/(WORLD_WIDTH/10), 16);
-        printf("#");}
-        if(i%(WORLD_WIDTH/1000)==5){
-        Setpos(25, 18);
-		printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));}
-        now++;
-        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
-        {
-            if(noise_result[i][j]<-15)
-            {
-                if(rand()%100==0)s2[i][j]=32;
-                else s2[i][j]=39;
-            }
-        }
-    }
-    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
-    {
-        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
-        {
-            if(rand() % 300 == 0)
-                st_nether(63,i, j,3);
-        }
-        for(int j = WORLD_HEIGHT - 2; j >= 900; j--)
-        {
-            if(rand() % 1000 == 0)
-            {
-                s2[i][j]=69;
-                if(rand()%5<2)s2[i+rand()%3-1][j+rand()%3-1]=69;
-                if(rand()%5<2)s2[i+rand()%3-1][j+rand()%3-1]=69;
-            }
-        }
-    }
-    sky();
-}
-
-void spawn_chest(int xxx, int yyy);
-void fill_blocks(const int block_id,const int stx,const int sty,const int enx,const int eny)
-{
-	for(int i=stx;i<=enx;i++)
-	{
-		for(int j=sty;j<=eny;j++)
-		{
-			s[i][j]=block_id;
-		}
-	}
-}
-void make_tree(int i, int tall)
-{
-    if(boimes2[i] == 0)
-    {
-        s[i][tall] = 2;
-        tall--;
-        s[i][tall] = 2;
-        tall--;
-        s[i][tall] = 2;
-        while(rand() % 2 == 0)
-        {
-            tall--;
-            s[i][tall] = 2;
-        }
-        if(rand() % 2 == 0)
-        {
-            fill_blocks(23,i-1,tall-2,i+1,tall);
-            s[i][tall] = 2;
-        }
-        else
-        {
-        	fill_blocks(23,i-2,tall-2,i+2,tall);
-        	fill_blocks(23,i-1,tall-3,i+1,tall-3);
-        	s[i][tall] = 2;
-        }
-    }
-    else
-    {
-        s[i][tall] = 2;
-        tall--;
-        s[i][tall] = 2;
-        tall--;
-        s[i][tall] = 2;
-        if(rand() % 2 == 0)
-        {
-            tall--;
-            s[i][tall] = 2;
-        }
-        fill_blocks(23,i-2,tall-1,i+2,tall);
-        fill_blocks(23,i-1,tall-2,i+1,tall-2);
-        s[i][tall] = 2;
-        tall -= 3;
-        s[i][tall] = 2;
-        tall--;
-        s[i][tall] = 2;
-        while(rand() % 2 == 0)
-        {
-            tall--;
-            s[i][tall] = 2;
-        }
-		fill_blocks(23,i-1,tall-1,i+1,tall-1); 
-        s[i - 1][tall] = 23;
-        s[i + 1][tall] = 23;
-        s[i][tall - 2] = 23;
-    }
-}
-void make_eow();
+static void level_layout(int n);      // 前向声明：关卡布局计算
+static void build_level_terrain(int n);   // 前向声明：关卡地形建造
 void MAP()
 {
+    // 纯地牢模式：不再生成主世界地形，世界保持空白
     box.clear();
     boxlen = 0;
     memset(boimes, 0, sizeof(boimes));
     memset(boimes2, 0, sizeof(boimes2));
-    for(int i = 0; i < WORLD_WIDTH; i++)
-        boimes[i] = 0;
-    int a, mouns[64], mouns2[64], ran, js_ = 0, js_2 = 0;
-    for(int i = 50; i <= WORLD_WIDTH - 301; i++)
-    {
-        if(rand() % 700 == 0 && js_ < 64)
-        {
-            ran = rand() % 300 + 100;
-            for(int j = i - 25; j < i + ran; j++)
-                boimes[j] = 1;
-            mouns[js_] = i, mouns2[js_] = ran + i;
-            js_++;
-            i += ran;
-        }
-    }
-    for(int i = 50; i <= WORLD_WIDTH - 301; i++)
-    {
-        if(rand() % 700 == 0)
-        {
-            ran = rand() % 300 + 100;
-            for(int j = i - 25; j < i + ran; j++)
-                boimes2[j] = 2;
-            js_2++;
-            i += ran;
-        }
-    }
     memset(s, 0, sizeof(s));
     memset(s2, 0, sizeof(s2));
     memset(ep, 0, sizeof(ep));
     memset(shiti, 0, sizeof(shiti));
     memset(shiti2, 0, sizeof(shiti2));
-    for(int i = 0; i < WORLD_WIDTH; i++)
-        zs_ls[i] = 740;
-    perlin(400, 60);
-    perlin(400, 60);
-    perlin(200, 45);
-    perlin(100, 22);
-    perlin(50, 11);
-    perlin(25, 5);
-    perlin(12, 2);
-    for(int i = 0; i < js_; i++)
-    {
-        perlin_2(25, 30, mouns[i], mouns2[i], rand() % 4+2);
-        perlin_2(12, 10, mouns[i], mouns2[i], rand() % 3+2);
-        perlin_2(6, 5, mouns[i], mouns2[i], rand() % 2+2);
-    }
-    result();
-    if(oi)
-        make_st(5, 500, 8, WORLD_WIDTH / 2, 100);
+    clear_entity_hash();
     HideCursor();
     Clear_2();
     weidu = 1;
-    double now = 0;
     now_time = 0;
     night = 0;
-    int wmax = 0, wh = 0;
     tall = 149;
-    life = 20;
-    water=0;
+    life = lifeMax;
+    hujiazhi = armorMax;
     memset(beibao, 0, sizeof(beibao));
     Setpos(21, 13);
-    cout << "  正在生成主世界...";
-    spawn_noise_cave();
-    for(int i = 0; i < WORLD_WIDTH; i++)
-    {
-        tall = WORLD_HEIGHT - 1 - zs[i];
-        if(tall < 0) tall = 0;
-        if(i == WORLD_WIDTH / 2)
-            back_x = WORLD_WIDTH / 2, back_y = tall, x = WORLD_WIDTH / 2, y = tall;
-        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
-        {
-            int dirt = 5, store = 1;
-            bool ischeckboime=1;
-            for(int ii=0;ii<=4&&ischeckboime;ii++){
-            	if(boimes2[i + ii] == 2)
-            {
-                if(rand() % 5 < 5-ii)
-                    store = 54, dirt = 53,ischeckboime=0;
-            }
-			}
-            for(int ii=-4;ii<=-1&&ischeckboime;ii++){
-            if(boimes2[i + ii] == 2)
-            {
-                if(rand() % 5 < 5+ii)
-                    store = 54, dirt = 53,ischeckboime=0;
-            }
-			}
-            s[i][j] = store;
-            if(j == WORLD_HEIGHT - 1)
-                s[i][j] = 10;
-            if(boimes[i] == 1 && tall < 100)
-                continue;
-            if(boimes[i] == 1 && tall <= 105)
-            {
-                if(j <= tall + (tall - 100))
-                    s[i][j] = dirt;
-                if(j <= tall + 1 + (tall - 100) && rand() % 2 == 0)
-                    s[i][j] = dirt;
-                continue;
-            }
-            if(tall > 160 && tall <= 165)
-            {
-                if(j <= 165)
-                    s[i][j] = dirt;
-                if(j <= 166 && rand() % 2 == 0)
-                    s[i][j] = dirt;
-            }
-            else
-            {
-                if(j <= tall + 6 && tall < 165)
-                    s[i][j] = dirt;
-                if(j <= tall + 7 && tall < 165 && rand() % 2 == 0)
-                    s[i][j] = dirt;
-            }
-        }
-        if(tall >= 160)
-        {
-            for(int j = tall + 1; j >= 160; j--)
-                s[i][j] = 19;
-        }
-        else if(rand() % 15 == 2 && water <= 0 && i > 2 && i < WORLD_WIDTH - 2 &&
-                (!(boimes[i] == 1 && tall < 100)))
-        {
-            make_tree(i, tall);
-        }
-    }
-    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
-    {
-        for(int j = 995; j >= 125; j--)
-        {
-            if(rand() % 450 == 0)
-                st(3, i, j, 2);
-            if(j > 165 && rand() % (700 - int(j * 0.3)) == 0)
-                st(4, i, j, 3);
-            if(boimes2[i] == 0)
-                if(rand() % 1000 == 0)
-                    st(5, i, j, 2);
-            if(boimes2[i] == 2)
-                if(rand() % 400 == 0)
-                    stt(i, j, rand() % 8);
-            if(j > 250)
-            {
-                if(rand() % (800- int(j * 0.3)) == 0)
-                    st(62, i, j, 4);
-            }
-            if(j > 350)
-            {
-                if(rand() % (1000 - int(j * 0.5)) == 0)
-                    st(12, i, j, 5);
-            }
-        }
-        if(boimes[i] == 1)
-        {
-            for(int j = 175; j >= 15; j--)
-            {
-                if(rand() % (235 + int(j)) == 0)
-                    st(3, i, j, 2);
-                if(rand() % (485 + int(j)) == 0)
-                    st(4, i, j, 3);
-            }
-        }
-    }
-    Setpos(11, 15);
-    for(int i = 0; i < 58; i++)
-        cout << "-";
-    Setpos(11, 17);
-    for(int i = 0; i < 58; i++)
-        cout << "-";
-    Setpos(10, 16);
-    cout << " |";
-    Setpos(39, 16);
-    cout << "  |";
-    int df = 0;
-    for(int i = 5; i <= WORLD_WIDTH - 6; i++)
-    {
-        if(df != int(now * 50.0 / (WORLD_WIDTH - 10)))
-            Setpos2(int(now * 50.0 / (WORLD_WIDTH - 10)) + 22, 16), printf("#");
-        df = int(now * 50.0 / (WORLD_WIDTH - 10));
-        if(i%(WORLD_WIDTH/1000)==5)
-		{
-        	Setpos(25, 18);
-			printf("%.1lf%%", now * 100.0 / (WORLD_WIDTH - 10));
-		}
-        now++;
-        if(rand() % 200 == 0)
-        {
-            Make_deep(i);
-        }
-        if(rand() % 200 == 0)
-        {
-            make_skycave(i);
-        }
-        for(int j = 995; j >= 1030 - zs[i]; j--)
-        {
-            if(noise_result[i][j]<-25+(j-1030+zs[i])*0.02){
-			s[i][j]=0;}
-            if(rand() % 4000 == 0)
-                noodle_cave(i, j);
-        }
-        for(int j = 1029 - zs[i]; j >= WORLD_HEIGHT - 1 - zs[i];j--)
-        {
-            if(noise_result[i][j]<-25+(j-1030+zs[i])*2)s[i][j]=0;
-        }
-    }
-    sweep_floating_snow(1);
-    for(int i = 20; i <= WORLD_WIDTH - 21; i++)
-    {
-    	for(int j = 995; j >= 1030 - zs[i]; j--)
-        {
-            if(rand() % 12000 == 0)
-                Make_water(i, j, rand()%50);
-            if(rand() % 18000 == 0&&j>300) Make_lava(i, j, 30+rand()%20);
-        }
-        if(rand() % 10 == 0)
-        {
-            if(rand() % 10 == 0)
-            {
-                make_lake(i,0);
-            }
-            else make_lake(i,1);
-        }
-    }
-    make_mineshaft();
-    try_spawn();
-    for(int i = 10; i <= WORLD_WIDTH - 11; i++)
-    {
-        for(int j = 200; j <= 950; j++)
-        {
-            if(rand() % 12000 == 0)
-            {
-                spawn_chest(i, j);
-            }
-        }
-        if(rand() % 250 == 0)
-        {
-            for(int t = 0; t < 2; t++)
-            {
-                int ry = 200 + rand() % 750;
-                spawn_chest(i, ry);
-            }
-        }
-    }
-    Clear_formap();
-    MAP_nether();
-    sky();
-    if(godeater)
-        make_eow();
-    // ===== 元气骑士地牢：主世界关卡传送门（用火把表示）=====
-    portal_x = WORLD_WIDTH / 2 + 6;
-    // 找到地表（第一个实体方块）
-    int portal_ground = -1;
-    for(int j = 0; j < WORLD_HEIGHT; j++)
-        if(blocktouch[s[portal_x][j]] >= 1) { portal_ground = j; break; }
-    if(portal_ground < 0) portal_ground = 100;
-    // 清空地表上方几格，确保入口可进入
-    for(int j = portal_ground; j >= portal_ground - 3 && j >= 0; j--)
-        s[portal_x][j] = 0;
-    portal_y = portal_ground - 1;
-    s[portal_x][portal_y] = 16;   // 火把作为关卡传送门
+    cout << "  正在准备地牢...";
+    // 玩家初始位置（会被 enter_level 覆盖）
+    x = 9007; y = 507;
+    back_x = 9007; back_y = 507;
+    portal_x = 20; portal_y = -1;
+    memset(wear, 0, sizeof(wear));
+    // ===== 预生成全部10个关卡地形（随世界保存，布局持久） =====
+    for(int lvl = 1; lvl <= 10; lvl++)
+        build_level_terrain(lvl);
+    // 恢复第1关布局参数（build_level_terrain循环后layOff等停留在第10关）
+    level_layout(1);
+    mark_all_dirty();
+    setlight();
 }
-
 void swap_map(bool ismakedoor=1)
 {
     if(weidu == 1)
@@ -2498,6 +1328,16 @@ void pr_mouse(int i,int j)
     	printbuf("[]",i,j);
 	}
 }
+// 判断坐标(dx,dy)是否属于当前地牢关卡范围（外围墙矩形内一律白底，消除房间旁黑色空洞）
+static bool lvl_ground(int gdx, int gdy)
+{
+    if(layCount <= 0) return false;
+    int maxC = 1;
+    for(int L = 0; L < layCount; L++)
+        if(layRooms[L] > maxC) maxC = layRooms[L];
+    return gdx >= levelStartX && gdx <= levelStartX + maxC * 20 &&
+           gdy >= levelStartY && gdy <= levelStartY + layCount * 14;
+}
 void Updateblock(bool ismap,int i,int j)
 {
     if(ismap && !ep[dx][dy])
@@ -2535,7 +1375,18 @@ void Updateblock(bool ismap,int i,int j)
     {
         if(light[dx][dy] > 0 || abs(jl(dx - To_int(x), dy - To_int(y))) < 4)
         {
-            if(weidu == 1)
+            if(inDungeon)
+            {
+                if(lvl_ground(dx, dy))
+                    Color3(-1,i,j);      // 关卡地面/过道：白色
+                else
+                    Color3(0,i,j);       // 关卡外空白背景：黑色
+            }
+            else if(weidu == 2)
+            {
+                Color3(0,i,j);
+            }
+            else if(weidu == 1)
             {
                 Color3(-1,i,j);
             }
@@ -2631,7 +1482,18 @@ void Ubformap(int pt, bool ex,int i,int j)
     }
     else if(pt == 0)
     {
-        if(weidu == 1)
+        if(inDungeon)
+        {
+            if(lvl_ground(dx, dy))
+                Color3(-1,i,j);      // 关卡地面/过道：白色
+            else
+                Color3(0,i,j);       // 关卡外空白背景：黑色
+        }
+        else if(weidu == 2)
+        {
+            Color3(0,i,j);
+        }
+        else if(weidu == 1)
         {
             Color3(-1,i,j);
         }
@@ -2663,6 +1525,18 @@ void Print()
     if(boimes2[To_int(x)]!=last_boi)air_();
     last_boi=boimes2[To_int(x)];
     vector<int> nearby_entities;
+    // 相机跨格时整体失效渲染缓存：关卡地面底色依赖世界坐标（lvl_ground），
+    // 滚动后屏幕格仍复用旧位置的黑/白底，造成永不消失的黑边（部分渲染残留）
+    {
+        static int lastcx = -1, lastcy = -1;
+        int ncx = int(jx + 0.5), ncy = int(jy + 0.5);
+        if(ncx != lastcx || ncy != lastcy)
+        {
+            memset(painting, -1, sizeof(painting));
+            lastcx = ncx;
+            lastcy = ncy;
+        }
+    }
     for(int j = 0; j <= printy; j++)
     {
         for(int i = 0; i <= printx; i++)
@@ -2682,7 +1556,7 @@ void Print()
                 {
                     painting[i][j][0] = 17;
                     painting[i][j][1] = 17;
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Color3(-4,i,j);
                     if(i == 25)
                     {
@@ -2701,7 +1575,7 @@ void Print()
                 {
                     painting[i][j][0] = 17;
                     painting[i][j][1] = 17;
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Color3(0,i,j);
                     if(i == 25)
                     {
@@ -2726,17 +1600,17 @@ void Print()
                         continue;
                     painting[i][j][0] = 21;
                     painting[i][j][1] = 21;
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Color3(-4,i,j);
                     if(i == 25)
                     {
                         if(boss2hp >= 100)
-                            printf("%d", ((int)(boss2hp)) / 10);
+                            printbuf(to_string(((int)boss2hp) / 10),i,j);
                         else
-                            printf("%d", int(boss2hp));
+                            printbuf(to_string((int)boss2hp)+" ",i,j);
                     }
                     else if(i == 26 && boss2hp >= 100)
-                        printf("%d ", ((int)(boss2hp)) % 10);
+                        printbuf(to_string(((int)boss2hp) % 10)+" ",i,j);
                     else
                         printbuf("  ",i,j);
                     continue;
@@ -2748,17 +1622,17 @@ void Print()
                         continue;
                     painting[i][j][0] = 20;
                     painting[i][j][1] = 20;
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Color3(0,i,j);
                     if(i == 25)
                     {
                         if(boss2hp >= 100)
-                            printf("%d", ((int)(boss2hp)) / 10);
+                            printbuf(to_string(((int)boss2hp) / 10),i,j);
                         else
-                            printf("%d", int(boss2hp));
+                            printbuf(to_string((int)boss2hp)+" ",i,j);
                     }
                     else if(i == 26 && boss2hp >= 100)
-                        printf("%d ", ((int)(boss2hp)) % 10);
+                        printbuf(to_string(((int)boss2hp) % 10)+" ",i,j);
                     else
                         printbuf("  ",i,j);
                     continue;
@@ -2796,7 +1670,7 @@ void Print()
                         {
                             painting[i][j][0] = 1500+shiti[k].type*10+shiti[k].nbt;
                             painting[i][j][1] = 1500;
-                            Setpos(i, j);
+                            // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                             Color3(1,i,j);
                             if(shiti[k].type == 1)
                                 printbuf("ZZ",i,j);
@@ -2856,7 +1730,13 @@ void Print()
                                     Color3(12,i,j);
                                 else
                                     Color3(0,i,j);
-                                printf("%d",int(shiti[k].maxHP + 0.5));
+                                // 双缓冲：printf直写控制台会被帧尾WriteConsoleOutput覆盖（从未可见）；
+                                // 改写charInfo，实体格显示血量前两位
+                                {
+                                    string hp2 = to_string(int(shiti[k].maxHP + 0.5));
+                                    if(hp2.size() < 2) hp2 += " ";
+                                    printbuf(hp2.substr(0, 2), i, j);
+                                }
                             }
                             else if(shiti[k].type >= 14 && shiti[k].type <= 22)
                             {
@@ -2893,7 +1773,7 @@ void Print()
                 {
                     painting[i][j][0] = 1000;
                     painting[i][j][1] = 1000;
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Color3(1,i,j);
                     printbuf("{}",i,j);
                 }
@@ -2915,7 +1795,7 @@ void Print()
                         s[dx][dy] ||
                         (painting[i][j][1] > 0) != (light[dx][dy] > 0))
                 {
-                    Setpos(i, j);
+                    // 双缓冲：Color3/printbuf直写charInfo，Setpos是纯浪费的控制台syscall
                     Updateblock(0,i,j);
                 }
                 painting[i][j][0] = s[dx][dy];
@@ -2934,12 +1814,25 @@ void Print()
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
    COORD bufferSize = {(short)xlen, (short)ylen};
    COORD bufferCoord = {0, 0};
-   SMALL_RECT writeRegion = {0,0, (short)(0+xlen),(short)(0+ylen)};
+   // writeRegion必须与bufferSize一致（Right/Bottom为包含边界）：{0,0,xlen-1,ylen-1}
+   // 原来写成{xlen,ylen}会多写一行一列未初始化数据（黑块），且覆盖行43+的HUD区域
+   SMALL_RECT writeRegion = {0,0, (short)(xlen-1),(short)(ylen-1)};
    WriteConsoleOutput(hConsole, charInfo, bufferSize, bufferCoord, &writeRegion);
 }
 LARGE_INTEGER frequency;
 LARGE_INTEGER lastTime;
 int frameCount = 0;
+// 高精度帧门控：clock()在Windows上粒度约15.6ms，15ms门槛实际在15~31ms间抖动，
+// 60帧档实测只有30~45帧；QPC微秒级精度消除抖动
+static double qpc_ms()
+{
+    LARGE_INTEGER t;
+    if(frequency.QuadPart == 0)
+        QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&t);
+    return (double)t.QuadPart * 1000.0 / (double)frequency.QuadPart;
+}
+static double g_last_frame_ms = -1;
 float fps = 0;
 // 初始化帧率计数器
 void InitFPSCounter()
@@ -3022,7 +1915,9 @@ void printformap()
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
    COORD bufferSize = {(short)xlen, (short)ylen};
    COORD bufferCoord = {0, 0};
-   SMALL_RECT writeRegion = {0,0, (short)(0+xlen),(short)(0+ylen)};
+   // writeRegion必须与bufferSize一致（Right/Bottom为包含边界）：{0,0,xlen-1,ylen-1}
+   // 原来写成{xlen,ylen}会多写一行一列未初始化数据（黑块），且覆盖行43+的HUD区域
+   SMALL_RECT writeRegion = {0,0, (short)(xlen-1),(short)(ylen-1)};
    WriteConsoleOutput(hConsole, charInfo, bufferSize, bufferCoord, &writeRegion);
 }
 void openmap()
@@ -3033,6 +1928,10 @@ void openmap()
     std::fill(&light[0][0], &light[0][0] + (size_t)WORLD_WIDTH * WORLD_HEIGHT,
               (short)15);
     sf = 1;
+    // 上一帧鼠标位置：必须在循环外声明，否则每帧都是未初始化值（帧末赋值随作用域销毁）
+    POINT p0 = GetMousePos();
+    int mprx = To_int(p0.x / 2 - 26);
+    int mpry = To_int(p0.y - 14);
     while(1)
     {
         if(clock() - Clocknum >= 0)
@@ -3044,7 +1943,6 @@ void openmap()
             p = GetMousePos();
             mpx = To_int(p.x / 2 - 26);
             mpy = To_int(p.y - 14);
-            int mprx, mpry;
             if(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
             {
                 while(GetAsyncKeyState('M') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
@@ -3107,215 +2005,6 @@ void openmap()
         //Sleep(1);
     }
 }
-constexpr char BIN_MAGIC[] = "2DMCBIN";
-constexpr int BIN_VERSION = 2;
-
-// 旧存档世界尺寸（用于v1二进制格式兼容）
-constexpr int OLD_WORLD_W = 5001;
-constexpr int OLD_WORLD_H = 1001;
-
-// 为扩展的区域生成地形（旧存档加载时，x从from_x到WORLD_WIDTH-1的新区域）
-void expand_world(int from_x)
-{
-    if(from_x >= WORLD_WIDTH) return;
-    int start_biome = from_x > 50 ? from_x : 50;
-    // 为新列生成生物群系
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        boimes[i] = 0;
-        boimes2[i] = 0;
-    }
-    for(int i = start_biome; i <= WORLD_WIDTH - 301; i++)
-    {
-        if(rand() % 700 == 0)
-        {
-            int ran = rand() % 300 + 100;
-            for(int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
-                boimes[j] = 1;
-            i += ran;
-        }
-    }
-    for(int i = start_biome; i <= WORLD_WIDTH - 301; i++)
-    {
-        if(rand() % 700 == 0)
-        {
-            int ran = rand() % 300 + 100;
-            for(int j = i - 25; j < i + ran && j < WORLD_WIDTH; j++)
-                boimes2[j] = 2;
-            i += ran;
-        }
-    }
-    // 生成全范围高度图（perlin需要全范围）
-    for(int i = 0; i < WORLD_WIDTH; i++)
-        zs_ls[i] = 785;
-    perlin(200, 60);
-    perlin(100, 30);
-    perlin(50, 15);
-    perlin(25, 7);
-    perlin(12, 3);
-    result();
-    // 新旧区域高度图在接缝处平滑过渡，避免出现垂直悬崖
-    if(from_x > 0)
-    {
-        int old_surface = WORLD_HEIGHT - 2;
-        for(int j = 0; j < WORLD_HEIGHT - 1; j++)
-        {
-            short b = s[from_x - 1][j];
-            if(b != 0 && b != 11 && !(b >= 19 && b <= 23) && !(b >= 32 && b <= 34))
-            {
-                old_surface = j;
-                break;
-            }
-        }
-        int blend = WORLD_WIDTH - from_x;
-        if(blend > 200)
-            blend = 200;
-        for(int i = from_x; i < from_x + blend; i++)
-        {
-            double t = (i - from_x + 1.0) / blend;
-            int new_surface = WORLD_HEIGHT - 1 - zs[i];
-            int surf = (int)(old_surface * (1.0 - t) + new_surface * t + 0.5);
-            if(surf < 0)
-                surf = 0;
-            if(surf > WORLD_HEIGHT - 1)
-                surf = WORLD_HEIGHT - 1;
-            zs[i] = (short)(WORLD_HEIGHT - 1 - surf);
-        }
-    }
-    // 仅为新列生成主世界地形
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        tall = WORLD_HEIGHT - 1 - zs[i];
-        for(int j = WORLD_HEIGHT - 1; j >= tall + 1; j--)
-        {
-            int dirt = 5, store = 1;
-            if(boimes2[i] == 2) store = 54, dirt = 53;
-            s[i][j] = store;
-            if(j == WORLD_HEIGHT - 1) s[i][j] = 10;
-            if(tall > 160 && tall <= 165)
-            {
-                if(j <= 165) s[i][j] = dirt;
-            }
-            else
-            {
-                if(j <= tall + 6 && tall < 165) s[i][j] = dirt;
-            }
-        }
-        if(tall >= 160)
-        {
-            for(int j = tall + 1; j >= 160; j--)
-                s[i][j] = 19;
-        }
-    }
-    // 新列种树
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        if(i <= 2 || i >= WORLD_WIDTH - 2)
-            continue;
-        int t = WORLD_HEIGHT - 1 - zs[i];
-        if(t < 0)
-            t = 0;
-        if(t >= 160)
-            continue;
-        if(boimes[i] == 1 && t < 100)
-            continue;
-        if(rand() % 15 == 2)
-            make_tree(i, t);
-    }
-    // 新列放置矿石
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        for(int j = 995; j >= 125; j--)
-        {
-            if(rand() % 450 == 0) st(3, i, j, 2);
-            if(j > 165 && rand() % (700 - int(j * 0.3)) == 0) st(4, i, j, 3);
-            if(boimes2[i] == 0 && rand() % 1000 == 0) st(5, i, j, 2);
-            if(j > 250 && rand() % (800 - int(j * 0.3)) == 0) st(62, i, j, 4);
-            if(j > 350 && rand() % (1000 - int(j * 0.5)) == 0) st(12, i, j, 5);
-        }
-    }
-    // 新列生成洞穴
-    spawn_noise_cave();
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        if(rand() % 400 == 0) Make_deep(i);
-        if(rand() % 300 == 0) make_skycave(i);
-        for(int j = 995; j >= 1030 - zs[i]; j--)
-        {
-            if(noise_result[i][j] < -45) s[i][j] = 0;
-            if(rand() % 12000 == 0) Make_water(i, j, rand()%50);
-            if(rand() % 18000 == 0&&j>300) Make_lava(i, j, 30+rand()%20);
-            if(rand() % 4000 == 0) noodle_cave(i, j);
-        }
-    }
-    sweep_floating_snow(from_x);
-    // 新列生成湖泊
-    for(int i = from_x; i <= WORLD_WIDTH - 21; i++)
-    {
-        if(i < 20) continue;
-        if(rand() % 10 == 0)
-        {
-            if(rand() % 10 == 0)
-                make_lake(i, 0);
-            else
-                make_lake(i, 1);
-        }
-    }
-    // 新列生成下界地形
-    for(int i = from_x; i < WORLD_WIDTH; i++)
-    {
-        int ntall = 900;
-        if(rand() % 15 == 0) ntall++;
-        if(rand() % 15 == 1) ntall--;
-        if(ntall < 0) ntall = 0;
-        for(int j = WORLD_HEIGHT - 1; j >= ntall + 1; j--)
-            s2[i][j] = 39;
-    }
-    spawn_noise_nether();
-    for(int i = (from_x > 5 ? from_x : 5); i <= WORLD_WIDTH - 6; i++)
-    {
-        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
-        {
-            if(noise_result[i][j] < -15)
-            {
-                if(rand() % 100 == 0) s2[i][j] = 32;
-                else s2[i][j] = 39;
-            }
-        }
-        for(int j = WORLD_HEIGHT - 2; j >= 900; j--)
-        {
-            if(rand() % 1000 == 0)
-            {
-                s2[i][j] = 69;
-                if(rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
-                if(rand() % 5 < 2) s2[i + rand() % 3 - 1][j + rand() % 3 - 1] = 69;
-            }
-        }
-        for(int j = WORLD_HEIGHT - 6; j >= 0; j--)
-        {
-            if(rand() % 300 == 0) st_nether(63, i, j, 3);
-        }
-    }
-    // 新列生成宝箱
-    for(int i = from_x; i <= WORLD_WIDTH - 11; i++)
-    {
-        if(i < 10) continue;
-        for(int j = 200; j <= 950; j++)
-        {
-            if(rand() % 12000 == 0)
-                spawn_chest(i, j);
-        }
-        if(rand() % 250 == 0)
-        {
-            for(int t = 0; t < 2; t++)
-            {
-                int ry = 200 + rand() % 750;
-                spawn_chest(i, ry);
-            }
-        }
-    }
-    mark_all_dirty();
-}
 
 // RAII：FILE* 句柄守卫，任何 return 路径自动 fclose
 struct FileGuard
@@ -3331,142 +2020,7 @@ struct FileGuard
     FileGuard &operator=(const FileGuard &) = delete;
 };
 
-// 通用2D数组读取：从文件读取sw×sh的数据，拷贝到cur_w×cur_h的数组中
-// 过大忽略，过小保留原值（由调用者后续生成）
-template<typename T>
-void fread_2d_compat(FILE *fp, T *arr, int cur_w, int cur_h, int sw, int sh)
-{
-    int copy_w = (sw < cur_w) ? sw : cur_w;
-    int copy_h = (sh < cur_h) ? sh : cur_h;
-    vector<unsigned char> tmp((sh > 0 ? sh : 1) * sizeof(T));
-    for(int i = 0; i < sw; i++)
-    {
-        if(sh > 0) fread(tmp.data(), sizeof(T), sh, fp);
-        if(i < copy_w)
-        {
-            for(int j = 0; j < copy_h; j++)
-                memcpy(&arr[i * cur_h + j], &tmp[(size_t)j * sizeof(T)], sizeof(T));
-        }
-    }
-}
 
-bool load_binary(const char *filename)
-{
-    FileGuard fg(fopen(filename, "rb"));
-    if(!fg.fp) return false;
-    FILE *fp = fg.fp;
-    char magic[7];
-    if(fread(magic, 1, 7, fp) != 7)
-        return false;
-    if(memcmp(magic, BIN_MAGIC, 7) != 0)
-        return false;
-    int version;
-    fread(&version, sizeof(int), 1, fp);
-    int saved_w, saved_h;
-    bool ep_bug = false;
-    if(version == 1)
-    {
-        // 旧版格式：固定5001×1001，ep有bug（写了5001*5001而非5001*1001）
-        saved_w = OLD_WORLD_W;
-        saved_h = OLD_WORLD_H;
-        ep_bug = true;
-    }
-    else
-    {
-        // v2+：从文件头读取维度
-        fread(&saved_w, sizeof(int), 1, fp);
-        fread(&saved_h, sizeof(int), 1, fp);
-    }
-    // 读取地形数据（过大忽略，过小保留）
-    fread_2d_compat(fp, &s[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
-    fread_2d_compat(fp, &s2[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
-    fread(beibao, sizeof(int), 101 * 2, fp);
-    for(int i = 0; i < 101; i++)
-        if(beibao[i][0] < 0 || beibao[i][0] > 91)
-            beibao[i][0] = 0, beibao[i][1] = 0;
-    fread(&weidu, sizeof(int), 1, fp);
-    fread(&x, sizeof(double), 1, fp);
-    fread(&y, sizeof(double), 1, fp);
-    fread(&back_x, sizeof(int), 1, fp);
-    fread(&back_y, sizeof(int), 1, fp);
-    fread(&life, sizeof(double), 1, fp);
-    fread(&now_time, sizeof(int), 1, fp);
-    fread(&night, sizeof(int), 1, fp);
-    fread(&will_night, sizeof(int), 1, fp);
-    fread(&will_light, sizeof(int), 1, fp);
-    fread(shiti, sizeof(guaiwu), 500, fp);
-    fread(shiti2, sizeof(guaiwu), 500, fp);
-    fread(wear, sizeof(int), 6, fp);
-    fread(&ed, sizeof(int), 1, fp);
-    // 读取ep数据
-    if(ep_bug)
-    {
-        // v1: ep被写成了 saved_w × saved_w（bug），实际有效数据只有 saved_w × saved_h
-        // 需要读取 saved_w*saved_w 个bool，但只取前 saved_w*saved_h 个
-        int ep_total = saved_w * saved_w;       // 文件中的总量
-        int ep_valid_rows = saved_w;            // 有效行数
-        int ep_valid_cols = saved_h;            // 有效列数
-        vector<char> tmp(ep_valid_cols);
-        for(int i = 0; i < ep_valid_rows; i++)
-        {
-            fread(tmp.data(), sizeof(bool), ep_valid_cols, fp);
-            if(i < WORLD_WIDTH)
-            {
-                for(int j = 0; j < ep_valid_cols && j < WORLD_HEIGHT; j++)
-                    ep[i][j] = tmp[j];
-            }
-        }
-        // 跳过文件中ep的剩余垃圾数据
-        int ep_remaining = ep_total - ep_valid_rows * ep_valid_cols;
-        if(ep_remaining > 0)
-            fseek(fp, ep_remaining * sizeof(bool), SEEK_CUR);
-    }
-    else
-    {
-        // v2+: ep尺寸正确，直接用通用函数读取
-        fread_2d_compat(fp, &ep[0][0], WORLD_WIDTH, WORLD_HEIGHT, saved_w, saved_h);
-    }
-    int box_count;
-    fread(&box_count, sizeof(int), 1, fp);
-    box.clear();
-    boxlen = box_count;
-    for(int i = 0; i < box_count; i++)
-    {
-        unsigned short bx, by;
-        unsigned short things[27];
-        fread(&bx, sizeof(unsigned short), 1, fp);
-        fread(&by, sizeof(unsigned short), 1, fp);
-        fread(things, sizeof(unsigned short), 27, fp);
-        box.push_back({{0}, bx, by});
-        memcpy(box.back().things, things, sizeof(things));
-        for(int j = 0; j < 27; j++)
-            if(box.back().things[j] % 1000 > 91)
-                box.back().things[j] = 0;
-    }
-    fread(&boss2hp, sizeof(double), 1, fp);
-    // 读取boimes（旧格式固定5005，v2+为saved_w+5）
-    int boimes_count = (version == 1) ? 5005 : (saved_w + 5);
-    vector<short> btmp(boimes_count);
-    fread(btmp.data(), sizeof(short), boimes_count, fp);
-    for(int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
-        boimes[i] = btmp[i];
-    fread(btmp.data(), sizeof(short), boimes_count, fp);
-    for(int i = 0; i < boimes_count && i < WORLD_WIDTH + 5; i++)
-        boimes2[i] = btmp[i];
-    // 如果存档世界比当前世界小，生成新区域地形
-    if(saved_w < WORLD_WIDTH)
-    {
-        expand_world(saved_w);
-    }
-    clear_entity_hash();
-    for(int i = 0; i < 500; i++)
-    {
-        if(shiti[i].type > 0)
-            add_entity_to_hash(i, shiti[i].gx, shiti[i].gy);
-    }
-    setlight();
-    return true;
-}
 
 // ===================== v3 分块存档格式（2DMCBNK） =====================
 // 布局：32B 文件头 + 157 个固定偏移列块（s/s2/ep，可原地重写）+ 文件尾 META 标签流
@@ -3621,6 +2175,9 @@ static void build_meta(vector<unsigned char> &m)
         for(int t = 0; t < 24 && t < 32; t++) extrai[11 + t] = talents[t];
         extrai[35] = portal_x;   // 存档传送门坐标（加载后恢复，否则传送门失效）
         extrai[36] = portal_y;
+        extrai[37] = lifeMax;    // 生命/护甲上限与当前护甲值（天赋加成持久化）
+        extrai[38] = armorMax;
+        extrai[39] = hujiazhi;
         buf_tag(m, TAG_EXTRA, extrai, sizeof(extrai));
     }
     buf_u16(m, TAG_END);
@@ -4017,6 +2574,11 @@ static bool load_binary_v3(const char *filename)
                 double dv[4];
                 memcpy(dv, p, 32);
                 x = dv[0], y = dv[1], life = dv[2], boss2hp = dv[3];
+                // META 损坏/截断时 dv 可能是垃圾值，之后 s[int(x)][int(y)]、
+                // boimes2[To_int(x)] 都会变成野指针访问 → 必须钳位
+                if(!(x >= 0 && x <= WORLD_WIDTH - 1)) x = WORLD_WIDTH / 2;
+                if(!(y >= 0 && y <= WORLD_HEIGHT - 1)) y = 500;
+                if(!(life >= 0 && life <= 2000)) life = 200;
             }
             break;
         case TAG_INTS:
@@ -4027,6 +2589,14 @@ static bool load_binary_v3(const char *filename)
                 weidu = iv[0], back_x = iv[1], back_y = iv[2], ed = iv[3];
                 now_time = iv[4], night = iv[5], will_night = iv[6],
                 will_light = iv[7];
+                if(weidu != 1 && weidu != 2) weidu = 1;
+                if(back_x < 0 || back_x >= WORLD_WIDTH) back_x = 9007;
+                if(back_y < 0 || back_y >= WORLD_HEIGHT) back_y = 507;
+                // ed 只作除数用（rand() % To_int(ed/1.2) 等），<=1 会 SIGFPE
+                if(ed != 4000 && ed != 6000 && ed != 8000) ed = 6000;
+                if(night < 0 || night > 1) night = 0;
+                if(will_night < 0 || will_night > 1) will_night = 0;
+                if(will_light < 0 || will_light > 1) will_light = 0;
             }
             break;
         case TAG_BEIBAO:
@@ -4034,7 +2604,7 @@ static bool load_binary_v3(const char *filename)
             {
                 memcpy(beibao, p, sizeof(int) * 202);
                 for(int i = 0; i < 101; i++)
-                    if(beibao[i][0] < 0 || beibao[i][0] > 103)
+                    if(beibao[i][0] < 0 || beibao[i][0] > 113)
                         beibao[i][0] = 0, beibao[i][1] = 0;
             }
             break;
@@ -4069,7 +2639,7 @@ static bool load_binary_v3(const char *filename)
                         memcpy(&b.by, q + 2, 2);
                         memcpy(b.things, q + 4, sizeof(b.things));
                         for(int j = 0; j < 27; j++)
-                            if(b.things[j] % 1000 > 103)
+                            if(b.things[j] % 1000 > 113)
                                 b.things[j] = 0;
                         box.push_back(b);
                     }
@@ -4114,19 +2684,29 @@ static bool load_binary_v3(const char *filename)
                         if(ei[35] > 0 && ei[35] < WORLD_WIDTH) portal_x = ei[35];
                         if(ei[36] > 0 && ei[36] < WORLD_HEIGHT) portal_y = ei[36];
                     }
-                    // 若存档时身处地牢：房间墙体/坐标未持久化，加载后强制回到主世界，
-                    // 避免地牢状态不完整导致卡死或刷错怪
-                    if(inDungeon)
+                    // 恢复生命/护甲上限与当前护甲值（旧档默认200）
+                    if(n >= 40)
                     {
+                        if(ei[37] >= 200 && ei[37] <= 2000) lifeMax = ei[37];
+                        if(ei[38] >= 200 && ei[38] <= 2000) armorMax = ei[38];
+                        if(ei[39] > 0 && ei[39] <= armorMax) hujiazhi = ei[39];
+                        else hujiazhi = armorMax;
+                    }
+                    else
+                        hujiazhi = armorMax;
+                    // 纯地牢模式：存档加载后一律直接重新进入关卡
+                    // （房间墙体/怪物状态不持久化，重进保证结构完整）
+                    // 旧档/建档瞬间的存档 inDungeon=0 且 curLevel=0，若不重进会
+                    // 把玩家留在空主世界坐标上（黑屏卡死），进度看似"没保存"
+                    {
+                        int rl = currentLevel > 0 ? currentLevel : 1;
+                        if(levelUnlocked < 1) levelUnlocked = 1;
+                        if(rl > levelUnlocked) rl = levelUnlocked;
                         inDungeon = false;
                         roomActive = false;
-                        currentLevel = 0;
-                        currentRoom = 0;
                         roomWavesLeft = roomWaveCD = roomWavesDone = roomWavesTotal = 0;
-                        lvl_x0 = lvl_x1 = lvl_y0 = lvl_y1 = 0;
-                        x = portal_x;
-                        y = portal_y;
-                        spx = 0; spy = 0; fell = y;
+                        void enter_level(int n);   // 前向声明
+                        enter_level(rl);
                     }
                 }
             }
@@ -4135,6 +2715,28 @@ static bool load_binary_v3(const char *filename)
             break;
         }
         off += len;
+    }
+    // TAG_EXTRA 可能在 TAG_DOUBLES 之后才恢复 lifeMax/armorMax/energyMax，
+    // 上限相关的钳位只能等整份 META 解析完再做
+    if(lifeMax < 200 || lifeMax > 2000) lifeMax = 200;
+    if(armorMax < 200 || armorMax > 2000) armorMax = 200;
+    if(energyMax <= 0) energyMax = 100;
+    if(!(life >= 0) || life > lifeMax) life = lifeMax;
+    if(!(hujiazhi >= 0) || hujiazhi > armorMax) hujiazhi = armorMax;
+    if(!(energy >= 0) || energy > energyMax) energy = energyMax;
+    // 实体同样来自存档：type/AI 非法或坐标越界都会让 st_move 用垃圾值索引 s[]
+    for(int i = 0; i < 500; i++)
+    {
+        guaiwu *e[2] = {&shiti[i], &shiti2[i]};
+        for(int k = 0; k < 2; k++)
+        {
+            if(e[k]->type == 0)
+                continue;
+            if(e[k]->type < 1 || e[k]->type > 22 || e[k]->AI < 0 || e[k]->AI > 5 ||
+                    !(e[k]->gx >= 0) || e[k]->gx > WORLD_WIDTH - 1 ||
+                    !(e[k]->gy >= 0) || e[k]->gy > WORLD_HEIGHT - 1)
+                memset(e[k], 0, sizeof(guaiwu));
+        }
     }
     clear_entity_hash();
     for(int i = 0; i < 500; i++)
@@ -4180,14 +2782,7 @@ static bool load_world(const string &nam)
             save_world(nam, true);
         return true;
     }
-    if(n >= 7 && memcmp(mg, BIN_MAGIC, 7) == 0)
-    {
-        if(!load_binary(path.c_str()))
-            return false;
-        mark_all_dirty();
-        return true;
-    }
-    return false;
+    return false;   // 仅支持v3格式（2DMCBNK）；v2旧档为地牢改版前主世界存档，不再兼容
 }
 
 int r;
@@ -4361,70 +2956,7 @@ void add_box_item(int idx, int item, int count)
         }
     }
 }
-void fill_box_loot(int idx)
-{
-    int rolls = 2 + rand() % 3;
-    for(int r = 0; r < rolls; r++)
-    {
-        int roll = rand() % 100;
-        if(roll < 30)
-            add_box_item(idx, 3, 3 + rand() % 8);
-        else if(roll < 55)
-            add_box_item(idx, 4, 2 + rand() % 6);
-        else if(roll < 70)
-            add_box_item(idx, 16, 4 + rand() % 10);
-        else if(roll < 78)
-            add_box_item(idx, 7, 1);
-        else if(roll < 86)
-            add_box_item(idx, 8, 1);
-        else if(roll < 92)
-            add_box_item(idx, 13, 1 + rand() % 3);
-        else if(roll < 95)
-            add_box_item(idx, 24, 1);
-        else if(roll < 97)
-            add_box_item(idx, 55, 1 + rand() % 2);
-        else if(roll < 99)
-        {
-            add_box_item(idx, 41, 1);
-            add_box_item(idx, 44, 6 + rand() % 10);
-        }
-        else
-            add_box_item(idx, 12, 1);
-    }
-    if(rand() % 4 == 0)
-        add_box_item(idx, 42, 1 + rand() % 3);
-    if(rand() % 8 == 0)
-        add_box_item(idx, 43, 1 + rand() % 2);
-    // 金苹果：稀有箱子战利品
-    if(rand() % 16 == 0)
-        add_box_item(idx, 91, 1);
-}
-bool can_place_chest(int xxx, int yyy)
-{
-    if(xxx <= 2 || xxx >= WORLD_WIDTH - 2 || yyy <= 5 || yyy >= WORLD_HEIGHT - 6)
-        return false;
-    if(s[xxx][yyy] != 0)
-        return false;
-    if(!(s[xxx][yyy - 1] == 0 || s[xxx][yyy - 1] == 11))
-        return false;
-    int below = s[xxx][yyy + 1];
-    if(below == 0 || below == 11)
-        return false;
-    if((below >= 19 && below <= 22) || (below >= 32 && below <= 34))
-        return false;
-    if(s[xxx][yyy] == 40 || s[xxx - 1][yyy] == 40 || s[xxx + 1][yyy] == 40 ||
-            s[xxx][yyy - 1] == 40 || s[xxx][yyy + 1] == 40)
-        return false;
-    return true;
-}
-void spawn_chest(int xxx, int yyy)
-{
-    if(!can_place_chest(xxx, yyy))
-        return;
-    s[xxx][yyy] = 40;
-    int idx = alloc_box(xxx, yyy);
-    fill_box_loot(idx);
-}
+void enter_level(int n);              // 前向声明：存档加载后重进关卡
 bool read(string nam)
 {
     save_system_flush();
@@ -4432,7 +2964,7 @@ bool read(string nam)
 }
 void Start()
 {
-    life = 20;
+    life = lifeMax;
     l_life=30;
     l_beibao[1][0]=100;
     if(weidu==2)
@@ -4567,11 +3099,13 @@ void wajue(int sx, int sy)
             wjlv = 6;
         if(wjlv >= blocklv[s[sx][sy]])
         {
-            int U;
+            int U = 0;
+            bool removeBlock = false;
             if(s[sx][sy] == 103)   // 关卡金矿：挖出金币
             {
                 add_coins(2 + rand() % 4);
                 wj = 0;
+                removeBlock = true;   // 金币不进背包，U 恒为 0，必须单独标记移除
             }
             else if(s[sx][sy]!=63)
             {
@@ -4583,7 +3117,8 @@ void wajue(int sx, int sy)
             }
             else
             {
-                for(int i=1; i<=rand()%5+2; i++)
+                int dropn = rand() % 5 + 2;
+                for(int i = 1; i <= dropn; i++)
                 {
                     U = getbeibao(65);
                     if(U != 0)
@@ -4614,7 +3149,7 @@ void wajue(int sx, int sy)
                     }
                 }
             }
-            if(U != 0)
+            if(removeBlock || U != 0)
             {
                 s[sx][sy] = 0;
                 mark_dirty_col(sx);
@@ -4693,7 +3228,7 @@ void block_(int xxx, int yyy)
     if(beibao[cho][0] == 6 || beibao[cho][0] == 7 || beibao[cho][0] == 8 ||
             beibao[cho][0] == 13 || beibao[cho][0] == 14 || beibao[cho][0] == 15 ||
             beibao[cho][0] == 18 || beibao[cho][0] == 17 || beibao[cho][0] == 25 ||
-            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||(beibao[cho][0]>=70&&beibao[cho][0]!=87&&beibao[cho][0]!=90))
+            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||(beibao[cho][0]>=70&&beibao[cho][0]!=87&&beibao[cho][0]!=90)||(beibao[cho][0]>=94&&beibao[cho][0]<=101)||(beibao[cho][0]>=105&&beibao[cho][0]<=112))
         return;
     if((s[xxx + 1][yyy] == 0 || s[xxx + 1][yyy] == 11 ||
             (s[xxx + 1][yyy] >= 19 && s[xxx + 1][yyy] <= 22) ||
@@ -4760,97 +3295,6 @@ void block_(int xxx, int yyy)
     }
     setlight();
     Clear();
-}
-void gohome()
-{
-    if(inDungeon)
-    {
-        // 从地牢返回主世界，重置关卡状态
-        inDungeon = false;
-        roomActive = false;
-        currentLevel = 0;
-        currentRoom = 0;
-    }
-    // 检查重生点床是否存在
-    if(s[back_x][back_y] == 90)
-    {
-        x = back_x, y = back_y - 1;
-        if(weidu==2)
-        {
-            swap_map(0);
-        }
-        shuaxin();
-    }
-    else
-    {
-        // 床被挖走，无法传送
-        Setpos(1, 31);
-        Color(0);
-        cout << " 无法传送：重生点床已被挖走                                ";
-    }
-}
-int step__;
-void x_touch()
-{
-    short pb = s[int(x + 0.5)][int(y + 0.5)];
-    if(blocktouch[pb] == 1)
-    {
-        step__ = 1;
-        while(step__ < 60)
-        {
-            x -= 0.03 * step__;
-            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
-                break;
-            x += 0.06 * step__;
-            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
-                break;
-            x -= 0.03 * step__;
-            if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] != 1)
-                break;
-            step__++;
-        }
-        if(spx > 0)
-            x -= 0.03;
-        spx = 0;
-    }
-}
-void y_touch()
-{
-    short pb = s[int(x + 0.5)][int(y + 0.5)];
-    if(blocktouch[pb] == 2&&y-int(y)>0.5)
-    {
-        if(spy > 0&&my!=-1)
-        {
-            if((y - fell) > 10)
-                life -= (y - fell - 10) * 0.5;
-            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 2&&y-int(y)>0.5)
-                y -= 0.05;
-            fell = y;
-            jump = 0;
-            spy = 0;
-            pb = s[int(x + 0.5)][int(y + 0.5)];
-        }
-    }
-    if(blocktouch[pb] == 1)
-    {
-        if(spy > 0)
-        {
-            if((y - fell) > 10)
-                life -= (y - fell - 10) * 0.5;
-            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
-                y -= 0.1;
-            fell = y;
-            jump = 0;
-            spy = 0;
-        }
-        if(spy < 0)
-        {
-            while(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] == 1)
-                y += 0.1;
-            spy = 3;
-            jump = 5;
-        }
-    }
 }
 void SetClean()
 {
@@ -4984,9 +3428,10 @@ void execute_command(const string &cmd)
     }
     else if(cmd_name == "heal" || cmd_name == "/heal")
     {
-        life = 20;
+        life = lifeMax;
+        hujiazhi = armorMax;
         Setpos(1, 31);
-        cout << " 生命已恢复                                                    ";
+        cout << " 生命/护甲已恢复                                               ";
     }
     else if(cmd_name == "life" || cmd_name == "/life")
     {
@@ -5459,6 +3904,10 @@ void make_jian(double tx, double ty, double stx, double sty, int nbt_)
 int QQQQ = 0;
 void try_make_st()
 {
+    if(inDungeon) return;   // 地牢内不刷主世界野怪（怪物由关卡波次控制）
+    // ed 在本函数里只作除数（rand() % To_int(ed/1.2) 等三处），
+    // 合法值只有 4000/6000/8000；损坏存档让 ed<=2 时第一个刷怪 tick 就 SIGFPE
+    if(ed != 4000 && ed != 6000 && ed != 8000) ed = 6000;
     for(int i = To_int(x) - 120; i <= To_int(x) + 120; i++)
     {
         for(int j = To_int(y) - 80; j <= To_int(y) + 80; j++)
@@ -5558,6 +4007,8 @@ void try_make_st()
 int dire;
 int gj;
 int Step;
+void thing_fall(int many_, int get);   // 前向声明：st_kill 中掉落暗影鳞片
+void enter_level(int n);              // 前向声明：死亡后重进关卡
 void st_kill(int l)
 {
     if(shiti[l].type == 4 && (shiti[l].nbt == 1 || shiti[l].nbt == 3))
@@ -5576,6 +4027,7 @@ void st_kill(int l)
     }
     if(shiti[l].AI == 4)
     {
+        thing_fall(rand() % 2 + 1, 105);   // 掉落暗影鳞片（beta1.8同步）
         if(l==shiti[l].conl)
         {
             if(shiti[shiti[l].conr].type==11)
@@ -5616,6 +4068,8 @@ void st_kill(int l)
             else shiti[shiti[l].conr].type=9,shiti[shiti[l].conr].conl=shiti[l].conr;
         }
     }
+    if(shiti[l].type == 8)
+        boss2hp = 0;   // Boss死亡：清血条，防止屏幕残留黑白块
     remove_entity_from_hash(l, shiti[l].gx, shiti[l].gy);
     shiti[l] = {0};
 }
@@ -5641,12 +4095,17 @@ void st_kill_fall(int l)
     if(shiti[l].type == 3)
     {
         thing_fall(rand() % 2 + 1, 44);
-        if(rand() % 5 == 0)
-            thing_fall(1, 42);
+        if(rand() % 10 == 0)
+            thing_fall(1, 41);   // 10%掉木弓（beta1.8同步）
     }
     if(shiti[l].type == 6)
     {
         thing_fall(rand() % 2 + 1, 42);
+    }
+    if(shiti[l].type == 7)
+    {
+        thing_fall(rand() % 2 + 1, 37);   // 僵尸猪灵：腐肉+金粒（beta1.8同步）
+        thing_fall(rand() % 2 + 1, 65);
     }
     if(shiti[l].type ==5)
     {
@@ -5656,11 +4115,11 @@ void st_kill_fall(int l)
     if(shiti[l].type == 12)
     {
         thing_fall(1, 87);
-        thing_fall(1, 88);
+        thing_fall(rand() % 2 + 1, 88);
     }
     if(shiti[l].type == 13)
     {
-        thing_fall(rand() % 2 + 1, 89);
+        thing_fall(rand() % 3 + 1, 89);
     }
     // 击杀掉落金币 (30% 概率 1-3 金币)
     if(shiti[l].type >= 1 && shiti[l].type <= 13 && shiti[l].type != 4 && shiti[l].type != 12 && shiti[l].type != 13)
@@ -5671,6 +4130,16 @@ void st_kill_fall(int l)
     // 天赋：击败回蓝 / 击败回血
     if(hasTalent(T_KILLEN)) energy = min(energyMax, energy + 5);
     if(hasTalent(T_KILLHP)) life += 1;
+    // 基础机制：击杀怪物概率回蓝/回血（匹配200血/200蓝体系）
+    if(shiti[l].type >= 1 && shiti[l].type <= 13 && shiti[l].type != 12 && shiti[l].type != 13)
+    {
+        if(rand() % 100 < 30)                       // 30%回蓝
+            energy = min(energyMax, energy + 8 + rand() % 8);
+        if(rand() % 100 < 25)                       // 25%回血
+            life = min((double)lifeMax, life + 4 + rand() % 5);
+        if(hasTalent(T_ARMORREP) && rand() % 100 < 10)  // 破甲修复天赋：10%回护甲
+            hujiazhi = min(armorMax, hujiazhi + 5);
+    }
     st_kill(l);
 }
 void damage(double dmg,int fromx,bool noKnockback = false)
@@ -5686,7 +4155,16 @@ void damage(double dmg,int fromx,bool noKnockback = false)
             if(rand() % 100 < 30) { spend_coins(1); dmg *= 0.5; }
         }
         if(hasTalent(T_ARMORREP)) dmg *= 0.9;
-        life -= dmg * jianshang;
+        // 护甲吸收：先扣护甲，护甲耗尽后剩余伤害扣血
+        if(hujiazhi > 0)
+        {
+            int absorb = hujiazhi;
+            if((double)absorb > dmg)
+                absorb = (int)dmg;
+            hujiazhi -= absorb;
+            dmg -= absorb;
+        }
+        life -= dmg;
         if(!noKnockback)
         {
             spx=((fromx<x)*2-1)*6;
@@ -5694,20 +4172,33 @@ void damage(double dmg,int fromx,bool noKnockback = false)
         }
         if(life <= 0)
         {
-            if(inDungeon)
+            if(inDungeon || currentLevel > 0)
             {
-                // 地牢死亡：返回主世界并重置关卡状态（保留已解锁进度/天赋/金币）
-                inDungeon = false;
-                roomActive = false;
-                currentLevel = 0;
-                currentRoom = 0;
+                // 纯地牢模式死亡：重新回到当前关第一个房间（满状态重开本关）
+                int lvl = currentLevel > 0 ? currentLevel : 1;
+                Setpos(1, 31);
+                Color(0);
+                cout << " 你死了！重新挑战第 " << lvl << " 关                          ";
+                life = lifeMax;
+                hujiazhi = armorMax;
+                energy = energyMax;
+                spx = 0;
+                spy = 0;
+                wudi = 60;
+                enter_level(lvl);
+                memset(painting, 114, sizeof(painting));
+                shuaxin();
             }
-            Start();
-            life = 20;
-            spx = 0;
-            spy = 0;
-            jump = 0;
-            shuaxin();
+            else
+            {
+                Start();
+                life = lifeMax;
+                hujiazhi = armorMax;
+                spx = 0;
+                spy = 0;
+                jump = 0;
+                shuaxin();
+            }
         }
     }
 }
@@ -6249,15 +4740,8 @@ static bool ai1_attacks(int l, double old_gx, double old_gy)
                             jl(abs(shiti[l].gx - x), abs(shiti[l].gy - y) * 3)))
             {
                 shiti[l].CD = 0;
-                double ttx, tty, total, px, py;
-                ttx = abs(x - shiti[l].gx);
-                tty = abs(y - shiti[l].gy);
-                total = ttx + tty + 0.001;
-                px = ttx / total;
-                py = tty / total;
-                if(x - shiti[l].gx < 0) px *= -1;
-                if(y - shiti[l].gy < 0) py *= -1;
-                make_jian(shiti[l].gx, shiti[l].gy - 0.75, 30 * px, 50 * py, 0);
+                double ang = atan2(y - shiti[l].gy, x - shiti[l].gx);
+                make_jian(shiti[l].gx, shiti[l].gy - 0.75, 50 * cos(ang), 50 * sin(ang), 0);
             }
         }
         return true;
@@ -6439,6 +4923,7 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     {
         shiti[l].spgx *= 0.995;
         shiti[l].gx += shiti[l].spgx * 0.03;
+        // 顶视角模式：箭矢不受重力，保持直线飞行
     }
     else
     {
@@ -6455,7 +4940,7 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     if(abs(x - shiti[l].gx) < 0.75 && abs(y - shiti[l].gy) < 0.75 &&
             shiti[l].nbt != 2 && shiti[l].nbt != 3 && shiti[l].nbt != 6 && shiti[l].nbt != 7)
     {
-        damage(3, shiti[l].gx, true);   // 箭矢命中不击退玩家
+        damage(5 + currentLevel, shiti[l].gx, true);   // 箭矢命中不击退玩家（伤害随关卡提升）
         update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
         st_kill(l);
         return false;
@@ -6475,7 +4960,7 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
                         shiti[LL].spgx = ((shiti[LL].gx - x > 0) * 2 - 1) * 0.4;
                     }
                     if(!(shiti[LL].type == 5 && shiti[LL].islife2 == 1))
-                        shiti[LL].HP -= 5;
+                        shiti[LL].HP -= 25;   // 箭伤害匹配200血体系
                     update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
                     if(shiti[LL].HP <= 0)
                     {
@@ -6539,14 +5024,13 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     }
     if(shiti[l].nbt <= 3)
     {
-        shiti[l].spgy += g;
-        shiti[l].gy += shiti[l].spgy * 0.02;
-        shiti[l].spgy *= 0.98;
+        shiti[l].gy += shiti[l].spgy * 0.03;   // 与x轴同比例：直线飞行
+        shiti[l].spgy *= 0.995;
     }
     else
     {
         if(shiti[l].nbt == 5) shiti[l].gy += g;
-        shiti[l].gy += shiti[l].spgy * 0.02;
+        shiti[l].gy += shiti[l].spgy * 0.03;   // 子弹y轴与x轴同比例：直线飞行
     }
     eb = ent_block(l, ex, ey);
     if(blocktouch[eb] == true && shiti[l].nbt != 4 && shiti[l].nbt != 5)
@@ -6558,7 +5042,7 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     if(abs(x - shiti[l].gx) < 0.75 && abs(y - shiti[l].gy) < 0.75 &&
             shiti[l].nbt != 2 && shiti[l].nbt != 3 && shiti[l].nbt != 6 && shiti[l].nbt != 7)
     {
-        damage(3, shiti[l].gx, true);   // 箭矢命中不击退玩家
+        damage(5 + currentLevel, shiti[l].gx, true);   // 箭矢命中不击退玩家（伤害随关卡提升）
         update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
         st_kill(l);
         return false;
@@ -6851,7 +5335,7 @@ static void ai_passive(int l, double old_gx, double old_gy)
                 if(dd < 1.8 && shiti[l].CD <= 0)
                 {
                     shiti[l].CD = 25;
-                    shiti[tgt].HP -= 6 + currentLevel * 2;
+                    shiti[tgt].HP -= 30 + currentLevel * 10;   // 随从伤害匹配200血体系
                     if(shiti[tgt].HP <= 0 && shiti[tgt].type != 8)
                         st_kill_fall(tgt);   // Boss由其AI分裂逻辑处理
                 }
@@ -7076,6 +5560,13 @@ int open_;
 short color_change = 0;
 void bb(short nowwz, short chos, bool change_)
 {
+    // 合法槽位：背包 1..30，箱子 -29..-5（对应 things[0..24]）。
+    // 死区 [-4,0] 会让 things[29+c_thing] 落到箱子的 bx/by 甚至结构体外，
+    // 而 bx/by 存的是世界坐标（如 9415），%1000 后可达 999 → 越界读 test[150]
+    bool okw = (nowwz >= 1 && nowwz <= 30) || (nowwz >= -29 && nowwz <= -5);
+    bool okc = (chos >= 1 && chos <= 30) || (chos >= -29 && chos <= -5);
+    if(!okw || !okc)
+        nowwz = chos = 31;   // 31 匹配不到任何渲染格，等于「不高亮，只重绘」
     for(int j = 10; j <= 20; j += 2)
     {
         Setpos(17 - change_ * 2, j + 5 + change_ * 3);
@@ -7206,6 +5697,8 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
         cout << " 钻石胸甲 ";
     else if(wear[1] == 84)
         cout << " 下界胸甲 ";
+    else if(wear[1] == 107)
+        cout << " 暗影胸甲 ";
     else
         cout << " 胸甲位   ";
     Setpos(19, 12);
@@ -7217,6 +5710,8 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
         cout << " 钻石护腿 ";
     else if(wear[2] == 85)
         cout << " 下界护腿 ";
+    else if(wear[2] == 108)
+        cout << " 暗影护腿 ";
     else
         cout << " 护腿位   ";
     Setpos(24, 9);
@@ -7228,6 +5723,8 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
         cout << " 钻石头盔 ";
     else if(wear[3] == 83)
         cout << " 下界头盔 ";
+    else if(wear[3] == 106)
+        cout << " 暗影头盔 ";
     else
         cout << " 头盔位   ";
     Setpos(24, 12);
@@ -7239,6 +5736,8 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
         cout << " 钻石靴子 ";
     else if(wear[4] == 86)
         cout << " 下界靴子 ";
+    else if(wear[4] == 109)
+        cout << " 暗影靴子 ";
     else
         cout << " 靴子位  ";
     for(int j = 10; j <= 20; j += 2)
@@ -7437,6 +5936,66 @@ void craft_update(int num, bool isprintback = 0, bool ischangecolor = 0)
         Setpos(6, 24);
         cout << "  上一页";
     }
+    else if(num == 8)
+    {
+        Setpos(6, 7);
+        cout << " 合成配方：";
+        Setpos(6, 8);
+        cout << "  4木板+2铁锭->锻造台";
+        Setpos(6, 9);
+        cout << "  腐化石块->4腐化石墙";
+        Setpos(6, 10);
+        cout << "  5暗影鳞片->暗影头盔";
+        Setpos(6, 11);
+        cout << "  8暗影鳞片->暗影胸甲";
+        Setpos(6, 12);
+        cout << "  7暗影鳞片->暗影护腿";
+        Setpos(6, 13);
+        cout << "  4暗影鳞片->暗影靴子";
+        Setpos(6, 14);
+        cout << "  10暗影鳞片->魔光剑";
+        Setpos(6, 15);
+        cout << "  8暗影鳞片->恶魔弓";
+        Setpos(6, 16);
+        cout << "  5暗影鳞片+5金锭";
+        Setpos(6, 17);
+        cout << "  ->魔光护符";
+        Setpos(6, 24);
+        cout << "  上一页";
+    }
+    else if(num == 7)
+    {
+        Setpos(6, 7);
+        cout << " 升级配方：";
+        Setpos(6, 8);
+        cout << "  钻石镐+下界锭 ";
+        Setpos(6, 9);
+        cout << "  ->下界镐";
+        Setpos(6, 10);
+        cout << "  钻石剑+下界锭 ";
+        Setpos(6, 11);
+        cout << "  ->下界剑";
+        Setpos(6, 12);
+        cout << "  钻石斧+下界锭 ";
+        Setpos(6, 13);
+        cout << "  ->下界斧";
+        Setpos(6, 14);
+        cout << "  钻石头盔+下界锭 ";
+        Setpos(6, 15);
+        cout << "  ->下界头盔";
+        Setpos(6, 16);
+        cout << "  钻石胸甲+下界锭 ";
+        Setpos(6, 17);
+        cout << "  ->下界胸甲";
+        Setpos(6, 18);
+        cout << "  钻石护腿+下界锭 ";
+        Setpos(6, 19);
+        cout << "  ->下界护腿";
+        Setpos(6, 20);
+        cout << "  钻石靴子+下界锭 ";
+        Setpos(6, 21);
+        cout << "  ->下界靴子";
+    }
 }
 short AN;
 bool wear_things(int wid,int tplace,int cc,int c_thing,int upd)
@@ -7592,6 +6151,10 @@ void movethings(int upd)
                     else if(wear_things(85,2,cc,c_thing,upd));
                     else if(wear_things(83,3,cc,c_thing,upd));
                     else if(wear_things(86,4,cc,c_thing,upd));
+                    else if(wear_things(107,1,cc,c_thing,upd));
+                    else if(wear_things(108,2,cc,c_thing,upd));
+                    else if(wear_things(106,3,cc,c_thing,upd));
+                    else if(wear_things(109,4,cc,c_thing,upd));
                     else if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
                               int((mpx + 12) / 4 + 0.5) < 1 ||
                               int(mpy / 2 * 5 + 0.5) > 26 ||
@@ -7624,6 +6187,10 @@ void movethings(int upd)
             {
                 craft_update(2,0,1);
             }
+            else if(upd==7)
+            {
+                craft_update(7,0,1);   // 锻造台升级界面
+            }
             else if(page == 1)
                 craft_update(1, 0, 1);
             else if(page == 2)
@@ -7632,7 +6199,9 @@ void movethings(int upd)
                 craft_update(4, 0, 1);
             else if(page == 4)
                 craft_update(6, 0, 1);
-            else craft_update(5, 0, 1);
+            else if(page == 5)
+                craft_update(5, 0, 1);
+            else craft_update(8, 0, 1);
         }
     }
 }
@@ -7730,7 +6299,8 @@ void moveinbox()
                         c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
                         if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
                                 int((mpx + 12) / 4 + 0.5) < 1 ||
-                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12) &&
+                                (c_thing < -4 || c_thing > 0))
                             bb(c_thing, cc, 1);
                     }
                     if(KEY_DOWN(VK_LBUTTON))
@@ -7741,7 +6311,8 @@ void moveinbox()
                         c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
                         if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
                                 int((mpx + 12) / 4 + 0.5) < 1 ||
-                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12) &&
+                                (c_thing < -4 || c_thing > 0))
                         {
                             if((cc != c_thing))
                             {
@@ -8132,6 +6703,34 @@ void craft_2()
     setlight();
     memset(painting, 114, sizeof(painting));
 }
+void craft_3()
+{
+    bag=1;
+    craft_update(7, 1);
+    AN = 0;
+    page = 7;
+    while(1)
+    {
+        if(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+        {
+            while(GetAsyncKeyState('E') & 0x8000 || GetAsyncKeyState(VK_ESCAPE))
+                Sleep(1);
+            bag=0;
+            break;
+        }
+        movethings(7);
+        zz(-5, 1, 15, 1, 71, 72, 1, 7);   // 钻石镐+下界锭->下界镐
+        zz(-3, 1, 49, 1, 71, 73, 1, 7);   // 钻石剑+下界锭->下界剑
+        zz(-1, 1, 50, 1, 71, 74, 1, 7);   // 钻石斧+下界锭->下界斧
+        zz(1, 1, 56, 1, 71, 83, 1, 7);    // 钻石头盔+下界锭->下界头盔
+        zz(3, 1, 57, 1, 71, 84, 1, 7);    // 钻石胸甲+下界锭->下界胸甲
+        zz(5, 1, 58, 1, 71, 85, 1, 7);    // 钻石护腿+下界锭->下界护腿
+        zz(7, 1, 59, 1, 71, 86, 1, 7);    // 钻石靴子+下界锭->下界靴子
+        Sleep(1);
+    }
+    setlight();
+    memset(painting, 114, sizeof(painting));
+}
 void craft_1()
 {
     bag=1;
@@ -8158,7 +6757,9 @@ void craft_1()
             movethings(4);
         else if(page == 4)
             movethings(6);
-        else movethings(5);
+        else if(page == 5)
+            movethings(5);
+        else movethings(8);
         if(page == 1)
         {
             if(mpy == -5 && mpx < -9)
@@ -8241,7 +6842,7 @@ void craft_1()
             zz(-5, 1, 58, 1, 71, 85, 1, 6);
             zz(-3, 1, 59, 1, 71, 86, 1, 6);
         }
-        else
+        else if(page == 5)
         {
             zz(-5, 2, 6, 3, 64, 76, 1, 5);
             zz(-4, 1, 6, 2, 64, 77, 1, 5);
@@ -8252,10 +6853,23 @@ void craft_1()
             zz2(1, 4, 64, 82, 1, 5);
             zz(2, 8, 64, 1, 55, 91, 1, 5);
         }
+        else
+        {
+            // 第6页：锻造台/暗影装备（beta1.8同步）
+            zz(-5, 2, 13, 4, 67, 104, 1, 8);    // 2铁锭+4木板->锻造台
+            zz2(-4, 1, 68, 92, 4, 8);           // 腐化石块->4腐化石墙
+            zz2(-3, 5, 105, 106, 1, 8);         // 5暗影鳞片->暗影头盔
+            zz2(-2, 8, 105, 107, 1, 8);         // 8暗影鳞片->暗影胸甲
+            zz2(-1, 7, 105, 108, 1, 8);         // 7暗影鳞片->暗影护腿
+            zz2(0, 4, 105, 109, 1, 8);          // 4暗影鳞片->暗影靴子
+            zz2(1, 10, 105, 110, 1, 8);         // 10暗影鳞片->魔光剑
+            zz2(2, 8, 105, 111, 1, 8);          // 8暗影鳞片->恶魔弓
+            zz(3, 5, 105, 5, 64, 112, 1, 8);    // 5暗影鳞片+5金锭->魔光护符
+        }
         if(mpy == 11 && mpx < -9)
         {
             bool hasPrev = (page > 1);
-            bool hasNext = (page < 5);
+            bool hasNext = (page < 6);
             if(KEY_DOWN(VK_LBUTTON))
             {
                 if(mpx > -15 && hasPrev)
@@ -8280,7 +6894,8 @@ void craft_1()
                 else if(page == 2) craft_update(3);
                 else if(page == 3) craft_update(4);
                 else if(page == 4) craft_update(6);
-                else craft_update(5);
+                else if(page == 5) craft_update(5);
+                else craft_update(8);
             }
             else
             {
@@ -8579,52 +7194,6 @@ void cls()
         FillConsoleOutputCharacter(hConsole, ' ', dw, {0, 0}, &cCharsWrieern);
     }
 }
-bool SetFileReadOnly(const std::string &filePath, bool readOnly)
-{
-    #ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(filePath.c_str());
-    if(attributes == INVALID_FILE_ATTRIBUTES)
-    {
-        // std::cerr << " 获取文件属性失败: " << GetLastError() << std::endl;
-        return false;
-    }
-    if(readOnly)
-    {
-        attributes |= FILE_ATTRIBUTE_READONLY;
-    }
-    else
-    {
-        attributes &= ~FILE_ATTRIBUTE_READONLY;
-    }
-    if(!SetFileAttributesA(filePath.c_str(), attributes))
-    {
-        std::cerr << " 设置文件属性失败: " << GetLastError() << std::endl;
-        return false;
-    }
-    #else
-    struct stat fileStat;
-    if(stat(filePath.c_str(), &fileStat) != 0)
-    {
-        perror(" 获取文件状态失败");
-        return false;
-    }
-    mode_t newMode;
-    if(readOnly)
-    {
-        newMode = fileStat.st_mode & ~(S_IWUSR | S_IWGRP | S_IWOTH);
-    }
-    else
-    {
-        newMode = fileStat.st_mode | S_IWUSR;
-    }
-    if(chmod(filePath.c_str(), newMode) != 0)
-    {
-        perror(" 修改文件权限失败");
-        return false;
-    }
-    #endif
-    return true;
-}
 void SetWindowSize(int cols, int lines)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -8637,7 +7206,7 @@ void SetWindowSize(int cols, int lines)
 }
 void did()
 {
-    for(int x = 0; x <= 103; x++)
+    for(int x = 0; x <= 112; x++)
     {
         thing.insert({name[x], x});
     }
@@ -8661,6 +7230,10 @@ void did()
     blockwj[103] = 300;
     blocktouch[103] = 1;
     blocklv[103] = 2;
+    // 锻造台(104)：可放置/可挖的实体方块
+    blockwj[104] = 200;
+    blocktouch[104] = 1;
+    blocklv[104] = 2;
 }
 int lenth_ = 0;
 bool bw;
@@ -8754,6 +7327,7 @@ void make_newworld()
     cout << "               ";
     int brtick = 0;
     zzz.clear();
+    lenth_ = 0;   // 与 zzz 同步：否则重进本界面时 lenth_ 残留，退格会 erase 到 begin() 之前
     while(1)
     {
         if(clock() - Clocknum >= 15)
@@ -8831,6 +7405,9 @@ void make_newworld()
 }
 void print_bag()
 {
+    // 物品栏必须在WriteConsoleOutput渲染区域（行0~printy）之外，否则每帧被方块渲染覆盖
+    Setpos(1, printy + 4);
+    Color(0);
     printf("   \n");
     for(int i = 1; i <= 9; i++)
     {
@@ -8851,23 +7428,70 @@ int l_cho=10;
 int l_energy = -1, l_coin = -1;
 void print_fast()
 {
-    if(l_life!=life)
+    // 关卡进度组合值：关/层/波/余怪（变化时触发整行重绘）
+    int lvlinfo = currentLevel > 0 ?
+                  currentLevel * 1000000 + curLayer * 10000 +
+                  (roomActive ? roomWavesDone * 100 + min(roomWavesLeft, 99) : 0) : 0;
+    if(l_life!=life || l_hujia != hujiazhi || l_lvlinfo != lvlinfo)
     {
-        cout<<"  生命：" << int((life*10)+0.5)/10.0;
-        printf("        ");
+        // 生命 + 护甲 + 关卡进度显示（HUD）
+        Color(0);
+        cout << "  生命：" << int((life * 10) + 0.5) / 10.0 << "/" << lifeMax;
+        Color(11);
+        cout << "  护甲：" << hujiazhi << "/" << armorMax;
+        // 护甲条：按armorMax比例10格
+        {
+            int aw = armorMax > 0 ? hujiazhi * 10 / armorMax : 0;
+            if(aw < 0) aw = 0;
+            if(aw > 10) aw = 10;
+            for(int i = 0; i < 10; i++) cout << (i < aw ? "■" : "·");
+        }
+        Color(0);
+        if(currentLevel > 0)
+        {
+            Color(14);
+            cout << "  第" << currentLevel << "关 层" << (curLayer + 1) << "/" << layCount;
+            if(roomActive)
+                cout << " 波" << roomWavesDone << "/" << roomWavesTotal
+                     << " 余" << roomWavesLeft;
+            Color(0);
+        }
+        printf("      ");
+        l_hujia = hujiazhi;
+        l_lvlinfo = lvlinfo;
     }
-    // 能量条与金币显示（HUD 第34行）
+    // 能量条与金币显示（HUD，渲染区外行printy+2，避免被画面覆盖）
     int tcoins = total_coins();
     if(l_energy != int(energy) || l_coin != tcoins)
     {
         l_energy = int(energy); l_coin = tcoins; coin = tcoins;
-        Setpos(1, 34);
+        Setpos(1, printy + 2);
         Color(0);
         int bw = int(20.0 * energy / (energyMax > 0 ? energyMax : 1));
         if(bw < 0) bw = 0; if(bw > 20) bw = 20;
         cout << "  能量：" << int(energy) << "/" << int(energyMax) << " ";
         for(int i = 0; i < 20; i++) cout << (i < bw ? "█" : "·");
         printf("   金币：%d                  ", tcoins);
+    }
+    // 氧气泡显示（能量行右侧，潜水时显示）
+    if(oxygen < 895)
+    {
+        int bubbles = oxygen / 90;
+        if(bubbles < 0) bubbles = 0;
+        if(bubbles > 10) bubbles = 10;
+        Setpos(50, printy + 2);
+        Color(11);
+        cout << "氧气:";
+        for(int i = 0; i < 10; i++)
+            cout << (i < bubbles ? "O" : "*");
+        Color(0);
+        l_oxy = bubbles;
+    }
+    else if(l_oxy != 10)
+    {
+        Setpos(50, printy + 2);
+        cout << "                ";
+        l_oxy = 10;
     }
     print_set=0;
     bool isbagp=0;
@@ -8904,46 +7528,63 @@ void print_fast()
         f3=1-f3,key_d_Y=0;
         if(f3==0)printf("                     ");
     }
-    if(f3)cout << " " << "x:" <<int(x-WORLD_WIDTH/2+0.5)<< " y:" << int(WORLD_HEIGHT-1-y) << "          ";
-    if(f3)
+    // F3坐标/生物统计：值变化才直写控制台（原每帧2次cout+Setpos，双缓冲下帧内直写越少越好）
     {
-        int sheep_count = 0, pig_count = 0;
-        for(int i = 0; i < 500; i++)
+        static int l_f3x = -999999, l_f3y = -999999, l_sp = -1;
+        int f3x = int(x - WORLD_WIDTH / 2 + 0.5), f3y = int(WORLD_HEIGHT - 1 - y);
+        if(f3)
         {
-            if(shiti[i].type == 12) sheep_count++;
-            else if(shiti[i].type == 13) pig_count++;
+            if(f3x != l_f3x || f3y != l_f3y)
+                cout << " " << "x:" << f3x << " y:" << f3y << "          ";
         }
-        Setpos(20, 1);
-        cout << "羊:" << sheep_count << " 猪:" << pig_count << "   ";
+        l_f3x = f3x, l_f3y = f3y;
+        if(f3)
+        {
+            int sheep_count = 0, pig_count = 0;
+            for(int i = 0; i < 500; i++)
+            {
+                if(shiti[i].type == 12) sheep_count++;
+                else if(shiti[i].type == 13) pig_count++;
+            }
+            int sp = sheep_count * 1000 + pig_count;
+            if(sp != l_sp)
+            {
+                Setpos(20, 1);
+                cout << "羊:" << sheep_count << " 猪:" << pig_count << "   ";
+                l_sp = sp;
+            }
+        }
     }
     l_life=life;
 }
 void checkuseitem()
 {
-	gongji = 1;
+	gongji = 5;                      // 拳头（伤害匹配200血体系）
     gongjicd = 20;
     if(beibao[cho][0] == 17)
-        gongji = 5, gongjicd = 37.5;
+        gongji = 25, gongjicd = 37.5;   // 木剑
     if(beibao[cho][0] == 18)
-        gongji = 9, gongjicd = 75;
+        gongji = 45, gongjicd = 75;
     if(beibao[cho][0] == 47)
-        gongji = 6, gongjicd = 37.5;
+        gongji = 30, gongjicd = 37.5;  // 铁剑
     if(beibao[cho][0] == 48)
-        gongji = 9, gongjicd = 67;
+        gongji = 45, gongjicd = 67;
     if(beibao[cho][0] == 49)
-        gongji = 7, gongjicd = 37.5;
+        gongji = 35, gongjicd = 37.5;  // 钻石剑
     if(beibao[cho][0] == 50)
-        gongji = 9, gongjicd = 60;
+        gongji = 45, gongjicd = 60;
     if(beibao[cho][0] == 60)
-        gongji = 7, gongjicd = 30;
+        gongji = 35, gongjicd = 30;
     if(beibao[cho][0] == 73)
-        gongji = 9, gongjicd = 37.5;
+        gongji = 45, gongjicd = 37.5;
     if(beibao[cho][0] == 74)
-        gongji = 11, gongjicd = 60;
+        gongji = 55, gongjicd = 60;
     if(beibao[cho][0] == 77)
-        gongji = 4, gongjicd = 37.5;
+        gongji = 20, gongjicd = 37.5;
     if(beibao[cho][0] == 78)
-        gongji = 7, gongjicd = 60;
+        gongji = 35, gongjicd = 60;
+    if(beibao[cho][0] == 110)
+        gongji = 40, gongjicd = 30;   // 魔光剑（beta1.8同步）
     if(gongjicd<40&&gongjicd>25)issword=1;
     else issword=0;
 }
@@ -8952,7 +7593,7 @@ void checkuseitem()
 void spawn_level_wave();
 int roomCountForLevel(int n);
 void show_talent_pick();
-void fill_level_chest(int idx, int lvl);
+void fill_level_chest(int idx, int lvl, int big);
 void spawn_dungeon_npc(int type, int tx, int ty);
 // ---- 金币辅助 ----
 int add_coins(int n)
@@ -9015,11 +7656,11 @@ void make_bullet(double tx, double ty, double stx, double sty, int dmg, int crit
 }
 int gun_dmg(int gt)
 {
-    if(gt == 95) return 4;
-    if(gt == 96) return 2;
-    if(gt == 97) return 3;
-    if(gt == 98) return 16;
-    return 4;
+    if(gt == 95) return 60;    // 手枪：3发击杀普通怪
+    if(gt == 96) return 35;    // 冲锋枪：射速快单发低
+    if(gt == 97) return 45;    // 霰弹（每发，5连发）
+    if(gt == 98) return 220;   // 狙击：一发重创/秒杀
+    return 60;
 }
 int gun_energy(int gt)
 {
@@ -9043,41 +7684,30 @@ int gun_crit(int gt)
     if(gt == 95) c += 10;
     if(gt == 98) c += 20;
     if(hasTalent(T_CRIT)) c += 15;
-    if(hasTalent(T_FULLCRIT) && life >= life + 1) c += 20; // 满血暴击约略
+    if(hasTalent(T_FULLCRIT) && life >= lifeMax) c += 20; // 满血暴击
     return c;
 }
 void fire_gun(int gt)
 {
-    double ttx = abs(x - mpx), tty = abs(y - mpy);
-    double total = ttx + tty + 0.001;
-    double ppx = ttx / total, ppy = tty / total;
-    if(mpx - x < 0) ppx *= -1;
-    if(mpy - y < 0) ppy *= -1;
+    // 真实指向角（atan2）：子弹沿直线飞向准星，不再用L1归一化的偏斜方向
+    double baseAng = atan2(mpy - y, mpx - x);
     int dmg = gun_dmg(gt);
     int shots = 1;
     if(gt == 97) shots = 5 + 2 * talentLevel(T_MORESHOT);
     if(gt == 97)                        // 霰弹扇形
     {
-        double baseAng = atan2(ppy, ppx);
         for(int gi = 0; gi < shots; gi++)
         {
             double ang = baseAng + (gi - shots / 2.0) * 0.12;
             int crit = (rand() % 100 < gun_crit(gt)) ? 1 : 0;
-            make_bullet(x, y - 0.75, 40 * cos(ang), 67 * sin(ang), dmg, crit);
+            make_bullet(x, y - 0.75, 60 * cos(ang), 60 * sin(ang), dmg, crit);
         }
-    }
-    else if(gt == 98)                    // 狙击直线高速
-    {
-        int crit = (rand() % 100 < gun_crit(gt)) ? 1 : 0;
-        make_bullet(x, y - 0.75, 90 * ppx, 130 * ppy, dmg, crit);
     }
     else
     {
         int crit = (rand() % 100 < gun_crit(gt)) ? 1 : 0;
-        double spd = (gt == 96) ? 48 : 45;
-        double vy = spd * 1.67 * ppy;
-        if(ppx == 0) vy = spd * 1.67 * (ppy >= 0 ? 1 : -1);
-        make_bullet(x, y - 0.75, spd * ppx, vy, dmg, crit);
+        double spd = (gt == 96) ? 55 : (gt == 98 ? 110 : 50);
+        make_bullet(x, y - 0.75, spd * cos(baseAng), spd * sin(baseAng), dmg, crit);
     }
 }
 // ---- NPC 生成 ----
@@ -9097,9 +7727,9 @@ void grant_talent(int t)
     if(talentCount < 24)
     {
         talents[talentCount++] = t;
-        if(t == T_LIFE) life += 4;
-        if(t == T_ARMOR) hujiazhi += 1;
-        if(t == T_ENERGY) energy = min(energyMax, energy + 100);
+        if(t == T_LIFE) { lifeMax += 25; life += 25; }            // 生命上限+25
+        if(t == T_ARMOR) { armorMax += 50; hujiazhi += 50; }       // 护甲上限+50
+        if(t == T_ENERGY) { energyMax += 50; energy += 50; }       // 能量上限+50
     }
 }
 // ---- 关卡系统 ----
@@ -9110,147 +7740,334 @@ void reset_dungeon_state()
     levelUnlocked = 1;              // 重新开档：只解锁第1关
     talentCount = 0;
     memset(talents, 0, sizeof(talents));
+    lifeMax = 200; armorMax = 200;  // 血量/护甲/蓝量开局全满
     energy = 100; energyMax = 100;
+    hujiazhi = armorMax;
     coin = 0;
     lvl_x0 = lvl_x1 = lvl_y0 = lvl_y1 = 0;
 }
-void enter_level(int n)
+// 房间几何：房间(L,c) 左上角 rx0=levelStartX+c*22+1, ry0=levelStartY+L*18+1；内部18x12；层间4行走廊
+static int roomX0(int L, int c) { return levelStartX + c * 20 + 1; }   // 房间紧贴水平排列，无通道
+static int roomY0(int L) { return levelStartY + L * 14 + 1; }          // 房间紧贴竖直堆叠，无通道
+// 门控制：mode 0=全开 1=全关 2=默认（顶开底关）
+static void door_set(int L, int c, int mode)
 {
-    levelStartX = 9400 + (n - 1) * 30;
-    levelStartY = 500;
-    int occupied = 0;
-    for(int II = levelStartY; II < levelStartY + 45; II++)
-        if(s[levelStartX][II] != 0) { occupied = 1; break; }
-    // 构建3-5个房间的基岩围墙，上下排列代替横向排列
-    int roomCount = 3 + n % 3;   // 3-5
-    for(int r = 0; r < roomCount; r++)
-    {
-        int ry0 = levelStartY + r * 16 + 1;
-        int rx0 = levelStartX;
-        int ry1 = ry0 + 14;
-        int rx1 = rx0 + 20;
-        for(int j = ry0; j <= ry1; j++) { s[rx0][j] = 10; s[rx1][j] = 10; }
-        for(int i = rx0; i <= rx1; i++)
-        {
-            if(r == 0 || i < rx0 + 6 || i > rx0 + 7) s[i][ry0] = 10;
-            if(r == roomCount - 1 || i < rx0 + 6 || i > rx0 + 7) s[i][ry1] = 10;
-        }
-        for(int i = rx0 + 1; i < rx1; i++)
-            for(int j = ry0 + 1; j < ry1; j++)
-                s[i][j] = 0;
-        // 每个房间放1-2个金矿（避开门口列6/7，防止堵门或压在玩家出生点）
-        int gmin = 1 + rand() % 2;
-        for(int g = 0; g < gmin; g++)
-        {
-            int gx = rx0 + 2 + rand() % 17;
-            while(gx == rx0 + 6 || gx == rx0 + 7)
-                gx = rx0 + 2 + rand() % 17;
-            int gy = ry0 + 2 + rand() % 10;
-            s[gx][gy] = 103;
-        }
-        // 沿左右墙内侧放置火把照明
-        for(int j = ry0 + 2; j <= ry1 - 2; j += 3)
-        {
-            s[rx0 + 1][j] = 16;   // 靠左墙
-            s[rx1 - 1][j] = 16;   // 靠右墙
-        }
-    }
-    // 清除关卡区域实体
+    int rx0 = roomX0(L, c), ry0 = roomY0(L);
+    int ry1 = ry0 + 13;
+    short v_top = (mode == 1) ? 10 : 0;
+    short v_bot = (mode == 0) ? 0 : 10;
+    s[rx0 + 9][ry0] = v_top;  s[rx0 + 10][ry0] = v_top;
+    s[rx0 + 9][ry1] = v_bot;  s[rx0 + 10][ry1] = v_bot;
+    mark_dirty_col(rx0 + 9);   // 门状态变化随存档保存（关卡进度持久）
+    mark_dirty_col(rx0 + 10);
+}
+// 清除房间内所有怪物（NPC除外）
+static void clear_room_monsters(int L, int c)
+{
+    int rx0 = roomX0(L, c), ry0 = roomY0(L);
     for(int i = 0; i < 500; i++)
-        if(shiti[i].type > 0 && shiti[i].gx > levelStartX - 5 &&
-                shiti[i].gx < levelStartX + 30 &&
-                shiti[i].gy > levelStartY - 5 && shiti[i].gy < levelStartY + (roomCount * 16 + 5))
+        if(shiti[i].type > 0 && shiti[i].AI != 2 &&
+                (shiti[i].type < 14 || shiti[i].type > 22) &&
+                shiti[i].gx > rx0 && shiti[i].gx < rx0 + 19 &&
+                shiti[i].gy > ry0 && shiti[i].gy < ry0 + 13)
             st_kill(i);
-    // 清除关卡区域旧宝箱数据（房间重建会清掉旧宝箱方块，旧box条目作废，
-    // 避免同坐标重复box导致findbox打开旧空箱）
-    for(int i = 0; i < boxlen; i++)
-        if(box[i].bx != 5005 && (int)box[i].bx > levelStartX - 5 &&
-                (int)box[i].bx < levelStartX + 30 &&
-                (int)box[i].by > levelStartY - 5 &&
-                (int)box[i].by < levelStartY + (roomCount * 16 + 5))
+}
+// 关卡布局计算（确定性：每次进关布局一致）
+static void level_layout(int n)
+{
+    levelStartX = 9000 + (n - 1) * 95;
+    levelStartY = 500;
+    // 布局：层0起始房(1) + 中间层(房间数1/2/3/4递增) + 末层最终房(1)
+    int midLayers = 2 + min(2, n / 5);            // 中间层数 2-4
+    layCount = midLayers + 2;
+    int maxC = 1;
+    for(int L = 0; L < layCount; L++)
+    {
+        if(L == 0 || L == layCount - 1)
+            layRooms[L] = 1;
+        else
+            layRooms[L] = min(4, L);
+        maxC = max(maxC, layRooms[L]);
+    }
+    for(int L = 0; L < layCount; L++)
+        layOff[L] = (maxC - layRooms[L]) / 2;
+    bossCol = layOff[layCount - 1];
+}
+// 纯地形建造（墙/火把/门/NPC/起始补给箱）：新建世界时对全部关卡调用一次并随存档保存
+static void build_level_terrain(int n)
+{
+    level_layout(n);
+    for(int L = 0; L < layCount; L++)
+        for(int c = layOff[L]; c < layOff[L] + layRooms[L]; c++)
         {
-            box[i].bx = 5005;
-            box[i].by = 0;
-            memset(box[i].things, 0, sizeof(box[i].things));
+            int rx0 = roomX0(L, c), ry0 = roomY0(L);
+            int rx1 = rx0 + 19, ry1 = ry0 + 13;
+            // 左右墙
+            for(int j = ry0; j <= ry1; j++) { s[rx0][j] = 10; s[rx1][j] = 10; }
+            // 顶底墙（中间两格留作门）
+            for(int i = rx0; i <= rx1; i++)
+                if(i != rx0 + 9 && i != rx0 + 10)
+                { s[i][ry0] = 10; s[i][ry1] = 10; }
+            // 清空内部
+            for(int i = rx0 + 1; i < rx1; i++)
+                for(int j = ry0 + 1; j < ry1; j++)
+                    s[i][j] = 0;
+            // 火把装饰（四角内侧）
+            s[rx0 + 2][ry0 + 2] = 16;  s[rx1 - 2][ry0 + 2] = 16;
+            s[rx0 + 2][ry1 - 2] = 16;  s[rx1 - 2][ry1 - 2] = 16;
+            // 门默认态：顶门开（可进入）、底门关（清完才开）
+            door_set(L, c, 2);
         }
-    // 中间房间有概率刷出地牢NPC（特殊房间：商人/工匠/占星/雇佣/牧师/地牢商人/被关押/奸商/小偷猫）
-    for(int r = 1; r < roomCount - 1; r++)
+    // 外围墙（整个关卡外圈：最右列/最底行与房间墙重合，紧贴无通道）
+    int maxC = 1;
+    for(int L = 0; L < layCount; L++) maxC = max(maxC, layRooms[L]);
+    int W0 = levelStartX, W1 = levelStartX + maxC * 20;
+    int H1 = levelStartY + layCount * 14;
+    for(int j = levelStartY; j <= H1; j++) { s[W0][j] = 10; s[W1][j] = 10; }
+    for(int i = W0; i <= W1; i++) { s[i][levelStartY] = 10; s[i][H1] = 10; }
+    // 起始房（层0）：安全，门全开
+    int srx0 = roomX0(0, layOff[0]), sry0 = roomY0(0);
+    door_set(0, layOff[0], 0);
+    roomState[0][layOff[0]] = 2;
+    // 起始房放初始补给箱（新档空背包需要武器）
+    {
+        int cx = srx0 + 14, cy = sry0 + 8;
+        s[cx][cy] = 40;
+        int idx = alloc_box(cx, cy);
+        add_box_item(idx, 17, 1);        // 木剑
+        add_box_item(idx, 16, 8);        // 火把
+        add_box_item(idx, 44, 16);       // 木箭
+        add_box_item(idx, 89, 3);        // 猪肉
+        add_box_item(idx, 101, 5);       // 少量金币
+        add_box_item(idx, 113, 1);       // 护甲药水
+    }
+    // 中间层随机房间放地牢NPC（NPC房间为安全房：不刷怪，门全开）
+    for(int L = 1; L < layCount - 1; L++)
         if(rand() % 2 == 0)
         {
-            int npcType = 14 + rand() % 9;   // 14-22 随机
-            make_npc(npcType, levelStartX + 7 + rand() % 9, levelStartY + r * 16 + 3 + rand() % 10);
+            int c = layOff[L] + rand() % layRooms[L];
+            int npcType = 14 + rand() % 9;
+            make_npc(npcType, roomX0(L, c) + 3 + rand() % 13, roomY0(L) + 2 + rand() % 9);
+            roomState[L][c] = 2;          // 标记为已清空：不激活战斗
+            door_set(L, c, 0);            // 门全开
         }
+}
+void enter_level(int n)
+{
+    level_layout(n);
+    int maxC = 1;
+    for(int L = 0; L < layCount; L++) maxC = max(maxC, layRooms[L]);
+    // 关卡地形是否已存在（新建世界时已预生成并随存档保存）
+    bool built = (s[levelStartX + 1][levelStartY + 1] == 10);
+    if(!built)
+    {
+        // 旧存档兼容：首次进入时现场建造
+        build_level_terrain(n);
+    }
+    // 房间进度由门状态持久恢复（底门开=已清空），不重置已获进度
+    for(int L = 0; L < layCount; L++)
+        for(int c = layOff[L]; c < layOff[L] + layRooms[L]; c++)
+        {
+            if(L == 0 && c == layOff[0]) continue;
+            int rx0 = roomX0(L, c), ry0 = roomY0(L);
+            roomState[L][c] = (s[rx0 + 9][ry0 + 13] == 0) ? 2 : 0;
+        }
+    // 清除关卡区域战斗怪物（保留NPC与随从）
+    for(int i = 0; i < 500; i++)
+        if(shiti[i].type > 0 && shiti[i].gx > levelStartX - 5 &&
+                shiti[i].gx < levelStartX + maxC * 20 + 5 &&
+                shiti[i].gy > levelStartY - 5 &&
+                shiti[i].gy < levelStartY + layCount * 14 + 5)
+        {
+            if(shiti[i].type >= 14 && shiti[i].type <= 22) continue;   // NPC保留
+            if(shiti[i].AI == 5) continue;                              // 随从保留
+            st_kill(i);
+        }
+    // 起始房（层0）：安全，门全开
+    int srx0 = roomX0(0, layOff[0]), sry0 = roomY0(0);
+    door_set(0, layOff[0], 0);
+    roomState[0][layOff[0]] = 2;
     inDungeon = true;
     currentLevel = n;
+    curLayer = 0;
+    curCol = layOff[0];
     currentRoom = 0;
-    x = levelStartX + 7;
-    y = levelStartY + 7;
-    // 保险：出生点若为实体方块则清除（防止卡在方块里无法移动）
+    x = srx0 + 10;
+    y = sry0 + 6;
+    // 保险：出生点若为实体方块则清除
     if(blocktouch[s[int(x + 0.5)][int(y + 0.5)]] >= 1)
         s[int(x + 0.5)][int(y + 0.5)] = 0;
-    spx = 0; spy = 0; fell = y;
-    // 进入关卡时发放火把照明（补足到8个）
-    int torchSlot = getbeibao(16);
-    if(torchSlot > 0)
-    {
-        beibao[torchSlot][0] = 16;
-        beibao[torchSlot][1] += 8;
-        if(beibao[torchSlot][1] > 64) beibao[torchSlot][1] = 64;
-    }
-    // 进入房间0
-    lvl_x0 = levelStartX;
-    lvl_y0 = levelStartY + 1;
-    lvl_x1 = lvl_x0 + 20;
-    lvl_y1 = lvl_y0 + 14;
-    roomActive = true;
-    roomWavesDone = 0;
-    // 关门（锁住本房间底部出口，清怪后开门）
-    s[lvl_x0 + 6][lvl_y1] = 10;
-    s[lvl_x0 + 7][lvl_y1] = 10;
-    // 第5/10关：最终房间为Boss房（单波boss）
-    bool isBoss = (n == 5 || n == 10);
-    if(isBoss && currentRoom == roomCount - 1)
-        roomWavesTotal = 1;
-    else
-        roomWavesTotal = 2 + rand() % 3; // 2-4波
-    roomWaveCD = 0;
-    spawn_level_wave();
-    roomWavesDone = 1;   // 首波已刷出，计入已完成波数，避免多刷一波/开门过早
+    spx = 0; spy = 0;
+    // 当前房间范围（起始房）
+    lvl_x0 = srx0; lvl_y0 = sry0;
+    lvl_x1 = srx0 + 19; lvl_y1 = sry0 + 13;
+    roomActive = false;
+    roomWavesDone = 0; roomWavesTotal = 0; roomWaveCD = 0; roomWavesLeft = 0;
+    mark_all_dirty();
+    memset(painting, 114, sizeof(painting));
+    hujia_update();               // 刷新护甲值（存档加载/死亡重进后wear恢复）
+    setlight();
 }
 void spawn_level_wave()
 {
-    bool isBossRoom = (currentLevel == 5 || currentLevel == 10) &&
-                      (currentRoom == roomCountForLevel(currentLevel) - 1);
-    if(isBossRoom)
+    int rx0 = roomX0(curLayer, curCol), ry0 = roomY0(curLayer);
+    bool isFinal = (curLayer == layCount - 1);
+    // 第5/10关最终房为Boss房（单波boss）
+    if(isFinal && (currentLevel == 5 || currentLevel == 10))
     {
-        make_st(8, 800 + currentLevel * 60, 12, lvl_x0 + 10, lvl_y0 + 7, 10);
+        make_st(8, 1500 + currentLevel * 250, 15 + currentLevel, rx0 + 9, ry0 + 6, 10);
         return;
     }
-    int cnt = 3 + currentLevel / 3 + rand() % 2;
-    if(cnt > 7) cnt = 7;
+    int cnt = isFinal ? (3 + currentLevel / 3) : (2 + currentLevel / 4 + rand() % 2);
+    if(cnt > 6) cnt = 6;
     for(int k = 0; k < cnt; k++)
     {
-        int ex = lvl_x0 + 3 + rand() % 15;
-        int ey = lvl_y0 + 3 + rand() % 8;
-        // 避免生成在金矿等实体方块内（会卡死导致房间无法通关）
-        for(int tries = 0; tries < 10 && blocktouch[s[ex][ey]] >= 1; tries++)
+        int ex = rx0 + 2 + rand() % 16;
+        int ey = ry0 + 2 + rand() % 9;
+        // 避免生成在实体方块内 + 防止怪物重叠（与已有怪物保持距离）
+        for(int tries = 0; tries < 12; tries++)
         {
-            ex = lvl_x0 + 3 + rand() % 15;
-            ey = lvl_y0 + 3 + rand() % 8;
+            bool ok = (blocktouch[s[ex][ey]] < 1);
+            if(ok)
+                for(int i = 0; i < 500 && ok; i++)
+                    if(shiti[i].type > 0 && shiti[i].AI != 2 &&
+                            abs(shiti[i].gx - ex) < 2 && abs(shiti[i].gy - ey) < 2)
+                        ok = false;
+            if(ok) break;
+            ex = rx0 + 2 + rand() % 16;
+            ey = ry0 + 2 + rand() % 9;
         }
-        int typ = 1 + rand() % 3;
-        int hp = 25 + currentLevel * 5;
-        make_st(typ, hp, 6 + currentLevel, ex, ey);
+        int typ = (rand() % 2 ? 1 : 3);   // 僵尸/骷髅（CR怪物已删除）
+        int hp = 120 + currentLevel * 25;   // 血量匹配200血体系
+        make_st(typ, hp, 10 + currentLevel * 2, ex, ey);
     }
 }
-int roomInProgress() { return currentRoom; }
-int roomCountForLevel(int n) { return 3 + n % 3; }
+int roomInProgress() { return curLayer; }
+int roomCountForLevel(int n) { return 4 + min(2, n / 5); }
+// 关卡宝箱：走近自动开启（元气骑士风格，绕开右键交互链路）
+static void chest_auto_open()
+{
+    int px = To_int(x), py = To_int(y);
+    if(px <= 1 || py <= 1 || px >= WORLD_WIDTH - 2 || py >= WORLD_HEIGHT - 2)
+        return;
+    static const int dxy[5][2] = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for(int k = 0; k < 5; k++)
+    {
+        int cx = px + dxy[k][0], cy = py + dxy[k][1];
+        if(s[cx][cy] == 40)
+        {
+            int del = findbox(cx, cy);
+            int got = 0;
+            if(del != -1)
+            {
+                box[del].bx = 5005, box[del].by = 0;
+                for(int i = 0; i <= 24; i++)
+                {
+                    int item = box[del].things[i] % 1000;
+                    int cnt = box[del].things[i] / 1000;
+                    box[del].things[i] = 0;
+                    if(item == 0 || cnt <= 0)
+                        continue;
+                    for(int j = 1; j <= cnt; j++)
+                    {
+                        int uu = getbeibao(item);
+                        if(uu != 0)
+                            beibao[uu][1]++, beibao[uu][0] = item, got++;
+                    }
+                }
+            }
+            s[cx][cy] = 0;
+            mark_dirty_col(cx);
+            Setpos(1, 31);
+            Color(0);
+            if(got > 0)
+                cout << " 打开宝箱，获得 " << got << " 件物品！                ";
+            else
+                cout << " 打开了空宝箱                                          ";
+        }
+    }
+}
 void update_level()
 {
     if(!inDungeon) return;
+    // 关卡宝箱：走近自动开启
+    chest_auto_open();
+    // 计算玩家所在房间（内部矩形）
+    int pi = To_int(x), pj = To_int(y);
+    int pL = -1, pc = -1;
+    if(pj > levelStartY && pj < levelStartY + layCount * 14 - 1 &&
+            pi > levelStartX && pi < levelStartX + 8 * 20)
+    {
+        int L = (pj - levelStartY) / 14;
+        int cc = (pi - levelStartX) / 20;
+        if(L >= 0 && L < layCount && cc >= layOff[L] && cc < layOff[L] + layRooms[L])
+        {
+            int rx0 = roomX0(L, cc), ry0 = roomY0(L);
+            if(pi > rx0 && pi < rx0 + 19 && pj > ry0 && pj < ry0 + 13)
+            { pL = L; pc = cc; }
+        }
+    }
+    // 战斗中不能被逼出房间（门为实体锁死），玩家必须杀完全部怪才能离开关卡
+    // 踏入未清房间：激活战斗
+    if(!roomActive && pL > 0 && roomState[pL][pc] == 0)
+    {
+        curLayer = pL; curCol = pc;
+        currentRoom = curLayer;
+        roomActive = true;
+        roomState[pL][pc] = 1;
+        door_set(pL, pc, 1);                 // 关门锁战
+        bool isFinal = (pL == layCount - 1);
+        if(isFinal && (currentLevel == 5 || currentLevel == 10))
+            roomWavesTotal = 1;
+        else if(isFinal)
+            roomWavesTotal = 2;
+        else
+            roomWavesTotal = 2 + rand() % 2; // 2-3波
+        roomWavesDone = 0;
+        roomWaveCD = 0;
+        lvl_x0 = roomX0(pL, pc); lvl_y0 = roomY0(pL);
+        lvl_x1 = lvl_x0 + 19; lvl_y1 = lvl_y0 + 13;
+        spawn_level_wave();
+        roomWavesDone = 1;
+        Setpos(1, 31);
+        Color(0);
+        cout << " 怪物来袭！清空房间才能开门                             ";
+    }
     if(roomActive)
     {
-        // 限制怪物不飞出房间（拉回房间内）；NPC(14-22)需排除，避免被拽进当前房间
+        // 怪物间碰撞分离：距离过近时相互推开，防止重叠看不见
+        for(int i = 0; i < 500; i++)
+            if(shiti[i].type > 0 && shiti[i].AI != 2 &&
+                    (shiti[i].type < 14 || shiti[i].type > 22) &&
+                    shiti[i].gx > lvl_x0 && shiti[i].gx < lvl_x1 &&
+                    shiti[i].gy > lvl_y0 && shiti[i].gy < lvl_y1)
+                for(int j = i + 1; j < 500; j++)
+                    if(shiti[j].type > 0 && shiti[j].AI != 2 &&
+                            (shiti[j].type < 14 || shiti[j].type > 22) &&
+                            shiti[j].gx > lvl_x0 && shiti[j].gx < lvl_x1 &&
+                            shiti[j].gy > lvl_y0 && shiti[j].gy < lvl_y1)
+                    {
+                        double dx = shiti[j].gx - shiti[i].gx;
+                        double dy = shiti[j].gy - shiti[i].gy;
+                        double d2 = dx * dx + dy * dy;
+                        if(d2 < 0.8 && d2 > 0.0001)
+                        {
+                            double d = sqrt(d2);
+                            double push = (0.9 - d) * 0.5;
+                            dx /= d; dy /= d;
+                            shiti[i].gx -= dx * push;
+                            shiti[i].gy -= dy * push;
+                            shiti[j].gx += dx * push;
+                            shiti[j].gy += dy * push;
+                        }
+                        else if(d2 <= 0.0001)
+                        {
+                            // 完全重合：随机方向弹开
+                            shiti[j].gx += 0.5;
+                            shiti[j].gy += (rand() % 2 ? 0.4 : -0.4);
+                        }
+                    }
+        // 限制怪物不飞出房间；NPC(14-22)排除
         for(int i = 0; i < 500; i++)
             if(shiti[i].type > 0 && shiti[i].AI != 2 &&
                     (shiti[i].type < 14 || shiti[i].type > 22))
@@ -9277,6 +8094,7 @@ void update_level()
                 {
                     spawn_level_wave();
                     roomWavesDone++;
+                    alive = 1;   // 刚刷出新一波：本帧不算清空，防止门提前开
                 }
             }
             else
@@ -9286,70 +8104,66 @@ void update_level()
         }
         if(alive == 0 && roomWavesDone >= roomWavesTotal)
         {
+            // 房间清空：开门 + 奖励
+            roomState[curLayer][curCol] = 2;
             roomActive = false;
-            // 开门（底部出口）
-            s[lvl_x0 + 6][lvl_y1] = 0;
-            s[lvl_x0 + 7][lvl_y1] = 0;
-            // 通关刷宝箱
-            int cx = lvl_x0 + 3, cy = lvl_y1 - 2;
-            if(s[cx][cy] != 40)
+            door_set(curLayer, curCol, 0);
+            int rx0 = roomX0(curLayer, curCol), ry0 = roomY0(curLayer);
+            int cx = rx0 + 14, cy = ry0 + 10;
+            bool isFinal = (curLayer == layCount - 1);
+            if(isFinal)
             {
-                s[cx][cy] = 40;
-                int idx = alloc_box(cx, cy);
-                fill_level_chest(idx, currentLevel);
+                // 最终房：必出大宝箱（金币+装备）
+                if(s[cx][cy] != 40)
+                {
+                    s[cx][cy] = 40;
+                    int idx = alloc_box(cx, cy);
+                    fill_level_chest(idx, currentLevel, 1);
+                }
+                Setpos(1, 31);
+                Color(0);
+                cout << " 房间清空！宝箱已出现，从底部出口离开本关                ";
+            }
+            else if(rand() % 100 < 35)
+            {
+                // 普通房：35%概率小宝箱
+                if(s[cx][cy] != 40)
+                {
+                    s[cx][cy] = 40;
+                    int idx = alloc_box(cx, cy);
+                    fill_level_chest(idx, currentLevel, 0);
+                }
+                Setpos(1, 31);
+                Color(0);
+                cout << " 房间清空！获得一个宝箱                                 ";
             }
         }
         return;
     }
-    // 非战斗：检查是否进入下一房间或通关
-    if(currentRoom < roomCountForLevel(currentLevel) - 1)
+    // 通关判定：最终房已清且玩家越过其底部走廊
+    int fry1 = roomY0(layCount - 1) + 13;
+    if(roomState[layCount - 1][bossCol] == 2 && y > fry1 + 2)
     {
-        if(y > lvl_y1)
-        {
-            currentRoom++;
-            lvl_x0 = levelStartX;
-            lvl_y0 = levelStartY + currentRoom * 16 + 1;
-            lvl_x1 = lvl_x0 + 20;
-            lvl_y1 = lvl_y0 + 14;
-            roomActive = true;
-            roomWavesDone = 0;
-            // 关门（锁住新房间底部出口）
-            s[lvl_x0 + 6][lvl_y1] = 10;
-            s[lvl_x0 + 7][lvl_y1] = 10;
-            bool isBoss = (currentLevel == 5 || currentLevel == 10) && (currentRoom == roomCountForLevel(currentLevel) - 1);
-            roomWavesTotal = isBoss ? 1 : (2 + rand() % 3);
-            roomWaveCD = 0;
-            spawn_level_wave();
-            roomWavesDone = 1;   // 首波已刷出，计入已完成波数
-        }
-    }
-    else
-    {
-        if(y > lvl_y1)
-        {
-            // 通关当前大关
-            inDungeon = false;
-            levelUnlocked = max(levelUnlocked, min(currentLevel + 1, 10));
-            // 天赋三选一
-            show_talent_pick();
-            x = portal_x; y = portal_y;
-            spx = 0; spy = 0;
-            currentLevel = 0;
-            roomActive = false;
-            memset(painting, 114, sizeof(painting));
-            setlight();
-        }
+        // 通关当前大关：解锁下一关，天赋三选一，满状态进入下一关
+        levelUnlocked = max(levelUnlocked, min(currentLevel + 1, 10));
+        show_talent_pick();
+        int next = (currentLevel >= 10) ? 1 : currentLevel + 1;
+        Setpos(1, 31);
+        Color(0);
+        cout << " 通关！进入第 " << next << " 关                              ";
+        enter_level(next);   // 下一关继承上一关的血量/护甲/蓝量
     }
 }
 void show_talent_pick()
 {
     if(talentCount >= maxTalentSlots) return;
-    // 三选一
+    // 三选一（排除未实现的T_SPEEDARMOR=16）
     int opts[3];
     int used = 0;
     while(used < 3)
     {
         int t = rand() % 20;
+        if(t == T_SPEEDARMOR) continue;
         int dup = 0;
         for(int i = 0; i < used; i++) if(opts[i] == t) dup = 1;
         if(!dup) opts[used++] = t;
@@ -9378,17 +8192,46 @@ void show_talent_pick()
     cout << "您获得了天赋: " << talent_names[opts[pick - 1]] << "                    ";
     Sleep(1200);
 }
-void fill_level_chest(int idx, int lvl)
+void fill_level_chest(int idx, int lvl, int big)
 {
-    add_box_item(idx, 101, 3 + rand() % 8);   // 金币
-    add_box_item(idx, 99, 5 + rand() % 10);   // 子弹
-    int gunRoll = rand() % 100;
-    if(gunRoll < 60) add_box_item(idx, 95, 1);
-    else if(gunRoll < 75) add_box_item(idx, 97, 1);
-    else if(gunRoll < 85) add_box_item(idx, 96, 1);
-    else if(gunRoll < 92) add_box_item(idx, 98, 1);
-    else add_box_item(idx, 100, 1);
-    if(rand() % 3 == 0) add_box_item(idx, 94, 1);
+    if(big)
+    {
+        // 大宝箱（最终房）：金币 + 必出武器/道具 + 补给
+        add_box_item(idx, 101, 15 + rand() % 16);          // 金币15-30
+        int r = rand() % 100;
+        if(r < 45)                                          // 武器（含枪械）
+        {
+            int item;
+            int roll = rand() % 100;
+            if(roll < 25) item = 95;                        // 手枪
+            else if(roll < 45) item = 97;                   // 霰弹枪
+            else if(roll < 60) item = 98;                   // 狙击枪
+            else if(roll < 75) { if(lvl >= 6) item = 111; else item = 41; } // 弓
+            else { if(lvl >= 6) item = 110; else if(lvl >= 3) item = 49; else item = 47; } // 剑
+            add_box_item(idx, item, 1);
+        }
+        else if(r < 75)
+            add_box_item(idx, 113, 1 + rand() % 2);         // 护甲药水
+        else
+            add_box_item(idx, 24, 2);                       // 回血药
+        if(rand() % 2 == 0) add_box_item(idx, 94, 1);       // 能量药水
+        if(rand() % 2 == 0) add_box_item(idx, 100, 1);      // 大回血药
+    }
+    else
+    {
+        // 小宝箱（普通房概率出现）：金币 + 随机补给（含枪械）
+        add_box_item(idx, 101, 3 + rand() % 8);             // 金币3-10
+        int r = rand() % 100;
+        if(r < 18) add_box_item(idx, 95, 1);                // 手枪
+        else if(r < 28) add_box_item(idx, 97, 1);           // 霰弹枪
+        else if(r < 38) add_box_item(idx, 113, 1);          // 护甲药水
+        else if(r < 58) add_box_item(idx, 44, 8 + rand() % 8); // 木箭
+        else if(r < 76) add_box_item(idx, 24, 1 + rand() % 2); // 回血药
+        else if(r < 92) add_box_item(idx, 94, 1);           // 能量药水
+        // 暗影鳞片：高级关卡有概率掉落
+        if(lvl >= 3 && rand() % 4 == 0)
+            add_box_item(idx, 105, 1 + rand() % 3);
+    }
 }
 // ---- NPC 生成（地牢特殊房间）----
 void spawn_dungeon_npc(int type, int tx, int ty)
@@ -9413,7 +8256,7 @@ void interact_gacha()
     {
         int roll = rand() % 100;
         int item = 0, cnt = 1;
-        if(roll < 30) item = 99, cnt = 5 + rand() % 10;      // 子弹
+        if(roll < 30) item = 113, cnt = 1 + rand() % 2;     // 护甲药水
         else if(roll < 45) item = 94;                          // 能量药水
         else if(roll < 55) item = 100;                         // 大回血药
         else if(roll < 65) item = 95;                          // 手枪
@@ -9447,7 +8290,7 @@ void interact_npc(int idx)
         Setpos(1, 31);
         Color(0);
         int price = hasTalent(T_HALFPRICE) ? 5 : 10;
-        cout << " 商人：购买[1]能量药水(10金币) [2]子弹包(15金币) [3]大回血药(20金币) [4]离开";
+        cout << " 商人：购买[1]能量药水(10金币) [2]护甲药水(15金币) [3]大回血药(20金币) [4]离开";
         clock_t st = clock();
         while(clock() - st < 8000)
         {
@@ -9460,9 +8303,9 @@ void interact_npc(int idx)
             }
             if(GetAsyncKeyState('2') & 0x8000)
             {
-                if(getbeibao(99) == 0) { Setpos(1,32);cout<<" 背包已满！"; break; }
+                if(getbeibao(113) == 0) { Setpos(1,32);cout<<" 背包已满！"; break; }
                 int p2 = hasTalent(T_HALFPRICE) ? 8 : 15;
-                if(spend_coins(p2)) { int U=getbeibao(99); if(U)beibao[U][1]+=10,beibao[U][0]=99; Setpos(1,32);cout<<" 购买成功(子弹x10)"; }
+                if(spend_coins(p2)) { int U=getbeibao(113); if(U)beibao[U][1]++,beibao[U][0]=113; Setpos(1,32);cout<<" 购买成功(护甲药水)"; }
                 else Setpos(1,32),cout<<" 金币不足";
                 break;
             }
@@ -9657,7 +8500,7 @@ void interact_npc(int idx)
     else if(type == 19) // 地牢商人：地牢内军火商
     {
         Setpos(1, 31); Color(0);
-        cout << " 地牢商人：[1]随机枪械(35) [2]子弹x20(10) [3]能量药水(12) [4]离开";
+        cout << " 地牢商人：[1]随机枪械(35) [2]护甲药水(10) [3]能量药水(12) [4]离开";
         clock_t st = clock();
         while(clock() - st < 10000)
         {
@@ -9681,13 +8524,13 @@ void interact_npc(int idx)
             }
             if(GetAsyncKeyState('2') & 0x8000)
             {
-                if(getbeibao(99) == 0)
+                if(getbeibao(113) == 0)
                 {
                     Setpos(1, 32); cout << " 背包已满，无法购买！                            ";
                     break;
                 }
                 int p = hasTalent(T_HALFPRICE) ? 5 : 10;
-                if(spend_coins(p)) { int U=getbeibao(99); if(U)beibao[U][1]+=20,beibao[U][0]=99; Setpos(1,32);cout<<" 购买成功(子弹x20)"; }
+                if(spend_coins(p)) { int U=getbeibao(113); if(U)beibao[U][1]++,beibao[U][0]=113; Setpos(1,32);cout<<" 购买成功(护甲药水)"; }
                 else Setpos(1,32),cout<<" 金币不足";
                 break;
             }
@@ -9742,7 +8585,7 @@ void interact_npc(int idx)
                 {
                     int roll = rand() % 100;
                     if(roll < 35) { add_coins(5 + rand() % 11); Setpos(1, 32); cout << " 偷到金币！                                            "; }
-                    else if(roll < 60) { int U=getbeibao(99); if(U)beibao[U][1]+=8+rand()%8,beibao[U][0]=99; Setpos(1,32);cout<<" 偷到子弹！"; }
+                    else if(roll < 60) { int U=getbeibao(113); if(U)beibao[U][1]++,beibao[U][0]=113; Setpos(1,32);cout<<" 偷到护甲药水！"; }
                     else if(roll < 80) { int U=getbeibao(94); if(U)beibao[U][1]++,beibao[U][0]=94; Setpos(1,32);cout<<" 偷到能量药水！"; }
                     else if(roll < 95) { int U=getbeibao(24); if(U)beibao[U][1]+=1+rand()%2,beibao[U][0]=24; Setpos(1,32);cout<<" 偷到回血药水！"; }
                     else { int item = 95 + rand() % 4; int U=getbeibao(item); if(U)beibao[U][1]++,beibao[U][0]=item; Setpos(1,32);cout<<" 偷到一把枪械！"; }
@@ -9765,12 +8608,30 @@ void interact_npc(int idx)
         Setpos(1, 31); cout << "                                                              ";
     }
 }
-void game_loop()
+// 远距离挖掘/放置的落点探测。x/y 被钳在 [0,WORLD_WIDTH-1]，但 int(x+3.5) 可达
+// WORLD_WIDTH+2、int(x-2.5) 可为 -3：走到世界边缘长按鼠标就会读到 s[] 之外的垃圾
+// short，再拿它索引 blockwj[150] 是约 131KB 的越界读。界外一律视为不可挖/不可放。
+static inline bool probe_diggable(double px, double py)
 {
-    fell = y;
-    // 初始化窗口大小以适应渲染尺寸
-    SetWindowSize(printx + 5, printy + 5);
-    jx = x, jy = y;
+    int ix = int(px), iy = int(py);
+    if(ix < 0 || ix >= WORLD_WIDTH || iy < 0 || iy >= WORLD_HEIGHT)
+        return false;
+    unsigned id = (unsigned short)s[ix][iy];
+    return id < 150 && blockwj[id] > 0;
+}
+static inline bool probe_placeable(double px, double py)
+{
+    int ix = int(px), iy = int(py);
+    if(ix < 0 || ix >= WORLD_WIDTH || iy < 0 || iy >= WORLD_HEIGHT)
+        return false;
+    unsigned id = (unsigned short)s[ix][iy];
+    return id < 150 && blockwj[id] == 0;
+}
+// 相机必须按当前渲染尺寸钳位：Print() 用 dx = int(jx + i - printx*0.5 + 0.5)
+// 直接索引并写入 light[][]/ep[][]，printx/printy 变大而 jx/jy 没跟着钳位时
+// dx 可为负或超出世界 → 越界读写
+static void clamp_camera()
+{
     if(jx < printx / 2)
         jx = printx / 2;
     if(jy < printy / 2)
@@ -9779,26 +8640,48 @@ void game_loop()
         jx = WORLD_WIDTH - printx / 2 - 1;
     if(jy > WORLD_HEIGHT - printy / 2 - 1)
         jy = WORLD_HEIGHT - printy / 2 - 1;
+}
+void game_loop()
+{
+    fell = y;
+    // 初始化窗口大小以适应渲染尺寸
+    SetWindowSize(printx + 5, printy + 5);
+    jx = x, jy = y;
+    clamp_camera();
     Clear();
     setlight();
     int bow = 0;
     memset(painting, 1145, sizeof(painting));
-    l_life=30;
-    l_beibao[1][0]=100;
+    // HUD缓存全部置-1：强制首帧重绘（修复开局看不见物品栏/HUD）
+    l_life = -1;
+    l_hujia = -1;
+    l_lvlinfo = -1;
+    l_energy = -1;
+    l_coin = -1;
+    l_cho = -1;
+    l_oxy = -1;
+    for(int i = 1; i <= 25; i++)
+        l_beibao[i][0] = -1, l_beibao[i][1] = -1;
     run = 1;
     g_world_active = true;
     hujia_update();
     slow_update = 400;
     while(1)
     {
-        if(setfps == 0 || clock() - Clocknum >= 15 * setfps)
+        // QPC门控：clock()粒度~15.6ms导致60帧档实际只有30~45帧
         {
-            GetIn += (GetIn >= 1 ? 0 : 1);
-            keybd_event(VK_MENU, 0, 0, 0);               // 按下
-            keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
-            UpdateFPS();
-            HideCursor();
-            Clocknum = clock();
+            double nowms = qpc_ms();
+            if(g_last_frame_ms < 0)
+                g_last_frame_ms = nowms;
+            if(setfps == 0 || nowms - g_last_frame_ms >= 15.0 * setfps)
+            {
+                g_last_frame_ms = nowms;
+                Clocknum = clock();
+                GetIn += (GetIn >= 1 ? 0 : 1);
+                keybd_event(VK_MENU, 0, 0, 0);               // 按下
+                keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0); // 释放
+                UpdateFPS();
+                HideCursor();
             for(int S = 1; S <= setfps; S++)
             {
                 slow_update++;
@@ -9812,6 +8695,13 @@ void game_loop()
                     boom_loop();
                 atime();
                 update_level();   // 地牢关卡逻辑（未进入地牢时立即返回）
+                // 魔光护符(112)：能量自然恢复（beta1.8同步）
+                for(int mi = 1; mi <= 30; mi++)
+                    if(beibao[mi][0] == 112 && beibao[mi][1] > 0)
+                    {
+                        energy = min(energyMax, energy + 0.15);
+                        break;
+                    }
                 mx = 0;
                 if(wudi > 0)
                     wudi--;
@@ -9826,6 +8716,7 @@ void game_loop()
                             g_world_active = false;
                             return;
                         }
+                        clamp_camera();   // SET() 可能改大了 printx/printy
                         setlight();
                         memset(painting, 114, sizeof(painting));
                         Print();
@@ -9859,7 +8750,8 @@ void game_loop()
                     Clear();
                     memset(beibao, 0, sizeof(beibao));
                     back_x = 10, back_y = 145;
-                    life = 20;
+                    life = lifeMax;
+                    hujiazhi = armorMax;
                     Start();
                 }
                 if((GetAsyncKeyState('E') & 0x8000) && GetIn == 1)
@@ -9892,8 +8784,6 @@ void game_loop()
                     shuaxin();
                 if(GetAsyncKeyState('U') & 0x8000 && GetIn == 1)
                     save_world(zzz, false);
-                if(GetAsyncKeyState('B') & 0x8000 && GetIn == 1)
-                    gohome();
                 if(((GetAsyncKeyState('A') & 0x8000) ||
                         (GetAsyncKeyState(VK_LEFT) & 0x8000)) &&
                         GetIn == 1)
@@ -9953,11 +8843,12 @@ void game_loop()
                 else
                     can = 0;
                 checkuseitem();
-                // 大回血药(100)与能量药水(94)与回血药水(24)
+                // 大回血药(100)与能量药水(94)与回血药水(24)与护甲药水(113)
                 if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] == 100)
                 {
-                    int heal = 12 + (hasTalent(T_POTION) ? 6 : 0);
+                    int heal = 60 + (hasTalent(T_POTION) ? 30 : 0);
                     life += heal;
+                    if(life > lifeMax) life = lifeMax;
                     beibao[cho][1]--;
                 }
                 else if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] == 94)
@@ -9966,10 +8857,18 @@ void game_loop()
                     energy = min(energyMax, energy + eg);
                     beibao[cho][1]--;
                 }
+                else if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] == 113)
+                {
+                    // 护甲药水：恢复护甲值（护甲不自然恢复，仅道具恢复）
+                    int ar = 60 + (hasTalent(T_POTION) ? 30 : 0);
+                    hujiazhi = min(armorMax, hujiazhi + ar);
+                    beibao[cho][1]--;
+                }
                 else if(KEY_DOWN(VK_RBUTTON) && beibao[cho][0] == 24)
                 {
-                    int heal = 5 + (hasTalent(T_POTION) ? 3 : 0);
+                    int heal = 25 + (hasTalent(T_POTION) ? 12 : 0);
                     life += heal;
+                    if(life > lifeMax) life = lifeMax;
                     beibao[cho][1]--;
                 }
                 else if(KEY_DOWN(VK_RBUTTON) && (beibao[cho][0] == 37||beibao[cho][0] == 55||beibao[cho][0] == 88||beibao[cho][0] == 89||beibao[cho][0] == 91))
@@ -9978,13 +8877,13 @@ void game_loop()
                     if(eat > 75)
                     {
                         eat = 0;
-                        if(beibao[cho][0] == 37)life += 2;
-                        else if(beibao[cho][0] == 88)life += 2;
-                        else if(beibao[cho][0] == 89)life += 3;
-                        else if(beibao[cho][0] == 91)life += 8;
-                        else life += 4;
-                        if(life > 20)
-                            life = 20;
+                        if(beibao[cho][0] == 37)life += 10;
+                        else if(beibao[cho][0] == 88)life += 10;
+                        else if(beibao[cho][0] == 89)life += 15;
+                        else if(beibao[cho][0] == 91)life += 40;
+                        else life += 20;
+                        if(life > lifeMax)
+                            life = lifeMax;
                         beibao[cho][1]--;
                     }
                 }
@@ -10033,7 +8932,7 @@ void game_loop()
                 if(KEY_DOWN(VK_LBUTTON))
                 {
                     if(gunFired) { /* 已射击，跳过原逻辑 */ }
-                    else if(beibao[cho][0] == 41||beibao[cho][0] == 61)
+                    else if(beibao[cho][0] == 41||beibao[cho][0] == 61||beibao[cho][0] == 111)
                     {
                         bow++;
                         if(bow > 0)
@@ -10072,18 +8971,25 @@ void game_loop()
                                 }
                                 else
                                 {
-                                    double ttx=abs(x-mpx);
-                                    double tty=abs(y-mpy);
-                                    double total=ttx+tty+0.001;
-                                    double px=ttx/total;
-                                    double py=tty/total;
-                                    if(mpx-x<0)px*=-1;
-                                    if(mpy-y<0)py*=-1;
-                                    beibao[U][1]--;
-                                    if(beibao[U][0] == 44 || beibao[U][0] == 45)
-                                        make_jian(x, y-0.75, 30*px, 50*py, 2);
+                                    // 真实指向角（atan2）：箭矢直线飞向准星
+                                    double ang = atan2(mpy - y, mpx - x);
+                                    // 恶魔弓(111)：箭速更快，25%概率不消耗箭（beta1.8同步）
+                                    if(beibao[cho][0] == 111)
+                                    {
+                                        if(rand()%4!=0)beibao[U][1]--;
+                                        if(beibao[U][0] == 44 || beibao[U][0] == 45)
+                                            make_jian(x, y-0.75, 75*cos(ang), 75*sin(ang), 2);
+                                        else
+                                            make_jian(x, y-0.75, 75*cos(ang), 75*sin(ang), 3);
+                                    }
                                     else
-                                        make_jian(x, y-0.75, 30*px, 50*py, 3);
+                                    {
+                                        beibao[U][1]--;
+                                        if(beibao[U][0] == 44 || beibao[U][0] == 45)
+                                            make_jian(x, y-0.75, 55*cos(ang), 55*sin(ang), 2);
+                                        else
+                                            make_jian(x, y-0.75, 55*cos(ang), 55*sin(ang), 3);
+                                    }
                                 }
                             }
                         }
@@ -10098,20 +9004,20 @@ void game_loop()
                         {
                             if(mpx - int(x + 0.5) > 0)
                             {
-                                if(blockwj[s[int(x + 1.5)][int(y + 0.5)]] > 0)
+                                if(probe_diggable(x + 1.5, y + 0.5))
                                     wajue(int(x + 1.5), (y + 0.5));
-                                else if(blockwj[s[int(x + 2.5)][int(y + 0.5)]] > 0)
+                                else if(probe_diggable(x + 2.5, y + 0.5))
                                     wajue(int(x + 2.5), (y + 0.5));
-                                else if(blockwj[s[int(x + 3.5)][int(y + 0.5)]] > 0)
+                                else if(probe_diggable(x + 3.5, y + 0.5))
                                     wajue(int(x + 3.5), (y + 0.5));
                             }
                             else
                             {
-                                if(blockwj[s[int(x - 0.5)][int(y + 0.5)]] > 0)
+                                if(probe_diggable(x - 0.5, y + 0.5))
                                     wajue(int(x - 0.5), (y + 0.5));
-                                else if(blockwj[s[int(x - 1.5)][int(y + 0.5)]] > 0)
+                                else if(probe_diggable(x - 1.5, y + 0.5))
                                     wajue(int(x - 1.5), (y + 0.5));
-                                else if(blockwj[s[int(x - 2.5)][int(y + 0.5)]] > 0)
+                                else if(probe_diggable(x - 2.5, y + 0.5))
                                     wajue(int(x - 2.5), (y + 0.5));
                             }
                         }
@@ -10119,20 +9025,20 @@ void game_loop()
                         {
                             if(mpy - int(y + 0.5) > 0)
                             {
-                                if(blockwj[s[int(x + 0.5)][int(y + 1.5)]] > 0)
+                                if(probe_diggable(x + 0.5, y + 1.5))
                                     wajue(int(x + 0.5), (y + 1.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y + 2.5)]] > 0)
+                                else if(probe_diggable(x + 0.5, y + 2.5))
                                     wajue(int(x + 0.5), (y + 2.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y + 3.5)]] > 0)
+                                else if(probe_diggable(x + 0.5, y + 3.5))
                                     wajue(int(x + 0.5), (y + 3.5));
                             }
                             else
                             {
-                                if(blockwj[s[int(x + 0.5)][int(y - 0.5)]] > 0)
+                                if(probe_diggable(x + 0.5, y - 0.5))
                                     wajue(int(x + 0.5), (y - 0.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y - 1.5)]] > 0)
+                                else if(probe_diggable(x + 0.5, y - 1.5))
                                     wajue(int(x + 0.5), (y - 1.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] > 0)
+                                else if(probe_diggable(x + 0.5, y - 2.5))
                                     wajue(int(x + 0.5), (y - 2.5));
                             }
                         }
@@ -10147,6 +9053,8 @@ void game_loop()
                     {
                         if(s[mpx][mpy] == 9)
                             craft_2();
+                        else if(s[mpx][mpy] == 104)
+                            craft_3();   // 锻造台：下界装备升级
                         else if(s[mpx][mpy] == 40)
                             openbox();
                         else if(s[mpx][mpy] == 38)
@@ -10256,20 +9164,20 @@ void game_loop()
                         {
                             if(mpx - int(x + 0.5) > 0)
                             {
-                                if(blockwj[s[int(x + 3.5)][int(y + 0.5)]] == 0)
+                                if(probe_placeable(x + 3.5, y + 0.5))
                                     block_(int(x + 3.5), (y + 0.5));
-                                else if(blockwj[s[int(x + 2.5)][int(y + 0.5)]] == 0)
+                                else if(probe_placeable(x + 2.5, y + 0.5))
                                     block_(int(x + 2.5), (y + 0.5));
-                                else if(blockwj[s[int(x + 1.5)][int(y + 0.5)]] == 0)
+                                else if(probe_placeable(x + 1.5, y + 0.5))
                                     block_(int(x + 1.5), (y + 0.5));
                             }
                             else
                             {
-                                if(blockwj[s[int(x - 2.5)][int(y + 0.5)]] == 0)
+                                if(probe_placeable(x - 2.5, y + 0.5))
                                     block_(int(x - 2.5), (y + 0.5));
-                                else if(blockwj[s[int(x - 1.5)][int(y + 0.5)]] == 0)
+                                else if(probe_placeable(x - 1.5, y + 0.5))
                                     block_(int(x - 1.5), (y + 0.5));
-                                else if(blockwj[s[int(x - 0.5)][int(y + 0.5)]] == 0)
+                                else if(probe_placeable(x - 0.5, y + 0.5))
                                     block_(int(x - 0.5), (y + 0.5));
                             }
                         }
@@ -10277,20 +9185,20 @@ void game_loop()
                         {
                             if(mpy - int(y + 0.5) > 0)
                             {
-                                if(blockwj[s[int(x + 0.5)][int(y + 3.5)]] == 0)
+                                if(probe_placeable(x + 0.5, y + 3.5))
                                     block_(int(x + 0.5), (y + 3.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y + 2.5)]] == 0)
+                                else if(probe_placeable(x + 0.5, y + 2.5))
                                     block_(int(x + 0.5), (y + 2.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y + 1.5)]] == 0)
+                                else if(probe_placeable(x + 0.5, y + 1.5))
                                     block_(int(x + 0.5), (y + 1.5));
                             }
                             else
                             {
-                                if(blockwj[s[int(x + 0.5)][int(y - 2.5)]] == 0)
+                                if(probe_placeable(x + 0.5, y - 2.5))
                                     block_(int(x + 0.5), (y - 2.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y - 1.5)]] == 0)
+                                else if(probe_placeable(x + 0.5, y - 1.5))
                                     block_(int(x + 0.5), (y - 1.5));
-                                else if(blockwj[s[int(x + 0.5)][int(y - 0.5)]] == 0)
+                                else if(probe_placeable(x + 0.5, y - 0.5))
                                     block_(int(x + 0.5), (y - 0.5));
                             }
                         }
@@ -10311,82 +9219,66 @@ void game_loop()
                         }
                     }
                 }
-                if(gamemode == 1 && !inDungeon)
+                // ===== 顶视角移动（重力系统已移除）=====
                 {
                     short pfb = s[int(x + 0.5)][int(y + 0.5)];
-                    if((pfb >= 19 && pfb <= 22) ||
-                            (pfb >= 32 && pfb <= 34))
+                    if(gamemode == 1)
                     {
-                        if(wudi == 0)
-                            if(pfb >= 32 && pfb <= 34)
-                            {
-                                if(!hasTalent(T_LAVA))   // 岩浆免疫
-                                    life -= 4 * jianshang, wudi = 30;
-                            }
-                        fell = y;
-                        if(my == 1)
-                            spy = -12;
-                        if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
-                            spy = 10;
-                        spy += g;
-                        spy *= 0.75;
-                        y += spy * 0.02;
-                        y_touch();
-                        y += spy * 0.02;
-                        y_touch();
-                        x += spx * 0.05;
-                        x_touch();
-                    }
-                    else
-                    {
-                        if(my == 1 && jump == 0)
-                            jump = 1, spy = -13.5;
-                        else if(my == 0 && jump == 1)
-                            jump = 2;
-                        else if(my == 1 && jump == 2)
-                            jump = 3, spy = -13.5;
-                        spy += g;
-                        spy *= 0.96;
-                        y += spy * 0.055;
-                        y_touch();
-                        y += spy * 0.055;
-                        y_touch();
-                        if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                        if(pfb >= 32 && pfb <= 34)   // 岩浆伤害
                         {
-                            x += spx * 0.055;
-                            if(blocktouch[s[int(x + 0.5)][int(y + 1)]] == 0 &&
-                                    abs(int(spy + 0.5)) <= 1)
-                                x -= spx * 0.055;
-                            x_touch();
+                            if(wudi == 0 && !hasTalent(T_LAVA))
+                                damage(8, x, true), wudi = 30;
                         }
-                        else
+                        else if(pfb >= 19 && pfb <= 22)   // 水中：氧气消耗
                         {
-                            x += spx * 0.055;
-                            x_touch();
-                            x += spx * 0.055;
-                            x_touch();
+                            if(oxygen > -20)
+                                oxygen--;
+                            else if(wudi == 0)
+                                damage(5, x, true), wudi = 60;
                         }
                     }
-                }
-                else
-                {
+                    // 非水中恢复氧气
+                    if(!(pfb >= 19 && pfb <= 22))
+                    {
+                        oxygen += 5;
+                        if(oxygen > 900)
+                            oxygen = 900;
+                    }
                     spy = -my * 8;
-                    double ox = x, oy = y;
-                    x += spx * 0.16;
-                    y += spy * 0.16;
-                    // 地牢：撞墙回退，不穿墙（创造模式主世界仍可穿墙飞行）
-                    if(inDungeon)
+                    // 步进碰撞：每小步≤0.4格，防高速隧穿薄墙
+                    double mdx = spx * 0.16, mdy = spy * 0.16;
+                    double maxstep = max(fabs(mdx), fabs(mdy));
+                    int nsteps = (int)(maxstep / 0.4) + 1;
+                    for(int si = 0; si < nsteps; si++)
                     {
-                        int cx = int(x + 0.5), cy = int(y + 0.5);
-                        if(cx >= 0 && cx < WORLD_WIDTH && cy >= 0 && cy < WORLD_HEIGHT &&
-                                blocktouch[s[cx][cy]] >= 1)
+                        double ox = x, oy = y;
+                        double nx = x + mdx / nsteps;
+                        double ny = y + mdy / nsteps;
+                        if(gamemode != 1)
                         {
-                            x = ox;
-                            y = oy;
+                            x = nx; y = ny;   // 创造模式穿墙
+                            continue;
                         }
+                        auto solid = [&](double px, double py)
+                        {
+                            int cx = int(px + 0.5), cy = int(py + 0.5);
+                            return cx >= 0 && cx < WORLD_WIDTH && cy >= 0 &&
+                                   cy < WORLD_HEIGHT && blocktouch[s[cx][cy]] >= 1;
+                        };
+                        if(!solid(nx, ny))
+                        {
+                            x = nx; y = ny;         // 无碰撞
+                        }
+                        else if(!solid(nx, oy))
+                        {
+                            x = nx;                 // 仅x可行（贴墙滑动）
+                        }
+                        else if(!solid(ox, ny))
+                        {
+                            y = ny;                 // 仅y可行
+                        }
+                        // 都撞则保持原位
                     }
-                    // 创造飞行不累计摔落高度，切回生存时以当前位置为基准，避免摔死
-                    fell = y;
                 }
                 if(x < 0)
                     x = 0;
@@ -10395,7 +9287,24 @@ void game_loop()
                 if(x > WORLD_WIDTH - 1)
                     x = WORLD_WIDTH - 1;
                 if(y > WORLD_HEIGHT - 1)
-                    gohome();
+                {
+                    // 掉出世界底部保护：地牢内回关卡起始房，主世界回重生点
+                    if(inDungeon || currentLevel > 0)
+                    {
+                        y = WORLD_HEIGHT - 2;
+                        spx = 0; spy = 0;
+                        enter_level(currentLevel > 0 ? currentLevel : 1);
+                        memset(painting, 114, sizeof(painting));
+                        shuaxin();
+                    }
+                    else if(s[back_x][back_y] == 90)
+                    {
+                        x = back_x, y = back_y - 1;
+                        shuaxin();
+                    }
+                    else
+                        y = WORLD_HEIGHT - 2;
+                }
                 if(special_effect==2)
                 {
                     if(abs(x - jx) < 0.5) jx = x;
@@ -10415,14 +9324,7 @@ void game_loop()
                     jx = x;
                     jy = y;
                 }
-                if(jx < printx / 2)
-                    jx = printx / 2;
-                if(jy < printy / 2)
-                    jy = printy / 2;
-                if(jx > WORLD_WIDTH - printx / 2 - 1)
-                    jx = WORLD_WIDTH - printx / 2 - 1;
-                if(jy > WORLD_HEIGHT - printy / 2 - 1)
-                    jy = WORLD_HEIGHT - printy / 2 - 1;
+                clamp_camera();
                 st_move();
             }
             if(tick % 10 == 0)
@@ -10436,24 +9338,23 @@ void game_loop()
                 setlight();
             Print();
             lx = int(x + 0.5), ly = int(y + 0.5);
-            Setpos(1, 33);
-            if(printy > 30)
-                Setpos(1, printy + 1);
+            Setpos(1, printy + 1);   // HUD生命行光标定位（print_fast依赖；Setpos(1,33)被其覆盖，省1次调用）
             Color(0);
             if(life <= 0)
                 Start();
-            if(life < 20)
+            if(life < lifeMax)
                 H++;
             if(H > 300)
                 life++, H = 0;
-            if(life > 20 && !SetLife)
-                life = 20;
+            if(life > lifeMax && !SetLife)
+                life = lifeMax;
             print_fast();
             savetick++;
             if(savetick>=3600)
             {
                 savetick=0;
                 save_world(zzz, false);
+            }
             }
         }
         //Sleep(1);
@@ -10666,7 +9567,10 @@ int main()
                                         make_newworld();
                                         memset(painting, 114, sizeof(painting));
                                         if(iscre)
+                                        {
+                                            enter_level(1);   // 新世界直接进入第1关
                                             game_loop();
+                                        }
                                         bag=0;
                                         Clear_2();
                                         willclear = true;
