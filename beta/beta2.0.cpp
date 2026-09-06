@@ -298,6 +298,7 @@ int l_lvlinfo = -1;                                 // 上次显示的关卡进�
 int gunCD = 0;                                      // 枪械射击冷却
 int currentGunType = 0;                              // 当前手持枪械类型: 0=无 95=手枪 96=冲锋枪 97=霰弹 98=狙击
 int coin = 0;                                        // 持有金币
+int weaponBonus = 0;                                 // 工匠强化的攻击加成（随存档持久化）
 int levelUnlocked = 1;                               // 已解锁关卡(1-10)
 int currentLevel = 0;                                 // 当前关卡
 int currentRoom = 0;                                  // 当前房间
@@ -1136,6 +1137,8 @@ void st(int type, int x, int y, int ra2)
         s[x][y - 1] = type;
 }
 int last_l;   // 世界吞噬者链式生成：上一节实体下标
+// 全局 l 是本函数的输出槽：调用方（make_npc 等）在返回后读它拿到新实体下标，
+// 槽位满时 l == 500。因此 l 绝不能被当作循环变量，也不能跨任何可能分配实体的调用保存
 void make_st(int typ, int hp, int hur, int tx, int ty, int nbtt = 0,int iseof=0)
 {
     l = 0;
@@ -2185,6 +2188,7 @@ static void build_meta(vector<unsigned char> &m)
         extrai[37] = lifeMax;    // 生命/护甲上限与当前护甲值（天赋加成持久化）
         extrai[38] = armorMax;
         extrai[39] = hujiazhi;
+        extrai[40] = weaponBonus;  // 工匠强化等级
         buf_tag(m, TAG_EXTRA, extrai, sizeof(extrai));
     }
     buf_u16(m, TAG_END);
@@ -2762,6 +2766,8 @@ static bool load_binary_v3(const char *filename)
                     }
                     else
                         hujiazhi = armorMax;
+                    // 工匠强化等级（旧档没写到第40项 → ei 已被清零，保持默认0）
+                    if(n >= 41 && ei[40] >= 0 && ei[40] <= 20) weaponBonus = ei[40];
                     // 纯地牢模式：存档加载后一律直接重新进入关卡
                     // （房间墙体/怪物状态不持久化，重进保证结构完整）
                     // 旧档/建档瞬间的存档 inDungeon=0 且 curLevel=0，若不重进会
@@ -3124,6 +3130,65 @@ int getbeibao_3(int type, int nd)
     }
     return 0;
 }
+// 桶类转换（水桶/岩浆桶倒出、空桶舀起）：消耗一个、产出一个。
+// 原来直接改写整格的 id 而不动数量，堆叠 >1 时 N 个水桶倒一次水变成 N 个空桶
+// （复制漏洞，舀水方向是它的镜像）；生存模式下堆叠 >1 可达 ——
+// 挖箱子会把多个桶叠进同一格。返回 false 表示没地方放转换出来的桶，此时不做转换，
+// 宁可什么都不发生也不能整格改写
+static bool bucket_convert(int cho_, int newid)
+{
+    if(beibao[cho_][1] <= 1)
+    {
+        beibao[cho_][0] = newid;
+        beibao[cho_][1] = 1;
+        return true;
+    }
+    int slot = getbeibao(newid);
+    if(slot == 0)
+        return false;
+    beibao[cho_][1]--;
+    beibao[slot][1]++, beibao[slot][0] = newid;
+    return true;
+}
+// 把箱子内容倒进背包，moved 输出实际倒出的件数。
+// 返回 false 表示背包塞不下：没倒完的数量已写回原格，箱子仍可再次开启。
+// 挖箱子(wajue)和走近自动开箱(chest_auto_open)共用，两条路径的行为必须一致 ——
+// 原来前者用 things[i]%1000 > 91 过滤，物品 id 其实已经到 113
+// （能量药水94、枪械95-98、大回血药100、金币101、暗影鳞片105、护甲药水113），
+// 那些东西既不转移也不清零，而箱子已被墓碑化 → findbox 永不再匹配，
+// 物品不可达就等于丢失，之后 alloc_box 复用该槽时 memset 彻底销毁
+static bool box_dump_into_bag(int del, int &moved)
+{
+    moved = 0;
+    bool full = true;
+    for(int i = 0; i <= 24; i++)
+    {
+        unsigned short packed = box[del].things[i];
+        int item = packed % 1000;
+        int cnt = packed / 1000;
+        box[del].things[i] = 0;
+        if(cnt <= 0 || item <= 0)
+            continue;
+        if(item > 113)   // 损坏数据：再拿去索引 test[150] 就是越界读
+            continue;
+        int got = 0;
+        for(int j = 1; j <= cnt; j++)
+        {
+            int uu = getbeibao(item);
+            if(uu == 0)
+                break;
+            beibao[uu][1]++, beibao[uu][0] = item;
+            got++;
+        }
+        moved += got;
+        if(got < cnt)
+        {
+            box[del].things[i] = (unsigned short)((cnt - got) * 1000 + item);
+            full = false;
+        }
+    }
+    return full;
+}
 void wajue(int sx, int sy)
 {
     if(sx < 0 || sx >= WORLD_WIDTH || sy < 0 || sy >= WORLD_HEIGHT)
@@ -3211,25 +3276,26 @@ void wajue(int sx, int sy)
                     }
                 }
             }
-            if(s[sx][sy] == 40)
+            if(s[sx][sy] == 40 && U != 0)
             {
                 int del = findbox(sx, sy);
-                int uu;
                 if(del != -1)
                 {
-                    box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
-                    for(int i = 0; i <= 24; i++)
+                    int moved = 0;
+                    if(box_dump_into_bag(del, moved))
                     {
-                        if(box[del].things[i] % 1000 == 0 ||
-                                box[del].things[i] % 1000 > 91)
-                            continue;
-                        for(int j = 1; j <= box[del].things[i] / 1000; j++)
-                        {
-                            uu = getbeibao(box[del].things[i] % 1000);
-                            if(uu != 0)
-                                beibao[uu][1]++, beibao[uu][0] = box[del].things[i] % 1000;
-                        }
-                        box[del].things[i] = 0;
+                        box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
+                    }
+                    else
+                    {
+                        // 背包塞不下全部内容：把刚拿到的箱子退回，方块留在原地，
+                        // Box_ 也不墓碑化。原来无条件清空并墓碑化，而 U==0 时
+                        // s[sx][sy] 仍保留 40 → 留下一个 findbox 永远返回 -1 的死箱子，
+                        // 里面的东西一起丢掉
+                        beibao[U][1]--;
+                        if(beibao[U][1] <= 0)
+                            beibao[U][0] = 0, beibao[U][1] = 0;
+                        U = 0;
                     }
                 }
             }
@@ -3309,11 +3375,21 @@ void block_(int xxx, int yyy)
         }
         return;
     }
-    if(beibao[cho][0] == 6 || beibao[cho][0] == 7 || beibao[cho][0] == 8 ||
-            beibao[cho][0] == 13 || beibao[cho][0] == 14 || beibao[cho][0] == 15 ||
-            beibao[cho][0] == 18 || beibao[cho][0] == 17 || beibao[cho][0] == 25 ||
-            beibao[cho][0] == 37 || (beibao[cho][0] >= 41 && beibao[cho][0] <= 52)||(beibao[cho][0]>=60&&beibao[cho][0]<=61)||(beibao[cho][0]>=64&&beibao[cho][0]<=65)||(beibao[cho][0]>=70&&beibao[cho][0]!=87&&beibao[cho][0]!=90)||(beibao[cho][0]>=94&&beibao[cho][0]<=101)||(beibao[cho][0]>=105&&beibao[cho][0]<=112))
-        return;
+    // 可放置白名单：只有真的是方块、而且挖得回来的 id 才允许放进世界。
+    // 原来是一份手工黑名单，缺口有 10/11/24/27-31/38/55-59/92/102/113 ——
+    // 右键铁头盔会写出 s[xxx][yyy]=29，而 blockwj[29]==0 让 wajue 直接返回，
+    // 方块永远挖不掉、物品也就丢了；id 31(盾) 和 24(回血药水) 的 blockwj 是 -1，
+    // 等于在生存模式造出不可破坏的固体方块。105-113 更糟：blockprint[]/blockcolor[]
+    // 只定义到 104，printbuf 会对空 string 取 operator[](1) → UB
+    int held = beibao[cho][0];
+    if(held != 26 && held != 35)   // 水桶/岩浆桶落到下面的专用分支
+    {
+        if(held < 0 || held >= 150 || blockwj[held] <= 0)
+            return;
+        // 关卡金矿挖一次直接掉 2-5 金币且不给物品，能放下就能无限刷
+        if(held == 103)
+            return;
+    }
     if((s[xxx + 1][yyy] == 0 || s[xxx + 1][yyy] == 11 ||
             (s[xxx + 1][yyy] >= 19 && s[xxx + 1][yyy] <= 22) ||
             (s[xxx + 1][yyy] >= 32 && s[xxx + 1][yyy] <= 34)) &&
@@ -3332,11 +3408,10 @@ void block_(int xxx, int yyy)
     (s[xxx][yyy] >= 32 && s[xxx][yyy] <= 34)||s[xxx][yyy] == 92);
     if(beibao[cho][0] == 26)
     {
-        if(can_place)
+        if(can_place && bucket_convert(cho, 25))
         {
             s[xxx][yyy] = 19;
             mark_dirty_col(xxx);
-            beibao[cho][0] = 25;
             setlight();
             Clear();
         }
@@ -3344,11 +3419,10 @@ void block_(int xxx, int yyy)
     }
     if(beibao[cho][0] == 35)
     {
-        if(can_place)
+        if(can_place && bucket_convert(cho, 25))
         {
             s[xxx][yyy] = 32;
             mark_dirty_col(xxx);
-            beibao[cho][0] = 25;
             setlight();
             Clear();
         }
@@ -3575,20 +3649,27 @@ void execute_command(const string &cmd)
             return;
         }
         int item_id = it->second;
-        int slot = getbeibao(item_id);
-        if(slot > 0)
+        // 必须逐个发放：原来一次 getbeibao 拿到某个槽就 += amount 再截到 64 ——
+        // 「已有60石头 + /give stone 10」得到 64 并静默销毁 6 个；
+        // 而 getbeibao(95..98) 返回的是空格，+= amount 会在一格里叠 64 把手枪，
+        // 破坏 getbeibao 里「枪械每格一个」的不变量
+        int got = 0;
+        for(int i = 0; i < amount; i++)
         {
+            int slot = getbeibao(item_id);
+            if(slot == 0) break;
             beibao[slot][0] = item_id;
-            beibao[slot][1] += amount;
-            if(beibao[slot][1] > 64) beibao[slot][1] = 64;
-            Setpos(1, 31);
-            cout << " 已获得 " << amount << " " << test[item_id] << "              ";
+            beibao[slot][1]++;
+            got++;
         }
-        else
-        {
-            Setpos(1, 31);
+        Setpos(1, 31);
+        if(got == 0)
             cout << " 错误: 背包已满                                                ";
-        }
+        else if(got < amount)
+            cout << " 已获得 " << got << " " << test[item_id]
+                 << "，背包放不下剩余 " << amount - got << " 个            ";
+        else
+            cout << " 已获得 " << got << " " << test[item_id] << "              ";
     }
     else if(cmd_name == "EM_wzl")
     {
@@ -3970,13 +4051,15 @@ void block_update()
     Clear();
 }
 
-void make_jian(double tx, double ty, double stx, double sty, int nbt_)
+// 返回新分配的槽位下标，槽位满时返回 -1。
+// 游标是局部变量，原来返回 void 让调用方无从得知弹道实体落在哪个槽
+int make_jian(double tx, double ty, double stx, double sty, int nbt_)
 {
     int i = 0;
     while(i < 500 && shiti[i].type != 0)
         i++;
     if(i >= 500)
-        return;
+        return -1;
     add_entity_to_hash(i, tx, ty);
     shiti[i].HP = 0, shiti[i].hurt = 0, shiti[i].type = 4, shiti[i].gx = tx,
              shiti[i].gy = ty, shiti[i].nbt = nbt_;
@@ -3984,6 +4067,7 @@ void make_jian(double tx, double ty, double stx, double sty, int nbt_)
     shiti[i].randomtick = 0, shiti[i].direction = 0;
     shiti[i].sd = 0;
     shiti[i].AI = 2;
+    return i;
 }
 int QQQQ = 0;
 void try_make_st()
@@ -5612,39 +5696,43 @@ void st_move()
     boss3hp = 0;
     if(playerCD > 0)
         playerCD--;
-    for(l = 0; l < 500; l++)
+    // 循环变量必须是局部的：全局 l 是 make_st 的输出槽，AI 处理器里 boss 分裂/死亡
+    // 会调 make_st 改写它，于是外层 l++ 从新分配的槽继续 —— 中间一段实体被整帧跳过；
+    // 新槽位更低时（常见 12/13），13..旧位置 的实体在同一帧被模拟两次
+    // （双倍重力、双倍 gongjitick、boss3hp 累加两次 → 血条虚高）
+    for(int ei = 0; ei < 500; ei++)
     {
-        if(shiti[l].type > 0)
+        if(shiti[ei].type > 0)
         {
-            double old_gx = shiti[l].gx;
-            double old_gy = shiti[l].gy;
-            if(shiti[l].AI == 1)
+            double old_gx = shiti[ei].gx;
+            double old_gy = shiti[ei].gy;
+            if(shiti[ei].AI == 1)
             {
-                if(!ai_ground(l, old_gx, old_gy))
+                if(!ai_ground(ei, old_gx, old_gy))
                     continue;
             }
-            else if(shiti[l].AI == 2)
+            else if(shiti[ei].AI == 2)
             {
-                if(!ai_projectile(l, old_gx, old_gy))
+                if(!ai_projectile(ei, old_gx, old_gy))
                     continue;
             }
-            else if(shiti[l].AI == 3)
+            else if(shiti[ei].AI == 3)
             {
-                if(!ai_flyboss(l, old_gx, old_gy))
+                if(!ai_flyboss(ei, old_gx, old_gy))
                     continue;
             }
-            else if(shiti[l].AI == 4)
+            else if(shiti[ei].AI == 4)
             {
-                if(!ai_boss3(l, old_gx, old_gy))
+                if(!ai_boss3(ei, old_gx, old_gy))
                     continue;
             }
-            else if(shiti[l].AI == 5)
+            else if(shiti[ei].AI == 5)
             {
-                ai_passive(l, old_gx, old_gy);
-                if(shiti[l].type == 0)
+                ai_passive(ei, old_gx, old_gy);
+                if(shiti[ei].type == 0)
                     continue;
             }
-            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+            update_entity_hash(ei, old_gx, old_gy, shiti[ei].gx, shiti[ei].gy);
         }
     }
     if(!checkhp)
@@ -6121,12 +6209,26 @@ bool wear_things(int wid,int tplace,int cc,int c_thing,int upd)
         }
 	}
 	if(iswear){
-	wear[tplace] = wid;
-	beibao[cc][0] = 0;
-	beibao[cc][1] = 0;
-    craft_update(upd);
-	return true;}
-    return false;
+	    // 已穿戴的那件必须先退回背包：原来直接覆写 wear[tplace]，
+	    // 穿着铁胸甲再拖钻石胸甲上去，铁胸甲就静默消失了（卸下护甲那条路径
+	    // movethings 里是用 getbeibao 正确处理的，只有换装这条路漏了）
+	    int old = wear[tplace];
+	    if(old != 0){
+	        int back = getbeibao(old);
+	        if(back == 0)
+	            return false;   // 背包塞不下旧件 → 拒绝换装，宁可什么都不发生
+	        beibao[back][0] = old;
+	        beibao[back][1]++;
+	    }
+	    wear[tplace] = wid;
+	    // 数量要扣一件而不是整格清零：getbeibao 会把同 id 叠到 64，zz2 也用
+	    // beibao[O][1] += 1 发放，于是从 N 个头盔的堆叠上装备一次，N 个全没
+	    beibao[cc][1]--;
+	    if(beibao[cc][1] <= 0)
+	        beibao[cc][0] = 0, beibao[cc][1] = 0;
+	    craft_update(upd);
+	    return true;}
+	    return false;
 }
 void movethings(int upd)
 {
@@ -6347,10 +6449,13 @@ void moveinbox()
     mpx = To_int(p.x / 2 - 24);
     mpy = To_int(p.y - 17);
     if(!(int((mpx + 12) / 4 + 0.5) > 5 || int((mpx + 12) / 4 + 0.5) < 1 ||
-            int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12))
+            int(mpy / 2 * 5 + 0.5) > 26 || int(mpy + 0.5) < -12))
     {
         c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
-        if(c_thing < 26 && c_thing > -30 && (c_thing < -4 || c_thing > 0))
+        // 背包第6行（槽26-30）原来被 <26 挡在外面：boxprint 和 bb 画的是 beibao[1..30]
+        // 共6行，但这里只放行前5行 → 开着箱子时最后一行既点不了也拖不了、Q 也丢不掉。
+        // movethings 用的是 <31，两边必须一致
+        if(c_thing < 31 && c_thing > -30 && (c_thing < -4 || c_thing > 0))
         {
             Setpos(0, 0);
             cout << 29 + c_thing << "   " << mpy << "  ";
@@ -6393,7 +6498,7 @@ void moveinbox()
                         c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
                         if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
                                 int((mpx + 12) / 4 + 0.5) < 1 ||
-                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12) &&
+                                int(mpy / 2 * 5 + 0.5) > 26 || int(mpy + 0.5) < -12) &&
                                 (c_thing < -4 || c_thing > 0))
                             bb(c_thing, cc, 1);
                     }
@@ -6405,7 +6510,7 @@ void moveinbox()
                         c_thing = int((mpx + 12) / 4 + 0.5) + mpy / 2 * 5;
                         if(!(int((mpx + 12) / 4 + 0.5) > 5 ||
                                 int((mpx + 12) / 4 + 0.5) < 1 ||
-                                int(mpy / 2 * 5 + 0.5) > 21 || int(mpy + 0.5) < -12) &&
+                                int(mpy / 2 * 5 + 0.5) > 26 || int(mpy + 0.5) < -12) &&
                                 (c_thing < -4 || c_thing > 0))
                         {
                             if((cc != c_thing))
@@ -6503,7 +6608,7 @@ void moveinbox()
     }
     if(upda)
     {
-        if(c_thing < 26 && c_thing > -30)
+        if(c_thing < 31 && c_thing > -30)
             color_change = c_thing;
         else
             color_change = -3;
@@ -7716,6 +7821,7 @@ void checkuseitem()
         gongji = 35, gongjicd = 60;
     if(beibao[cho][0] == 110)
         gongji = 40, gongjicd = 30;   // 魔光剑（beta1.8同步）
+    gongji += weaponBonus;            // 工匠强化：叠在武器基础攻击之上
     if(gongjicd<40&&gongjicd>25)issword=1;
     else issword=0;
 }
@@ -7778,11 +7884,16 @@ bool spend_coins(int n)
 void make_bullet(double tx, double ty, double stx, double sty, int dmg, int crit)
 {
     // 复用 make_jian 生成弹道实体(type=4,AI=2)，用 direction 存伤害，nbt 区分子弹
-    make_jian(tx, ty, stx, sty, 6);
-    if(l < 500 && shiti[l].type == 4)
+    // 必须用 make_jian 的返回值，不能读全局 l：l 是 make_st 的输出槽，
+    // fire_gun 从主循环调用时它停在 500，原来的 if(l < 500 && shiti[l].type == 4)
+    // 恒为假 → direction 停在 0、nbt 停在 6，ai_projectile 回退到 bd = 4，
+    // 手枪/冲锋枪/霰弹/狙击的 60/35/45/220 一个都没生效；
+    // 而 l 若恰好指向别的怪物，伤害还会被写到那只怪身上
+    int i = make_jian(tx, ty, stx, sty, 6);
+    if(i >= 0)
     {
-        shiti[l].direction = crit ? dmg * 1.5 : dmg;
-        shiti[l].nbt = crit ? 7 : 6;
+        shiti[i].direction = crit ? dmg * 1.5 : dmg;
+        shiti[i].nbt = crit ? 7 : 6;
     }
 }
 int gun_dmg(int gt)
@@ -7863,6 +7974,23 @@ void grant_talent(int t)
         if(t == T_ENERGY) { energyMax += 50; energy += 50; }       // 能量上限+50
     }
 }
+// grant_talent 的逆操作：奸商重置天赋时必须把属性一起扣回。
+// 原来只 talentCount--，加成留在身上 → 买 T_LIFE 花 100、重置花 80，
+// 净赚 +25 最大生命还腾出一个槽位，可无限循环刷属性
+void revoke_talent(int t)
+{
+    // 当前值也要减：只钳上限的话，残血时买一次天赋就白拿 +25 血，
+    // 重置后上限虽然回落，多出来的血还在 → 变成花 180 金币买永久回血
+    if(t == T_LIFE)   { lifeMax -= 25;   life -= 25;
+                        if(life > lifeMax) life = lifeMax; }
+    if(t == T_ARMOR)  { armorMax -= 50;  hujiazhi -= 50;
+                        if(hujiazhi > armorMax) hujiazhi = armorMax; }
+    if(t == T_ENERGY) { energyMax -= 50; energy -= 50;
+                        if(energy > energyMax) energy = energyMax; }
+    if(life < 1) life = 1;             // 残血时重置天赋不该把自己扣死
+    if(hujiazhi < 0) hujiazhi = 0;
+    if(energy < 0) energy = 0;
+}
 // ---- 关卡系统 ----
 void reset_dungeon_state()
 {
@@ -7875,6 +8003,7 @@ void reset_dungeon_state()
     energy = 100; energyMax = 100;
     hujiazhi = armorMax;
     coin = 0;
+    weaponBonus = 0;                 // 工匠强化随世界重置
     lvl_x0 = lvl_x1 = lvl_y0 = lvl_y1 = 0;
     // 上限被降回初始值后必须同步当前值：调用方可能在 reset 之前就写过了
     // （MAP() 会执行 life = lifeMax，用的还是上一个存档天赋加成后的旧上限），
@@ -8105,24 +8234,12 @@ static void chest_auto_open()
         {
             int del = findbox(cx, cy);
             int got = 0;
+            // 背包塞不下就原封不动：原来先墓碑化 Box_ 再无条件清空每格，
+            // 装不下的部分直接消失，而方块已被移除 → 东西找不回来
+            if(del != -1 && !box_dump_into_bag(del, got))
+                continue;
             if(del != -1)
-            {
                 box[del].bx = BOX_TOMBSTONE, box[del].by = BOX_TOMBSTONE;
-                for(int i = 0; i <= 24; i++)
-                {
-                    int item = box[del].things[i] % 1000;
-                    int cnt = box[del].things[i] / 1000;
-                    box[del].things[i] = 0;
-                    if(item == 0 || cnt <= 0)
-                        continue;
-                    for(int j = 1; j <= cnt; j++)
-                    {
-                        int uu = getbeibao(item);
-                        if(uu != 0)
-                            beibao[uu][1]++, beibao[uu][0] = item, got++;
-                    }
-                }
-            }
             s[cx][cy] = 0;
             mark_dirty_col(cx);
             Setpos(1, 31);
@@ -8483,7 +8600,17 @@ void interact_npc(int idx)
     else if(type == 15) // 工匠：强化
     {
         Setpos(1, 31); Color(0);
-        cout << " 工匠：强化武器需要30金币，是否强化？[1]是 [2]否";
+        // 原来扣 30 金币、打印「攻击+2」，但不修改任何状态 —— 纯收费的空选项。
+        // 现在真的加到 weaponBonus（checkuseitem 里叠到 gongji 上，随存档持久化）。
+        // 封顶 +20：不封顶就是无限氪金币换攻击
+        if(weaponBonus >= 20)
+        {
+            cout << " 工匠：武器已强化到极限（攻击+20）                          ";
+            Sleep(1500);
+            Setpos(1, 31); cout << "                                                              ";
+            return;
+        }
+        cout << " 工匠：强化武器需要30金币(当前攻击+" << weaponBonus << ")，是否强化？[1]是 [2]否";
         clock_t st = clock();
         while(clock() - st < 8000)
         {
@@ -8492,7 +8619,8 @@ void interact_npc(int idx)
                 int p = hasTalent(T_HALFPRICE) ? 15 : 30;
                 if(spend_coins(p))
                 {
-                    Setpos(1, 32); cout << " 武器已强化！攻击+2                                    ";
+                    weaponBonus = min(weaponBonus + 2, 20);
+                    Setpos(1, 32); cout << " 武器已强化！攻击+" << weaponBonus << "                    ";
                 }
                 else Setpos(1, 32), cout << " 金币不足                                        ";
                 break;
@@ -8520,7 +8648,10 @@ void interact_npc(int idx)
             {
                 if(spend_coins(price))
                 {
+                    // 与 show_talent_pick 用同一份有效列表：T_SPEEDARMOR(16) 未实现，
+                    // 原来 rand()%20 抽到它就等于花 100 金币买了个空效果
                     int t = rand() % 20;
+                    while(t == T_SPEEDARMOR) t = rand() % 20;
                     grant_talent(t);
                     Setpos(1, 32); cout << " 获得天赋：" << talent_names[t] << "                  ";
                 }
@@ -8545,7 +8676,10 @@ void interact_npc(int idx)
             {
                 if(spend_coins(price))
                 {
-                    life = life + 8;
+                    // 就地钳到上限，和吃食物/喝药水那两条路径一致：
+                    // 主循环末尾虽然也有一道 life > lifeMax 的钳位，但它挂在
+                    // 从来没被置位的调试开关 SetLife 上，不该依赖
+                    life = min(life + 8, (double)lifeMax);
                     Setpos(1, 32); cout << " 已治疗！+8生命                                    ";
                 }
                 else Setpos(1, 32), cout << " 金币不足                                          ";
@@ -8603,6 +8737,10 @@ void interact_npc(int idx)
             {
                 if(spend_coins(80))
                 {
+                    // 必须撤销属性加成：只减 talentCount 的话，买 T_LIFE(100金币)
+                    // 再重置(80金币) 净赚 +25 最大生命并腾出一个槽位，可无限循环
+                    revoke_talent(talents[talentCount - 1]);
+                    talents[talentCount - 1] = 0;
                     talentCount--;
                     Setpos(1, 32); cout << " 已重置最近天赋！                                    ";
                 }
@@ -9309,16 +9447,16 @@ void game_loop()
                         }
                         else if(beibao[cho][0] == 25)
                         {
-                            if(s[mpx][mpy] == 19)
+                            // 舀水/舀岩浆同样走 bucket_convert：整格改写会让
+                            // N 个空桶舀一次变成 N 个水桶
+                            if(s[mpx][mpy] == 19 && bucket_convert(cho, 26))
                             {
-                                beibao[cho][0] = 26;
                                 s[mpx][mpy] = 0;
                                 mark_dirty_col(mpx);
                                 Clear();
                             }
-                            if(s[mpx][mpy] == 32)
+                            if(s[mpx][mpy] == 32 && bucket_convert(cho, 35))
                             {
-                                beibao[cho][0] = 35;
                                 s[mpx][mpy] = 0;
                                 mark_dirty_col(mpx);
                                 Clear();
