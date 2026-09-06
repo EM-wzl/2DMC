@@ -857,6 +857,8 @@ POINT GetMousePos()
 }
 boomthings bz[1000];
 int KK;
+int bz_high;   // bz[] 的占用高水位：Print 每个可见格都要扫 bz，用它做上界，
+               // 没有爆炸 pending 时一次都不用扫
 boomthings zc[1000];
 void Clear()
 {
@@ -892,6 +894,8 @@ void boom_add(int i, int j, int col)
     while(bz[KK].color != 0 && KK < 299)
         KK++;
     bz[KK].color = col, bz[KK].x = i, bz[KK].y = j;
+    if(KK + 1 > bz_high)
+        bz_high = KK + 1;
     if(blockwj[s[i][j]] != -1 && bz[KK].color != 1)
     {
         s[i][j] = 0;
@@ -908,7 +912,15 @@ void boom_add_ready(int i, int j, int col)
 int nnx, nny;
 void boom_loop()
 {
-    for(int i = 0; i < 299; i++)
+    // 两个排空循环的范围必须和生产者对齐：boom_add / boom_add_ready 都是
+    // while(... && KK < 299) KK++，即最大会写到下标 299。
+    // 原来 bz 只排空到 298（bz[299] 永不消费），zc 更是只排空到 98 ——
+    // 一次 -4 引爆入队 21 个 ready 格，同一 tick 内 5 只以上苦力怕死亡
+    // （boss2 三阶段爆破，或一次爆炸炸死多只，每只 st_kill 都调 boom_add(-4)）
+    // 就是 105 条，下标 99-104 既不消费也不清除，永久占位并不断蚕食队列容量，
+    // 直到 zc[99..299] 全堵死；此后 KK 恒为 299，每个新 ready 格都覆盖
+    // 永不消费的 zc[299] → 连锁爆炸彻底失效
+    for(int i = 0; i <= 299; i++)
     {
         if(bz[i].color != 0)
         {
@@ -956,7 +968,8 @@ void boom_loop()
             }
         }
     }
-    for(int i = 0; i < 99; i++)
+    bz_high = 0;   // bz 已被上面清空，高水位归零；下面的 boom_add 会重新抬高它
+    for(int i = 0; i <= 299; i++)
     {
         if(zc[i].color != 0)
         {
@@ -1648,7 +1661,7 @@ void Print()
                     continue;
                 }
             }
-            for(int k = 0; k <= 100; k++)
+            for(int k = 0; k < bz_high; k++)
             {
                 if(bz[k].color != 0 && bz[k].color != 1)
                 {
@@ -4396,15 +4409,31 @@ static void ai_passive(int l, double old_gx, double old_gy);
 static void ent_update_state(int l);
 
 // 碰撞缓存助手：刷新实体当前方块，同行代码复用 eb，避免重复索引 s[][]
+//
+// 越界一律当空气(0)。实体确实会短暂越出世界：type 5 boss 的冲刺没有任何碰撞
+// 和剔除（ai1_script 里 spgx = 90*px，还会把 toy 设成 y-8），普通怪的视线扫描
+// 和跳跃探测最远走到 ±30 格。原来的 s[ex][ey] 会读到 s 之前/之后的内存
+// （s 是文件里第一个数组，负下标直接踩出 BSS），取出的垃圾 short 再去索引
+// blocktouch[150] 又是一次幅度大得多的越界读
+static inline bool ent_oob(int ex, int ey)
+{
+    return ex < 0 || ey < 0 || ex > WORLD_WIDTH - 1 || ey > WORLD_HEIGHT - 1;
+}
+// 按整数格取方块，越界当空气
+static inline short blk_at(int bx, int by)
+{
+    return ent_oob(bx, by) ? (short)0 : s[bx][by];
+}
+// 按世界坐标取方块（四舍五入到格），越界当空气
+static inline short blk_atd(double gx, double gy)
+{
+    return blk_at(int(gx + 0.5), int(gy + 0.5));
+}
 inline short ent_block(int l, int &ex, int &ey)
 {
     ex = int(shiti[l].gx + 0.5);
     ey = int(shiti[l].gy + 0.5);
-    return s[ex][ey];
-}
-static inline bool ent_oob(int ex, int ey)
-{
-    return ex < 0 || ey < 0 || ex > WORLD_WIDTH - 1 || ey > WORLD_HEIGHT - 1;
+    return ent_oob(ex, ey) ? (short)0 : s[ex][ey];
 }
 static inline bool fluid_block_id(short b)
 {
@@ -4412,9 +4441,13 @@ static inline bool fluid_block_id(short b)
 }
 static inline bool out_of_active_area(double gx, double gy)
 {
+    // 上界必须留 1.5 格余量：To_int(g) = int(g + 0.5)，原来的 gx > WORLD_WIDTH - 1
+    // 会放过 gx = 9999.6，而 To_int(9999.6) == 10000 → s[10000][ey] 越出数组一列，
+    // 别名到 s2 的第一列并被当成 s 写坏。下界 gx < 0 本来就安全（int() 向零截断）。
     return gx < To_int(x) - 120 || gy < To_int(y) - 80 ||
            gx > To_int(x) + 120 || gy > To_int(y) + 80 ||
-           gx < 0 || gy < 0 || gx > WORLD_WIDTH - 1 || gy > WORLD_HEIGHT - 1;
+           gx < 0 || gy < 0 ||
+           gx >= WORLD_WIDTH - 1.5 || gy >= WORLD_HEIGHT - 1.5;
 }
 static void boss2_die_split(int l, double old_gx, double old_gy)
 {
@@ -4528,20 +4561,48 @@ static bool ai1_despawn_check(int l, double old_gx, double old_gy)
             return false;
         }
     }
-    else if(shiti[l].type == 5 && shiti[l].HP <= 0)
+    else if(shiti[l].type == 5)
     {
-        if(shiti[l].islife2 == 0)
+        // type 5 是 boss：不能走上面那条 out_of_active_area 剔除（那个判定含 120x80
+        // 的玩家盒，玩家走远就会把 boss 删掉，打断战斗），但必须钳在世界内。
+        // ai1_script 用 spgx = 90*px 冲刺，每帧 gx += 1.8，全程无碰撞无剔除，
+        // 而玩家被钳在 x>=0、toy 还会被设成 y-8 —— 在 x<=2 附近或世界顶部打它，
+        // int(gx+0.5) 就变负，接着 s[ex][ey]=0 会写到 20MB 数组之前。
+        // 撞到边界时把该轴速度清零，否则每帧都要重新钳一次
+        if(shiti[l].gx < 1)
         {
-            shiti[l].islife2 = 1;
-            shiti[l].HP = 1;
-            shiti[l].gongjitick = 0;
+            shiti[l].gx = 1;
+            if(shiti[l].spgx < 0) shiti[l].spgx = 0;
         }
-        else
+        else if(shiti[l].gx > WORLD_WIDTH - 2)
         {
-            update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
-            if(shiti[l].type == 5) st_kill_fall(l);
-            else st_kill(l);
-            return false;
+            shiti[l].gx = WORLD_WIDTH - 2;
+            if(shiti[l].spgx > 0) shiti[l].spgx = 0;
+        }
+        if(shiti[l].gy < 1)
+        {
+            shiti[l].gy = 1;
+            if(shiti[l].spgy < 0) shiti[l].spgy = 0;
+        }
+        else if(shiti[l].gy > WORLD_HEIGHT - 2)
+        {
+            shiti[l].gy = WORLD_HEIGHT - 2;
+            if(shiti[l].spgy > 0) shiti[l].spgy = 0;
+        }
+        if(shiti[l].HP <= 0)
+        {
+            if(shiti[l].islife2 == 0)
+            {
+                shiti[l].islife2 = 1;
+                shiti[l].HP = 1;
+                shiti[l].gongjitick = 0;
+            }
+            else
+            {
+                update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
+                st_kill_fall(l);
+                return false;
+            }
         }
     }
     return true;
@@ -4599,6 +4660,12 @@ static bool ent_physics_ground(int l)
     else
     {
         shiti[l].spgy += g;
+        // 终端速度必须钳住：g=0.7 配 0.98 阻尼收敛到 spgy=35，每帧 gy += 2.1 格，
+        // 而碰撞只在移动之后采样中心格 → 任何下落约 25 格以上的怪会直接穿过
+        // 1 格厚的地板。16 * 0.06 = 0.96 格/帧，刚好不到一格。
+        // ai_passive 的 NPC 分支本来就限到 30，说明限速是原本就有的意图。
+        // 只钳下落方向，起跳的负 spgy 不受影响
+        if(shiti[l].spgy > 16) shiti[l].spgy = 16;
         shiti[l].gy += shiti[l].spgy * 0.06;
         shiti[l].spgy *= 0.98;
         if(shiti[l].type == 5 && shiti[l].HP <= 250)
@@ -4609,7 +4676,7 @@ static bool ent_physics_ground(int l)
             else
                 shiti[l].spgy = 6;
             eb = ent_block(l, ex, ey);
-            if(blocktouch[eb] == true)
+            if(blocktouch[eb] == true && !ent_oob(ex, ey))
             {
                 s[ex][ey] = 0;
                 mark_dirty_col(ex);
@@ -4620,9 +4687,14 @@ static bool ent_physics_ground(int l)
     eb = ent_block(l, ex, ey);
     if(blocktouch[eb] == true)
     {
+        // 这两个「从固体里顶出来」的循环原来既没有迭代上限也没有范围判断：
+        // 嵌在一根延伸到世界边缘的固体柱里的怪（或 gy 已经为负）会把索引一路
+        // 推出数组并空转数百万次。上限 64 次 * 0.1 格 = 6.4 格，足够脱离任何
+        // 正常厚度的墙；blk_atd 越界返回空气，走出世界也会自然终止
         if(shiti[l].spgy >= 0)
         {
-            while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == true)
+            for(int esc = 0; esc < 64 &&
+                    blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == true; esc++)
                 shiti[l].gy -= 0.1;
             shiti[l].jp = 0;
             shiti[l].spgy = 0.01;
@@ -4630,7 +4702,8 @@ static bool ent_physics_ground(int l)
         }
         if(shiti[l].spgy < 0)
         {
-            while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == true)
+            for(int esc = 0; esc < 64 &&
+                    blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == true; esc++)
                 shiti[l].gy += 0.1;
             shiti[l].spgy = 2;
         }
@@ -4641,7 +4714,8 @@ static bool ent_physics_ground(int l)
         if(y < shiti[l].gy)
         {
             for(int i = -3; i <= -1; i++)
-                if(blocktouch[s[To_int(shiti[l].gx)][To_int(shiti[l].gy + i)]] == 1) isjump = 0;
+                if(blocktouch[blk_at(To_int(shiti[l].gx),
+                                     To_int(shiti[l].gy + i))] == 1) isjump = 0;
             if(isjump && shiti[l].jp == 0) shiti[l].jp = 1;
         }
     }
@@ -4654,8 +4728,9 @@ static bool ent_physics_ground(int l)
     {
         if(shiti[l].spgy >= 0 && !isdown)
         {
-            while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == 2 &&
-                    shiti[l].gy - int(shiti[l].gy) > 0.5)
+            for(int esc = 0; esc < 64 &&
+                    blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == 2 &&
+                    shiti[l].gy - int(shiti[l].gy) > 0.5; esc++)
                 shiti[l].gy -= 0.05;
             shiti[l].jp = 0;
             shiti[l].spgy = 0.01;
@@ -4677,7 +4752,10 @@ static bool ent_physics_ground(int l)
                     else if(i == 2) px += -ddx / 100, py += ddy / 100;
                     else if(i == 3) px += ddx / 100, py += -ddy / 100;
                     else px += -ddx / 100, py += -ddy / 100;
-                    if(blocktouch[s[To_int(px)][To_int(py)]] == 1) break;
+                    // 视线最远走到 sd(=30) 格之外：gx=5 的僵尸会求值
+                    // s[To_int(-25)][py]，即 s 之前约 50KB（s 是文件里第一个数组），
+                    // 取出的垃圾 short 再索引 blocktouch[150] 又是一次越界
+                    if(blocktouch[blk_at(To_int(px), To_int(py))] == 1) break;
                     if(abs(px - x) < 0.5 && abs(py - y) < 0.5)
                     {
                         shiti[l].chv = 600;
@@ -4726,7 +4804,7 @@ static bool ent_physics_ground(int l)
     if(shiti[l].type == 5 && shiti[l].HP <= 250)
     {
         eb = ent_block(l, ex, ey);
-        if(blocktouch[eb] == true)
+        if(blocktouch[eb] == true && !ent_oob(ex, ey))
         {
             s[ex][ey] = 0;
             mark_dirty_col(ex);
@@ -4735,7 +4813,8 @@ static bool ent_physics_ground(int l)
     }
     isjump = 1;
     for(int i = 1; i <= 3; i++)
-        if(blocktouch[s[To_int(shiti[l].gx - ((dire) * 2 - 1))][To_int(shiti[l].gy + i)]] == 1)
+        if(blocktouch[blk_at(To_int(shiti[l].gx - ((dire) * 2 - 1)),
+                             To_int(shiti[l].gy + i))] == 1)
             isjump = 0;
     if(isjump && shiti[l].jp == 0) shiti[l].jp = 1;
     eb = ent_block(l, ex, ey);
@@ -4745,10 +4824,10 @@ static bool ent_physics_ground(int l)
         while(Step < 60)
         {
             shiti[l].gx -= 0.03 * Step;
-            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == false)
+            if(blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == false)
                 break;
             shiti[l].gx += 0.06 * Step;
-            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == false)
+            if(blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == false)
                 break;
             shiti[l].gx -= 0.03 * Step;
             Step++;
@@ -4820,7 +4899,7 @@ static void ai1_script(int l, double old_gx, double old_gy)
             shiti[l].spgy += g * 2;
             shiti[l].gy += shiti[l].spgy * 0.04;
             if(shiti[l].gy >= shiti[l].toy &&
-                    (blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == 1))
+                    (blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == 1))
                 shiti[l].isnotouch = 0, shiti[l].gy -= shiti[l].spgy * 0.02,
                 boom_add(int(shiti[l].gx + 0.5), int(shiti[l].gy + 0.5), -4);
         }
@@ -5084,12 +5163,17 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
     {
         update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
         st_kill(l);
+        // 必须 return：st_kill 已把 shiti[l] 清零，继续跑下去等于在模拟一个空槽，
+        // 而返回 true 会让 st_move 再调一次 update_entity_hash，把死索引推进
+        // entity_hash[0][0]（击杀后 gx/gy 为 0）—— 永不移除，无上限累积
+        return false;
     }
     shiti[l].randomtick++;
     if(shiti[l].randomtick > 1200)
     {
         update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
         st_kill(l);
+        return false;
     }
     if(shiti[l].nbt <= 3)
     {
@@ -5150,7 +5234,11 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
                     }
                     update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
                     st_kill(l);
-                    continue;
+                    // 原来这里是 continue：箭槽已被清零，gx/gy 变成 0，
+                    // 循环继续拿原点当箭的位置 → 世界原点 1 格内的每个实体
+                    // 都再吃一次 25 伤害，st_kill(l) 反复执行，
+                    // update_entity_hash 不断推入陈旧哈希项
+                    return false;
                 }
             }
         }
@@ -5354,8 +5442,19 @@ static bool ai_boss3(int l, double old_gx, double old_gy)
             else
                 shiti[l].HP -= gongji;
             playerCD = gongjicd;
-            if(shiti[l].HP < 0)
+            // HP <= 0 而不是 < 0：恰好打到 0 的分段原来会活着并持续 touch_atk
+            if(shiti[l].HP <= 0)
+            {
                 st_kill(l);
+                // 必须立刻返回：st_kill 已清零本槽，而函数末尾的跟随链分支会拿
+                // conl==0 去读 shiti[0] 并把一个假位置写回本槽，st_move 随后
+                // update_entity_hash 时 std::find 失败（st_kill 已擦除），
+                // 于是把索引 l 推进一个永远不会被清理的桶。
+                // 此处 gx/gy 仍等于 old_gx/old_gy（移动在函数末尾），
+                // 所以 st_kill 内部的 remove_entity_from_hash 能找到它，
+                // 不需要先调 update_entity_hash
+                return false;
+            }
         }
     }
     boss3hp += shiti[l].HP;
@@ -5594,22 +5693,29 @@ static void ai_passive(int l, double old_gx, double old_gy)
     else
     {
         shiti[l].spgy += g;
+        // 与 ent_physics_ground 同样的终端速度钳位：0.98 阻尼 + 0.06 位移系数
+        // 收敛到每帧 2.1 格，会穿透 1 格厚的地板
+        if(shiti[l].spgy > 16) shiti[l].spgy = 16;
         shiti[l].gy += shiti[l].spgy * 0.06;
         shiti[l].spgy *= 0.98;
     }
     short eb = ent_block(l, ex, ey);
     if(blocktouch[eb] == true)
     {
+        // 与 ent_physics_ground 里的同名循环一致：必须有迭代上限，否则嵌在
+        // 一根直通世界边缘的固体柱里的怪会无限制空转
         if(shiti[l].spgy >= 0)
         {
-            while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == true)
+            for(int esc = 0; esc < 64 &&
+                    blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == true; esc++)
                 shiti[l].gy -= 0.1;
             shiti[l].jp = 0;
             shiti[l].spgy = 0.01;
         }
         if(shiti[l].spgy < 0)
         {
-            while(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == true)
+            for(int esc = 0; esc < 64 &&
+                    blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == true; esc++)
                 shiti[l].gy += 0.1;
             shiti[l].spgy = 2;
         }
@@ -5677,10 +5783,10 @@ static void ai_passive(int l, double old_gx, double old_gy)
         while(Step < 60)
         {
             shiti[l].gx -= 0.03 * Step;
-            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == false)
+            if(blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == false)
                 break;
             shiti[l].gx += 0.06 * Step;
-            if(blocktouch[s[int(shiti[l].gx + 0.5)][int(shiti[l].gy + 0.5)]] == false)
+            if(blocktouch[blk_atd(shiti[l].gx, shiti[l].gy)] == false)
                 break;
             shiti[l].gx -= 0.03 * Step;
             Step++;
@@ -9641,10 +9747,17 @@ void game_loop()
             p.y -= (printy - 30) / 2;
             mpy = To_int(jy - 14 + p.y);
             mpx = To_int(jx - 26 + p.x / 2);
-            if(lx != x || ly != y)
+            // lx/ly 是 int、x/y 是 double：原来的 if(lx != x || ly != y) 把 int
+            // 提升成 double 再比，只有 x 恰好是整数时才为假，而 lx 存的本来就是
+            // int(x + 0.5) —— 于是 setlight() 实际上每帧都在全量重跑：
+            // 即使在地牢/创造模式也要 memset 整个 20MB 的 light 数组，
+            // 生存模式还要跑两趟 300x1001 扫描加 300x401 的 DFS 种子扫描。
+            // 这是全程序最大的隐藏热点，必须按「是否跨格」判断
+            int nx = int(x + 0.5), ny = int(y + 0.5);
+            if(lx != nx || ly != ny)
                 setlight();
             Print();
-            lx = int(x + 0.5), ly = int(y + 0.5);
+            lx = nx, ly = ny;
             Setpos(1, printy + 1);   // HUD生命行光标定位（print_fast依赖；Setpos(1,33)被其覆盖，省1次调用）
             Color(0);
             if(life <= 0)
