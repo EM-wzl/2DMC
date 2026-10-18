@@ -158,3 +158,83 @@ const Font::Glyph &Font::glyph(u32 codepoint) const {
 		return it->second;
 	return m_fallback;
 }
+
+namespace {
+	// 判断一个码点是否属于「CJK 方块字」：中日韩统一表意文字（含扩展 A）、
+	// 假名、谚文、CJK 标点/全角字符等。这些字形在图集里是独立小方块，
+	// 渲染时允许整数倍放大；拉丁字母等保持原样，不破坏原有像素排版。
+	bool isCjkCodepoint(u32 cp) {
+		return (cp >= 0x2E80 && cp <= 0x9FFF)     // CJK 部首/假名/汉字主区（含扩展A）
+		    || (cp >= 0xAC00 && cp <= 0xD7AF)     // 谚文音节
+		    || (cp >= 0xF900 && cp <= 0xFAFF)     // CJK 兼容汉字
+		    || (cp >= 0xFE10 && cp <= 0xFE19)     // 竖排标点
+		    || (cp >= 0xFF00 && cp <= 0xFF60);    // 全角ASCII/半角假名
+	}
+}
+
+void Font::setRenderPixelScale(float scale) {
+	// 第一次调用时快照 CJK 字形的原始度量（图集坐标不变），之后始终从
+	// 原始度量重新计算显示尺寸——保证函数幂等，可随 guiScale 变化反复调用。
+	if (m_cjkBaseGlyphs.empty()) {
+		for (auto &kv : m_glyphs) {
+			if (kv.first >= 256 && isCjkCodepoint(kv.first))
+				m_cjkBaseGlyphs.emplace(kv.first, kv.second);
+		}
+	}
+
+	const float texW = (float)m_texture.getSize().x;
+	const float texH = (float)m_texture.getSize().y;
+
+	// scale<=0：恢复原始度量（关闭该修复的回退路径）
+	if (!(scale > 0.f)) {
+		for (auto &kv : m_cjkBaseGlyphs)
+			m_glyphs[kv.first] = kv.second;
+		m_lineHeight = m_asciiHeight;
+		for (auto &g : m_glyphs)
+			if (g.second.height > m_lineHeight)
+				m_lineHeight = g.second.height;
+		return;
+	}
+
+	// 目标放大倍率就近取整（至少 1x）。配合 RenderTarget 的整数平移，
+	// 每个图集纹素恰好映射为 k×k 个屏幕像素，点采样下笔画锐利均匀。
+	const u32 k = (scale < 1.f) ? 1u : (u32)(scale + 0.5f);
+
+	u32 maxGlyphHeight = m_asciiHeight;
+
+	for (auto &base : m_cjkBaseGlyphs) {
+		Glyph gl = base.second;
+
+		// 源格子像素尺寸（由归一化图集坐标反推回整像素，消除浮点误差）
+		const u32 srcW = (u32)((gl.u1 - gl.u0) * texW + 0.5f);
+		const u32 srcH = (u32)((gl.v1 - gl.v0) * texH + 0.5f);
+
+		gl.width  = (u8)(srcW * k);
+		gl.height = (u8)(srcH * k);
+
+		// 步进量化到整数屏幕像素，且不小于字形本身宽度（防止挤压重叠）
+		const u32 adv = (u32)(base.second.advance * scale + 0.5f);
+		gl.advance = (u8)(adv < gl.width ? gl.width : adv);
+
+		// 基线对齐：与 buildAsciiGlyphs 的规则一致——字形底边和 ASCII 底边
+		// 落在同一位置（行高按放大后的最高字形重新计算，见循环结束后）。
+		gl.offsetY = 0; // 先置 0，待 m_lineHeight 更新后统一回填
+
+		m_glyphs[base.first] = gl;
+
+		if (gl.height > maxGlyphHeight)
+			maxGlyphHeight = gl.height;
+	}
+
+	// 行高容纳放大后的中文字形，多行混排不被压叠
+	m_lineHeight = maxGlyphHeight;
+
+	// 回填 offsetY：offsetY = lineHeight - glyphHeight - 1，
+	// 使中文与 ASCII 的墨迹底边对齐（同 buildAsciiGlyphs 的约定）。
+	for (auto &base : m_cjkBaseGlyphs) {
+		Glyph &gl = m_glyphs[base.first];
+		gl.offsetY = (signed char)(m_lineHeight > gl.height
+		              ? (m_lineHeight - gl.height - 1)
+		              : 0);
+	}
+}
