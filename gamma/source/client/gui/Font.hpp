@@ -66,6 +66,16 @@ class Font {
 		// 行高（能容纳最高的字形，中文=18）
 		u32 lineHeight() const { return m_lineHeight; }
 
+		// 【修复：中文显示模糊】
+		// 图集里的中文字形是按小尺寸预烘的（源格子约 12px），而 HUD/菜单是以
+		// guiScale 倍率整体放大渲染的。当「字形源宽 × 实际屏幕缩放」不是整数时，
+		// 每个图集纹素映射到屏幕上会出现 1~N+1 像素不等的宽度，点采样(nearest)下
+		// 表现为笔画粗细不均、发丝断裂——即肉眼所见的中文模糊/毛刺。
+		// 这里把 CJK 字形的显示宽高与步进量化为「整数放大倍率 × 整数源像素」，
+		// 保证每个纹素恰好落在整数屏幕像素上，中文恢复清晰锐利的像素风格。
+		// 英文 ASCII 字形保持原度量不变。scale<=0 时恢复原始度量。
+		void setRenderPixelScale(float scale);
+
 		// 保留旧接口：ASCII 单元格尺寸
 		Vector2i getTileSize() const { return {m_asciiWidth, m_asciiHeight}; }
 
@@ -85,6 +95,9 @@ class Font {
 		u8 m_asciiColumns = 16;
 		u8 m_asciiAdvance[256] = {};
 		u32 m_lineHeight = 9;
+
+		// setRenderPixelScale 时保存的 CJK 字形原始度量（幂等，可反复调用）
+		std::unordered_map<u32, Glyph> m_cjkBaseGlyphs;
 };
 
 #endif // FONT_HPP_
