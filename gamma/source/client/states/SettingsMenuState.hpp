@@ -1,0 +1,91 @@
+/*
+ * =====================================================================================
+ *
+ *  OpenMiner
+ *
+ *  Copyright (C) 2018-2020 Unarelith, Quentin Bazin <openminer@unarelith.net>
+ *  Copyright (C) 2019-2020 the OpenMiner contributors (see CONTRIBUTORS.md)
+ *
+ *  This file is part of OpenMiner.
+ *
+ *  OpenMiner is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  OpenMiner is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with OpenMiner; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+ *
+ * =====================================================================================
+ */
+#ifndef SETTINGSMENUSTATE_HPP_
+#define SETTINGSMENUSTATE_HPP_
+
+#include "common/core/input/GameKey.hpp"
+
+#include "client/graphics/RectangleShape.hpp"
+#include "client/gui/MenuWidget.hpp"
+#include "client/states/InterfaceState.hpp"
+
+struct GuiScaleChangedEvent;
+class Key;
+
+class SettingsMenuState : public InterfaceState {
+	public:
+		SettingsMenuState(DrawableState *parent = nullptr);
+
+		void init() override;
+
+		void onEvent(const SDL_Event &event) override;
+
+	private:
+		void onGuiScaleChanged(const GuiScaleChangedEvent &event);
+
+		void updateWidgetPosition() override;
+
+		void doneButtonAction();
+
+		void addMainButtons();
+		void addGameplayButtons();
+		void addInterfaceButtons();
+		void addGraphicsButtons();
+		void addInputButtons();
+		void addDebugButtons();
+
+		TextButton &addToggleButton(const std::string &text, bool &configOption, bool worldReloadRequested = false);
+
+		void draw(RenderTarget &target, RenderStates states) const override;
+
+		Image m_background{"texture-menu_background"};
+		RectangleShape m_filter1;
+		RectangleShape m_filter2;
+
+		Text m_title;
+
+		MenuWidget m_menuWidget;
+		TextButton m_doneButton;
+
+		u16 m_currentKey = GameKey::Undefined;
+		TextButton *m_currentKeyButton = nullptr;
+		Key *m_key = nullptr;
+
+		enum class MenuState {
+			Main,
+			Gameplay,
+			Graphics,
+			Input,
+			Debug
+		};
+
+		MenuState m_state = MenuState::Main;
+
+		TextButton *m_resolutionButton = nullptr;
+};
+
+#endif // SETTINGSMENUSTATE_HPP_

@@ -1,0 +1,179 @@
+/*
+ * =====================================================================================
+ *
+ *  OpenMiner
+ *
+ *  Copyright (C) 2018-2020 Unarelith, Quentin Bazin <openminer@unarelith.net>
+ *  Copyright (C) 2019-2020 the OpenMiner contributors (see CONTRIBUTORS.md)
+ *
+ *  This file is part of OpenMiner.
+ *
+ *  OpenMiner is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  OpenMiner is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with OpenMiner; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+ *
+ * =====================================================================================
+ */
+#include "common/core/ApplicationStateStack.hpp"
+#include "common/event/Events.hpp"
+
+#include "server/core/ServerApplication.hpp" // For ServerOnlineEvent
+
+#include "client/core/Config.hpp"
+#include "client/core/GameConfig.hpp"
+#include "client/states/GameState.hpp"
+#include "client/states/ServerConnectState.hpp"
+#include "client/states/ServerLoadingState.hpp"
+#include "client/states/SettingsMenuState.hpp"
+#include "client/states/TitleScreenState.hpp"
+#include "client/states/WorldSelectionState.hpp"
+
+TitleScreenState::TitleScreenState(u16 port) : m_port(port) {
+	m_menuWidget.setScale(Config::guiScale, Config::guiScale);
+
+	m_menuWidget.addButton("单人游戏", [this] (TextButton &) {
+		m_stateStack->push<WorldSelectionState>(this);
+	});
+
+	// 联机入口默认隐藏（本项目按单机需求裁剪；服务端代码保留，单机仍走内嵌服务线程）
+	// m_menuWidget.addButton("多人游戏", [this] (TextButton &) {
+	// 	m_stateStack->push<ServerConnectState>(this);
+	// });
+
+	m_menuWidget.addButton("选项…", [this] (TextButton &) {
+		m_stateStack->push<SettingsMenuState>(this);
+	});
+
+	m_menuWidget.addButton("退出", [this] (TextButton &) {
+		m_stateStack->pop();
+	});
+
+	m_titleText.setScale(Config::guiScale * 4.f, Config::guiScale * 4.f);
+	m_titleText.setString(APP_NAME);
+	m_titleText.updateVertexBuffer();
+
+	std::string versionString = APP_NAME;
+	versionString.append(" ");
+	versionString.append(std::to_string(VERSION_MAJOR));
+	versionString.append(".");
+	versionString.append(std::to_string(VERSION_MINOR));
+	versionString.append(".");
+	versionString.append(std::to_string(VERSION_PATCH));
+	if (VERSION_SUFFIX[0]) {
+		versionString.append("-");
+		versionString.append(VERSION_SUFFIX);
+	}
+	m_versionText.setString(versionString);
+	m_versionText.setScale(Config::guiScale, Config::guiScale);
+	m_versionText.updateVertexBuffer();
+
+	// 版权与许可协议两行文字已按需求从标题页移除
+
+	updateWidgetPosition();
+}
+
+TitleScreenState::~TitleScreenState() {
+	if (m_thread.joinable())
+		m_thread.join();
+}
+
+void TitleScreenState::init() {
+	m_eventHandler->addListener<GuiScaleChangedEvent>(&TitleScreenState::onGuiScaleChanged, this);
+}
+
+void TitleScreenState::onEvent(const SDL_Event &event) {
+	InterfaceState::onEvent(event);
+
+	if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+		if (!m_stateStack->empty() && &m_stateStack->top() != this)
+			m_menuWidget.onEvent(event);
+	}
+
+	if (!m_stateStack->empty() && &m_stateStack->top() == this) {
+		m_menuWidget.onEvent(event);
+	}
+}
+
+void TitleScreenState::startSingleplayer(bool showLoadingState, const std::string &worldName, s32 seed) {
+	GameConfig::worldName = worldName;
+
+	auto &game = m_stateStack->push<GameState>();
+	game.setSingleplayer(true);
+
+	auto &serverLoadingState = m_stateStack->push<ServerLoadingState>(game, showLoadingState, "localhost", sf::Socket::AnyPort, this);
+	serverLoadingState.setUsername(Config::defaultUsername);
+
+	if (m_thread.joinable())
+		m_thread.join();
+
+	LogLevel logLevel = LoggerHandler::getInstance().maxLevel();
+	m_thread = std::thread([this, worldName, logLevel, seed] () {
+		ServerApplication app{*m_eventHandler};
+
+		if (!worldName.empty())
+			app.setWorldName(worldName);
+
+		app.setLogLevel(logLevel);
+		app.setSingleplayer(true);
+		app.setPort(sf::Socket::AnyPort);
+		app.setSeed(seed);
+		app.run();
+	});
+}
+
+void TitleScreenState::startMultiplayer(const std::string &host) {
+	auto &game = m_stateStack->push<GameState>();
+	auto &serverLoadingState = m_stateStack->push<ServerLoadingState>(game, false, host, m_port, this);
+	serverLoadingState.setUsername(Config::defaultUsername);
+}
+
+void TitleScreenState::onGuiScaleChanged(const GuiScaleChangedEvent &event) {
+	m_menuWidget.setScale(event.guiScale, event.guiScale);
+	m_menuWidget.onGuiScaleChanged(event);
+
+	m_titleText.setScale(event.guiScale * 4.f, event.guiScale * 4.f);
+	m_versionText.setScale(event.guiScale, event.guiScale);
+	// （版权/许可文字已移除，无需再设置缩放）
+
+	updateWidgetPosition();
+}
+
+void TitleScreenState::updateWidgetPosition() {
+	m_background.setPosition(
+		roundf(Config::screenWidth / 2.0f - m_background.width() / 2.0f),
+		roundf(Config::screenHeight / 2.0f - m_background.height() / 2.0f)
+	);
+
+	m_menuWidget.setPosition(
+		roundf(Config::screenWidth / 2.0f - m_menuWidget.getGlobalBounds().sizeX / 2.0f),
+		roundf(Config::screenHeight / 2.0f - m_menuWidget.getGlobalBounds().sizeY / 2.0f)
+	);
+
+	m_titleText.setPosition(
+		roundf(Config::screenWidth / 2.0f - (float)m_titleText.getSize().x * m_titleText.getScale().x / 2.0f),
+		roundf(0.04f * Config::screenHeight * Config::guiScale)
+	);
+	m_versionText.setPosition(Config::guiScale, float(Config::screenHeight - m_versionText.getSize().y * Config::guiScale));
+	// （版权/许可文字已移除，无需再定位）
+}
+
+void TitleScreenState::draw(RenderTarget &target, RenderStates states) const {
+	prepareDraw(target, states);
+
+	target.draw(m_background, states);
+
+	target.draw(m_titleText, states);
+	target.draw(m_versionText, states);
+
+	target.draw(m_menuWidget, states);
+}

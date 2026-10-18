@@ -1,0 +1,80 @@
+# Texture packs
+texturepacks/*
+!texturepacks/minecraft
+
+# Temporary editor files
+\#*#
+.#*
+*~
+.ycm_extra_conf.py
+
+# Compiled files
+*.o
+*.a
+*.d
+*.so
+*.bin
+a.out
+
+# Debug stuff
+vgcore.*
+.gdb_history
+.valgrind_suppressions
+gmon.out
+gprof.txt
+
+# CMake temporary files
+CMakeFiles
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# CMake temporary files on Windows
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+openminer.dir
+openminer_common.dir
+openminer_client.dir
+openminer_server.dir
+Win32
+Debug
+Release
+RelWithDebInfo
+
+# Visual Studio
+.vs
+
+# Doxygen generated files
+doc/html
+doc/latex
+
+# Binaries
+build
+build_win32
+build_win64
+build_msvc
+build_mingw
+build_clang
+build_debug
+deploy
+openminer
+openminer_server
+*.exe
+*.dll
+
+# Misc
+*.dat
+*.zip
+logs
+saves
+test_atlas.png
+config/client.lua
+config/keys.lua
+config/server.lua
+TODO
+Screenshot-*
+

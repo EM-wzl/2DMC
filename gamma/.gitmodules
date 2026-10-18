@@ -1,0 +1,34 @@
+[submodule "external/entt"]
+	path = external/entt
+	url = https://github.com/skypjack/entt.git
+	ignore = dirty
+[submodule "external/zlib"]
+	path = external/zlib
+	url = https://github.com/madler/zlib
+	ignore = dirty
+[submodule "external/sol2"]
+	path = external/sol2
+	url = https://github.com/ThePhD/sol2.git
+	ignore = dirty
+[submodule "external/lua"]
+	path = external/lua
+	url = https://github.com/WohlSoft/LuaJIT
+	ignore = dirty
+[submodule "external/SFML"]
+	path = external/SFML
+	url = https://github.com/SFML/SFML
+[submodule "external/bgfx.cmake"]
+	path = external/bgfx.cmake
+	url = https://github.com/bkaradzic/bgfx.cmake
+[submodule "external/tinyxml2"]
+	path = external/tinyxml2
+	url = https://github.com/leethomason/tinyxml2
+[submodule "external/glm"]
+	path = external/glm
+	url = https://github.com/g-truc/glm
+[submodule "external/SDL"]
+	path = external/SDL
+	url = https://github.com/libsdl-org/SDL
+[submodule "external/SDL_image"]
+	path = external/SDL_image
+	url = https://github.com/libsdl-org/SDL_image

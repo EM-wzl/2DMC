@@ -142,10 +142,20 @@ int main(int argc, char **argv)
         dumpTitle("start+1.5s", "fps.txt");
         dumpScreen("snap1.txt");      // 出生点画面 + 精确坐标
         // 按S下滑：穿过起始房底门→NPC房→战斗房（触发刷怪+关门）
-        tapKey('S', 2600);
-        Sleep(1500);                  // 等波次刷怪
+        tapKey('S', 3200);
+        Sleep(2500);                  // 等波次刷怪+怪物追上来
         dumpTitle("battle", "fps.txt");
         dumpScreen("snap2.txt");      // 战斗房画面（关门+怪物）
+        // 玩家在屏幕中心(35,21)：环绕点击8邻域攻击贴身怪，验证伤害飘字
+        // （0.6s寿命，须在攻击进行中截图）
+        for(int cc = 0; cc < 6; cc++)
+        {
+            clickCell(34, 20); clickCell(35, 20); clickCell(36, 20);
+            clickCell(34, 21);                clickCell(36, 21);
+            clickCell(34, 22); clickCell(35, 22); clickCell(36, 22);
+            Sleep(120);
+        }
+        dumpScreen("snap2b.txt");     // 攻击进行中：应能看到伤害数字
         tapKey('U', 120);             // 战斗中保存
         Sleep(2500);
         dumpTitle("saved", "fps.txt");

@@ -1,0 +1,9 @@
+标题原始字节: [2DMC beta2.0 - 深渊地牢] len=27 -> 宽字符 len=19
+GL_VERSION  = 4.6.0 Compatibility Profile Context 26.1.1.251211
+GL_RENDERER = AMD Radeon(TM) Graphics
+显示刷新率 = 180 Hz
+窗口已创建 1280x720
+纹理图集上传: 512x1024 (512 格)
+字体选用: Microsoft YaHei UI (汉字 18x24)
+字体图集就绪: 行高 26.0 空白 5.0
+退出：60 帧 / 0.35 秒 = 170.9 FPS，draw calls=32

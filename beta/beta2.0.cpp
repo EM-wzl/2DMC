@@ -1018,6 +1018,48 @@ void boom_loop()
     }
     Clear();
 }
+// ===================== 伤害飘字系统 =====================
+// 独立的浮点世界坐标数组（不属于实体序列化），每帧上浮、ttl 递减，
+// Print() 里以 painting 3000+slot 标记驱动增量重绘，过期后由方块分支自动补绘
+struct DmgFloat
+{
+    double gx, gy;   // 世界坐标（浮点，gy 每帧上浮）
+    double val;      // 伤害数值（显示时四舍五入、封顶99）
+    int ttl;         // 剩余帧数，<=0 为空闲槽
+    int color;       // Color3 色码：14黄=普通 12紫=暴击 4红=玩家受伤 11青=随从
+};
+DmgFloat dmgfloats[96];
+int df_high = 0;   // 占用高水位（同 bz_high 思路）
+void add_dmg_float(double gx, double gy, double val, int color)
+{
+    if(val < 1) return;
+    int slot = -1;
+    for(int i = 0; i < df_high; i++)
+        if(dmgfloats[i].ttl <= 0) { slot = i; break; }
+    if(slot < 0)
+    {
+        if(df_high >= 96) return;   // 满了直接丢：飘字是反馈不是状态，不值得排队
+        slot = df_high++;
+    }
+    dmgfloats[slot].gx = gx;
+    dmgfloats[slot].gy = gy - 0.8;   // 从目标头顶起跳
+    dmgfloats[slot].val = val;
+    dmgfloats[slot].ttl = 36;        // 约0.6秒
+    dmgfloats[slot].color = color;
+}
+void dmgfloat_tick()
+{
+    for(int i = 0; i < df_high; i++)
+    {
+        if(dmgfloats[i].ttl > 0)
+        {
+            dmgfloats[i].ttl--;
+            dmgfloats[i].gy -= 0.03;   // 缓慢上浮，约33帧才跨一格，读数稳定
+        }
+    }
+    while(df_high > 0 && dmgfloats[df_high - 1].ttl <= 0)
+        df_high--;   // 压缩高水位，控制 Print() 的每格扫描成本
+}
 int night = 0, will_night = 0, will_light = 0;
 int now_time = 0;
 struct LightPos
@@ -1858,6 +1900,23 @@ void Print()
                 Updateblock(0,i,j);
             }
         }
+    }
+    // 伤害飘字 overlay：叠在方块/实体之上，直接写 charInfo。
+    // 不参与 painting 缓存——写完后把该格 painting 置为 -2，
+    // 下一帧方块分支必然判定失配并重绘，数字消失后不会残留
+    for(int k = 0; k < df_high; k++)
+    {
+        if(dmgfloats[k].ttl <= 0) continue;
+        int fi = To_int(dmgfloats[k].gx - jx + printx * 0.5);
+        int fj = To_int(dmgfloats[k].gy - jy + printy * 0.5);
+        if(fi < 0 || fi > printx || fj < 0 || fj > printy) continue;
+        int dval = int(dmgfloats[k].val + 0.5);
+        if(dval > 99) dval = 99;
+        string ds = to_string(dval);
+        if(ds.size() < 2) ds += " ";
+        Color3(dmgfloats[k].color, fi, fj);
+        printbuf(ds, fi, fj);
+        painting[fi][fj][0] = -2;   // 强制下一帧重绘此格
     }
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
    COORD bufferSize = {(short)xlen, (short)ylen};
@@ -4429,6 +4488,8 @@ void damage(double dmg,double fromx,bool noKnockback = false)
             dmg -= absorb;
         }
         life -= dmg;
+        if(dmg >= 1)
+            add_dmg_float(x, y, dmg, 4);   // 玩家实际掉血飘红字（被护甲全吸收则不显示）
         if(!noKnockback)
         {
             // fromx 必须是小数：调用方传的是 shiti[i].gx。截断成 int 后方向会反转 ——
@@ -5309,7 +5370,10 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
                         shiti[LL].spgx = ((shiti[LL].gx - x > 0) * 2 - 1) * 0.4;
                     }
                     if(!(shiti[LL].type == 5 && shiti[LL].islife2 == 1))
+                    {
                         shiti[LL].HP -= 25;   // 箭伤害匹配200血体系
+                        add_dmg_float(shiti[LL].gx, shiti[LL].gy, 25, 14);
+                    }
                     update_entity_hash(l, old_gx, old_gy, shiti[l].gx, shiti[l].gy);
                     if(shiti[LL].HP <= 0)
                     {
@@ -5351,6 +5415,7 @@ static bool ai_projectile(int l, double old_gx, double old_gy)
                 {
                     double bd = shiti[l].direction > 0 ? shiti[l].direction : 4;
                     shiti[LL].HP -= bd;
+                    add_dmg_float(shiti[LL].gx, shiti[LL].gy, bd, 14);
                     if(shiti[LL].type == 5 && shiti[LL].islife2 == 0 && shiti[LL].HP <= 0)
                     {
                         shiti[LL].islife2 = 1;
@@ -5426,13 +5491,22 @@ static bool ai_flyboss(int l, double old_gx, double old_gy)
         if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
         {
             if(spy > 2)
-                shiti[l].HP -= gongji * 1.5, shiti[l].spgy = -8, gj = 2,
-                playerCD = gongjicd;
+            {
+                shiti[l].HP -= gongji * 1.5;
+                add_dmg_float(shiti[l].gx, shiti[l].gy, gongji * 1.5, 12);
+                shiti[l].spgy = -8, gj = 2, playerCD = gongjicd;
+            }
             else
-                shiti[l].HP -= gongji, shiti[l].spgy = -6, gj = 1,
-                playerCD = gongjicd;
+            {
+                shiti[l].HP -= gongji;
+                add_dmg_float(shiti[l].gx, shiti[l].gy, gongji, 14);
+                shiti[l].spgy = -6, gj = 1, playerCD = gongjicd;
+            }
             if(shiti[l].gongjitick > 600 && shiti[l].gongjitick < 900)
+            {
                 shiti[l].HP -= gongji * 10;
+                add_dmg_float(shiti[l].gx, shiti[l].gy, gongji * 10, 12);
+            }
             if(shiti[l].HP <= 0)
             {
                 boss2hp -= shiti[l].direction;
@@ -5710,6 +5784,7 @@ static void ai_passive(int l, double old_gx, double old_gy)
                 {
                     shiti[l].CD = 25;
                     shiti[tgt].HP -= 30 + currentLevel * 10;   // 随从伤害匹配200血体系
+                    add_dmg_float(shiti[tgt].gx, shiti[tgt].gy, 30 + currentLevel * 10, 11);
                     if(shiti[tgt].HP <= 0 && shiti[tgt].type != 8)
                         st_kill_fall(tgt);   // Boss由其AI分裂逻辑处理
                 }
@@ -5745,9 +5820,15 @@ static void ai_passive(int l, double old_gx, double old_gy)
         if(abs(x - shiti[l].gx) < 4.5 && abs(y - shiti[l].gy) < 4.5)
         {
             if(spy > 2)
+            {
                 shiti[l].HP -= gongji * 1.5, gj = 2;
+                add_dmg_float(shiti[l].gx, shiti[l].gy, gongji * 1.5, 12);
+            }
             else
+            {
                 shiti[l].HP -= gongji, gj = 1;
+                add_dmg_float(shiti[l].gx, shiti[l].gy, gongji, 14);
+            }
             playerCD = gongjicd;
             shiti[l].chv = 240;
             shiti[l].issd = 1;
@@ -9219,6 +9300,7 @@ void game_loop()
                     tick = 0, try_make_st();
                 if(tick % 10 == 0)
                     boom_loop();
+                dmgfloat_tick();   // 伤害飘字：每帧上浮+寿命递减
                 atime();
                 update_level();   // 地牢关卡逻辑（未进入地牢时立即返回）
                 // 魔光护符(112)：能量自然恢复（beta1.8同步）

@@ -1,0 +1,114 @@
+/*
+ * =====================================================================================
+ *
+ *  OpenMiner
+ *
+ *  Copyright (C) 2018-2020 Unarelith, Quentin Bazin <openminer@unarelith.net>
+ *  Copyright (C) 2019-2020 the OpenMiner contributors (see CONTRIBUTORS.md)
+ *
+ *  This file is part of OpenMiner.
+ *
+ *  OpenMiner is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
+ *
+ *  OpenMiner is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Lesser General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Lesser General Public License
+ *  along with OpenMiner; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+ *
+ * =====================================================================================
+ */
+#ifndef GAMESTATE_HPP_
+#define GAMESTATE_HPP_
+
+#include <glm/glm.hpp>
+
+#include "common/core/Registry.hpp"
+
+#include "client/core/KeyboardHandler.hpp"
+#include "client/graphics/Framebuffer.hpp"
+#include "client/graphics/PlayerBox.hpp"
+#include "client/graphics/ShaderUniform.hpp"
+#include "client/graphics/Clouds.hpp"
+#include "client/graphics/Skybox.hpp"
+#include "client/hud/HUD.hpp"
+#include "client/network/Client.hpp"
+#include "client/network/ClientCommandHandler.hpp"
+#include "client/states/DrawableState.hpp"
+#include "client/world/ClientChunk.hpp"
+#include "client/world/ClientPlayer.hpp"
+#include "client/world/ClientWorld.hpp"
+
+class RenderTarget;
+class TextureAtlas;
+
+class GameState : public DrawableState {
+	public:
+		GameState();
+
+		void init() override;
+		void onStateInactive() override;
+
+		void connect(const std::string &host, u16 port, const std::string &username);
+
+		void onEvent(const SDL_Event &event) override;
+
+		void update() override;
+
+		ClientPlayer &player() { return m_player; }
+		Client &client() { return m_client; }
+		ClientWorld &world() { return m_world; }
+		ClientCommandHandler &clientCommandHandler() { return m_clientCommandHandler; }
+		TextureAtlas &textureAtlas() { return m_textureAtlas; }
+
+		void setSingleplayer(bool isSingleplayer) {
+			m_clientCommandHandler.setSingleplayer(isSingleplayer);
+			m_client.setSingleplayer(isSingleplayer);
+		}
+
+	private:
+		void initShaders();
+
+		void onGuiScaleChanged(const GuiScaleChangedEvent &event);
+
+		void draw(RenderTarget &target, RenderStates states) const override;
+
+		Shader m_shader;
+
+		Framebuffer m_fbo;
+
+		Camera m_camera{70.0f, DIST_NEAR, DIST_FAR};
+		ClientPlayer m_player{m_camera};
+
+		Client m_client;
+
+		std::unordered_map<u16, PlayerBox> m_playerBoxes;
+
+		ClientCommandHandler m_clientCommandHandler{m_client, m_world, m_player, m_playerBoxes};
+
+		HUD m_hud{m_player, m_world, m_clientCommandHandler};
+
+		TextureAtlas &m_textureAtlas;
+
+		Registry m_registry;
+
+		ClientWorld m_world;
+
+		KeyboardHandler *m_keyboardHandler;
+		bool m_areModKeysLoaded = false;
+
+		Skybox m_skybox{m_camera, m_world};
+
+		Clouds m_clouds{m_camera};
+
+		ShaderUniform m_skyColor;
+		ShaderUniform m_sunlightIntensity;
+};
+
+#endif // GAMESTATE_HPP_

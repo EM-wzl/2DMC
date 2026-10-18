@@ -1,0 +1,36 @@
+os: linux
+dist: xenial
+language: cpp
+
+compiler:
+  - clang
+
+addons:
+    apt:
+        sources:
+            - sourceline: 'ppa:ubuntu-toolchain-r/test'
+        packages:
+            - libopenal-dev
+            - libjpeg-dev
+            - libudev-dev
+            - libxrandr-dev
+            - libfreetype6-dev
+            - libvorbis-dev
+            - libflac-dev
+            - libgl1-mesa-dev
+            - libegl1-mesa-dev
+            - libgles2-mesa-dev
+            - g++-8
+            - cmake
+            - cxxtest
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -DOM_BUILD_TESTS:BOOL=ON ..
+  - make -j8
+  - ./openminer_tests
+
+notifications:
+  email: false
+
