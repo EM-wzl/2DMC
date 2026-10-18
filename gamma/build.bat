@@ -16,8 +16,12 @@ rem  可选环境变量：
 rem    CMAKE_GEN   手动指定 CMake 生成器，例如：
 rem                set CMAKE_GEN=Visual Studio 17 2022 && build.bat
 rem    JOBS        并行编译任务数（MinGW/Ninja 时使用），默认自动检测
+rem    DEPLOY_DIR  部署目录，编译成功后自动把 exe 及依赖 DLL 复制到该目录。
+rem                默认为上一级目录下的 Minecraft 文件夹（即 ..\Minecraft）；
+rem                设为 none 可禁用部署，例如：set DEPLOY_DIR=none && build.bat
 rem
 rem  产物：build\openminer.exe（客户端）、build\openminer_server.exe（服务端）
+rem        编译完成后自动部署到 Minecraft 游戏目录（config/saves/mods/resources 所在处）
 rem =====================================================================
 
 setlocal
@@ -28,6 +32,7 @@ cd /d "%~dp0"
 set "BUILD_DIR=build"
 set "BUILD_TYPE=Release"
 set "USE_MINGW=0"
+if "%DEPLOY_DIR%"=="" set "DEPLOY_DIR=%~dp0..\Minecraft"
 
 rem ---- 解析参数 ----
 :parse_args
@@ -51,6 +56,7 @@ echo.
 echo ================= OpenMiner 编译脚本 =================
 echo  构建类型 : %BUILD_TYPE%
 echo  构建目录 : %CD%\%BUILD_DIR%
+echo  部署目录 : %DEPLOY_DIR%
 echo =====================================================
 echo.
 
@@ -156,32 +162,61 @@ echo.
 echo [3/3] 编译完成！
 
 set "EXE_FOUND=0"
+set "CLIENT_EXE="
+set "SERVER_EXE="
 if exist "%BUILD_DIR%\openminer.exe" (
     set "EXE_FOUND=1"
+    set "CLIENT_EXE=%BUILD_DIR%\openminer.exe"
     echo        %BUILD_DIR%\openminer.exe
 )
 if exist "%BUILD_DIR%\openminer_server.exe" (
     set "EXE_FOUND=1"
+    set "SERVER_EXE=%BUILD_DIR%\openminer_server.exe"
     echo        %BUILD_DIR%\openminer_server.exe
 )
 rem Visual Studio 生成器会把可执行文件输出到带构建类型的子目录
 if exist "%BUILD_DIR%\%BUILD_TYPE%\openminer.exe" (
     set "EXE_FOUND=1"
+    set "CLIENT_EXE=%BUILD_DIR%\%BUILD_TYPE%\openminer.exe"
     echo        %BUILD_DIR%\%BUILD_TYPE%\openminer.exe
 )
 if exist "%BUILD_DIR%\%BUILD_TYPE%\openminer_server.exe" (
     set "EXE_FOUND=1"
+    set "SERVER_EXE=%BUILD_DIR%\%BUILD_TYPE%\openminer_server.exe"
     echo        %BUILD_DIR%\%BUILD_TYPE%\openminer_server.exe
 )
 
 if "%EXE_FOUND%"=="1" (
     echo.
-    echo 编译产物已生成，直接运行上方列出的 exe 即可启动游戏。
+    echo 编译产物已生成。
 ) else (
     echo.
     echo [警告] 未在 %BUILD_DIR% 中找到 openminer.exe / openminer_server.exe，
     echo        若使用多配置生成器（Visual Studio），请在 IDE 中按 F5 运行或查看
     echo        %BUILD_DIR% 下对应配置子目录。
+)
+
+rem ---- 部署到 Minecraft 游戏目录 ----
+if /i not "%DEPLOY_DIR%"=="none" (
+    if not exist "%DEPLOY_DIR%" mkdir "%DEPLOY_DIR%"
+    if exist "%DEPLOY_DIR%" (
+        for %%E in ("%CLIENT_EXE%" "%SERVER_EXE%") do (
+            if not "%%~fE"=="" (
+                if exist "%%~fE" (
+                    copy /y "%%~fE" "%DEPLOY_DIR%\%%~nxE" >nul && echo [INFO] 已部署 %%~nxE -^> %DEPLOY_DIR%
+                )
+            )
+        )
+        rem MinGW 构建时把编译器运行时 DLL（libwinpthread/libgcc/libstdc++）一并带上，
+        rem 否则在没装 MSVC 运行库的机器上会报“找不到 DLL”；已存在则不覆盖
+        for %%D in (libwinpthread-1.dll libgcc_s_seh-1.dll libstdc++-6.dll) do (
+            where %%D >nul 2>nul && copy /y "%%~$PATH:%%D" "%DEPLOY_DIR%\%%D" >nul 2>nul
+        )
+        echo.
+        echo [INFO] 部署完成，双击 %DEPLOY_DIR%\openminer.exe 即可开始游戏。
+    ) else (
+        echo [警告] 无法创建部署目录 %DEPLOY_DIR%，请手动复制上方产物。
+    )
 )
 endlocal
 exit /b 0
