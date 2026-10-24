@@ -138,5 +138,20 @@ mod:biome {
 		portal = "default:portal",
 		portal_frame = "default:obsidian",
 	},
+
+	res = {
+		{
+			block = "default:nether_gold_ore",
+			probability = 0.004,
+			size = 4,
+			gen_type = "flood_fill",
+		},
+		{
+			block = "default:ancient_debris",
+			probability = 0.0005,
+			size = 1,
+			gen_type = "random_walk",
+		},
+	},
 }
 

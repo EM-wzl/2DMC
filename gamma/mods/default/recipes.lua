@@ -1289,3 +1289,90 @@ mod:crafting_recipe {
 	},
 	keys = {["#"] = "default:wheat"}
 }
+
+-- ===== 下界装备线 =====
+
+-- 下界锭：4 金锭 + 4 下界碎片（环形）
+mod:crafting_recipe {
+	result = {
+		id = "default:netherite_ingot",
+		amount = 1
+	},
+	pattern = {
+		"GSG",
+		"S S",
+		"GSG"
+	},
+	keys = {
+		["G"] = "default:gold_ingot",
+		["S"] = "default:netherite_scrap",
+	}
+}
+
+-- 钻石镐 + 下界锭 → 下界镐
+mod:crafting_recipe {
+	result = {
+		id = "default:netherite_pickaxe",
+		amount = 1
+	},
+	pattern = {
+		"D",
+		"N"
+	},
+	keys = {
+		["D"] = "default:diamond_pickaxe",
+		["N"] = "default:netherite_ingot",
+	}
+}
+
+-- 钻石剑 + 下界锭 → 下界剑
+mod:crafting_recipe {
+	result = {
+		id = "default:netherite_sword",
+		amount = 1
+	},
+	pattern = {
+		"D",
+		"N"
+	},
+	keys = {
+		["D"] = "default:diamond_sword",
+		["N"] = "default:netherite_ingot",
+	}
+}
+
+-- 钻石斧 + 下界锭 → 下界斧
+mod:crafting_recipe {
+	result = {
+		id = "default:netherite_axe",
+		amount = 1
+	},
+	pattern = {
+		"D",
+		"N"
+	},
+	keys = {
+		["D"] = "default:diamond_axe",
+		["N"] = "default:netherite_ingot",
+	}
+}
+
+-- 远古残骸 → 下界碎片
+mod:smelting_recipe {
+	input = {id = "default:ancient_debris", amount = 1},
+	output = {id = "default:netherite_scrap", amount = 1}
+}
+
+-- 传送门（控制台版规则：10 黑曜石 → 1 传送门方块）
+mod:crafting_recipe {
+	result = {
+		id = "default:portal",
+		amount = 1
+	},
+	pattern = {
+		"###",
+		"###",
+		"###"
+	},
+	keys = {["#"] = "default:obsidian"}
+}

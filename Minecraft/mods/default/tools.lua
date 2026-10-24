@@ -76,7 +76,7 @@ function register_tool(name, material, mining_speed, harvest_capability)
 end
 
 local tools = {axe = Capability.Axe, hoe = 0, pickaxe = Capability.Pickaxe, shovel = Capability.Shovel, sword = 0}
-local materials = {"wooden", "stone", "iron", "golden", "diamond"}
+local materials = {"wooden", "stone", "iron", "golden", "diamond", "netherite"}
 
 for i, m in ipairs(materials) do
 	for k, v in pairs(tools) do

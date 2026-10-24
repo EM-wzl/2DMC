@@ -780,3 +780,24 @@ mod:block {
 dofile("blocks/workbench.lua")
 dofile("blocks/furnace.lua")
 dofile("blocks/door.lua")
+
+-- ===== 下界矿物（追加在末尾，保证既有数字 ID 不变）=====
+mod:block {
+	id = "nether_gold_ore",
+	name = "下界金矿",
+	tiles = "nether_gold_ore.png",
+	hardness = 3,
+	harvest_requirements = Capability.Pickaxe,
+	item_drop = {
+		id = mod:id() .. ":gold_nugget",
+		amount = 3,
+	},
+}
+
+mod:block {
+	id = "ancient_debris",
+	name = "远古残骸",
+	tiles = {"ancient_debris_top.png", "ancient_debris_top.png", "ancient_debris_side.png"},
+	hardness = 8,
+	harvest_requirements = Capability.Pickaxe,
+}

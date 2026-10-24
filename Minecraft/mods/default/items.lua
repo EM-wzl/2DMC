@@ -499,3 +499,15 @@ mod:item {
 	name = "皮革",
 	tiles = "leather.png",
 }
+
+mod:item {
+	id = "netherite_scrap",
+	name = "下界碎片",
+	tiles = "netherite_scrap.png",
+}
+
+mod:item {
+	id = "netherite_ingot",
+	name = "下界锭",
+	tiles = "netherite_ingot.png",
+}
