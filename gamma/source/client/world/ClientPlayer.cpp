@@ -93,9 +93,10 @@ void ClientPlayer::move(float direction) {
 }
 
 void ClientPlayer::processInputs() {
-	if(GamePad::isKeyPressed(GameKey::Jump) && !m_isJumping) {
+	// 水中按住跳跃键可持续上浮（不受 m_isJumping 门控）
+	if(GamePad::isKeyPressed(GameKey::Jump) && (!m_isJumping || m_isInWater)) {
 		m_isJumping = true;
-		m_velocity.z = m_jumpSpeed;
+		m_velocity.z = m_isInWater ? m_jumpSpeed * 0.5f : m_jumpSpeed;
 	}
 
 	if(GamePad::isKeyPressed(GameKey::Fly)) {
@@ -127,13 +128,22 @@ void ClientPlayer::updatePosition(const ClientWorld &world) {
 	ClientChunk *chunk = (ClientChunk *)world.getChunkAtBlockPos((int)m_x, (int)m_y, (int)m_z);
 	if (chunk && chunk->isInitialized()) {
 		if (!Config::isFlyModeEnabled) {
-			m_velocity.z -= chunk->dimension().gravity() * 0.001f;
+			m_isInWater = isInWater(world);
+			if (m_isInWater) {
+				// 游泳：重力 ×0.25 缓慢下沉，并限制下沉速度
+				m_velocity.z -= chunk->dimension().gravity() * 0.001f * 0.25f;
+				if (m_velocity.z < -m_jumpSpeed * 0.4f)
+					m_velocity.z = -m_jumpSpeed * 0.4f;
+			}
+			else {
+				m_velocity.z -= chunk->dimension().gravity() * 0.001f;
 
-			m_isJumping = true;
+				m_isJumping = true;
 
-			// Limit max vertical speed to jump speed
-			if (m_velocity.z < -m_jumpSpeed)
-				m_velocity.z = -m_jumpSpeed;
+				// Limit max vertical speed to jump speed
+				if (m_velocity.z < -m_jumpSpeed)
+					m_velocity.z = -m_jumpSpeed;
+			}
 		}
 	}
 	// Block player until the chunk loads, unless "no clip" mode is enabled
@@ -208,6 +218,15 @@ void ClientPlayer::checkCollisions(const ClientWorld &world) {
 			}
 		}
 	}
+}
+
+bool ClientPlayer::isInWater(const ClientWorld &world) {
+	// 脚部或身体中部处于液体方块（draw_type = liquid）即视为在水中
+	const BlockState *feet = world.getBlockState((int)m_x, (int)m_y, (int)m_z);
+	if (feet && feet->block().id() && feet->drawType() == BlockDrawType::Liquid)
+		return true;
+	const BlockState *body = world.getBlockState((int)m_x, (int)m_y, (int)(m_z + m_hitbox.sizeZ * 0.5));
+	return body && body->block().id() && body->drawType() == BlockDrawType::Liquid;
 }
 
 bool passable(const ClientWorld &world, double x, double y, double z) {

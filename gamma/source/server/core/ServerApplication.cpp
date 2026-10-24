@@ -42,6 +42,7 @@ static bool hasBeenInterrupted = false;
 
 #include <stdio.h>
 #include <signal.h>
+#include <cstdlib>
 
 static void sigintHandler(int) {
 	signal(SIGINT, sigintHandler);
@@ -141,6 +142,10 @@ bool ServerApplication::init() {
 	if (!m_worldName.empty())
 		m_worldController.load(m_worldName);
 
+	// TEMP: 流体验证自动测试钩子（2DMC_AUTOTEST=1 时启用，验证后移除）
+	if (std::getenv("2DMC_AUTOTEST"))
+		m_autotestCountdown = 500;
+
 	if (m_eventHandler)
 		m_eventHandler->emplaceEvent<ServerOnlineEvent>(true, m_server.port());
 
@@ -214,6 +219,52 @@ void ServerApplication::update() {
 	}
 
 	m_worldController.update(doTick);
+
+	// TEMP: 流体验证自动测试触发（到点后调用 Lua 全局，验证后移除）
+	if (m_autotestCountdown > 0 && !m_autotestDone) {
+		--m_autotestCountdown;
+		if (m_autotestCountdown == 0) {
+			m_autotestDone = true;
+			try {
+				auto &world = m_worldController.getWorld(0);
+				// 测试区在区块 (0,0,0)（x 0-15 / y 0-15 / z 0-31），先强制生成
+				for (int cx = -1 ; cx <= 1 ; ++cx)
+					for (int cy = -1 ; cy <= 0 ; ++cy)
+						for (int cz = -1 ; cz <= 1 ; ++cz) {
+							auto &chunk = world.getOrCreateChunk(cx, cy, cz);
+							world.generateChunk(chunk);
+						}
+				logInfo() << "[AUTOTEST] chunks ready, calling autotest_server_run";
+				m_scriptEngine.lua().script_file("mods/default/autotest.lua");
+				sol::object r = m_scriptEngine.lua()["autotest_server_run"](&world);
+				if (r.valid())
+					logInfo() << "[FLUIDTEST] " << r.as<std::string>();
+				std::fflush(nullptr);
+			}
+			catch (const std::exception &e) {
+				logError() << e.what();
+			}
+		}
+	}
+	else if (m_autotestDone && std::getenv("2DMC_AUTOTEST")) {
+		// TEMP: 每 20 帧采样一次测试区状态，结果写入 autotest_result.txt（验证后移除）
+		static u64 fluidTestFrame = 0;
+		if (++fluidTestFrame % 20 == 0) {
+			try {
+				sol::function fn = m_scriptEngine.lua()["autotest_server_tick"];
+				if (fn.valid()) {
+					auto &world = m_worldController.getWorld(0);
+					sol::object r = fn(&world);
+					if (r.valid())
+						logInfo() << "[FLUIDTEST] " << r.as<std::string>();
+				}
+				std::fflush(nullptr);
+			}
+			catch (const std::exception &e) {
+				logError() << "[AUTOTEST-TICK] " << e.what();
+			}
+		}
+	}
 
 	if (m_clock.getTicks() % 100 < 10) {
 		for (auto &it : m_players) {

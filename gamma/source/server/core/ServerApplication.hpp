@@ -70,6 +70,10 @@ class ServerApplication {
 
 		std::string m_worldName;
 
+		// TEMP: 流体验证自动测试钩子（2DMC_AUTOTEST 环境变量门控，验证后移除）
+		u32 m_autotestCountdown = 0;
+		bool m_autotestDone = false;
+
 		WorldController m_worldController{m_registry};
 		PlayerList m_players;
 

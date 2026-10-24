@@ -107,6 +107,7 @@ mod:block {
 
 	draw_type = "liquid",
 	is_opaque = false,
+	is_collidable = false,
 
 	fog_depth = 20.0,
 	fog_color = {0, 128, 255},
@@ -265,6 +266,7 @@ mod:block {
 	draw_type = "liquid",
 	is_light_source = true,
 	is_opaque = false,
+	is_collidable = false,
 
 	fog_depth = 10.0,
 	fog_color = {255, 128, 0},

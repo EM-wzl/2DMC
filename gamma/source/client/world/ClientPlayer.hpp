@@ -49,6 +49,7 @@ class ClientPlayer : public Player {
 
 		void processInputs();
 		void updatePosition(const ClientWorld &world);
+		bool isInWater(const ClientWorld &world);
 
 		void checkCollisions(const ClientWorld &world);
 
@@ -85,6 +86,7 @@ class ClientPlayer : public Player {
 
 		bool m_isJumping = false;
 		const float m_jumpSpeed = 0.06f;
+		bool m_isInWater = false;
 
 		std::optional<Vector3i> m_lastChunkPos;
 };

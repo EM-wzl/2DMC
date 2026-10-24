@@ -278,6 +278,7 @@ local function register_fluid_family(kind, base_tile, fog_depth, fog_color, is_l
 			tiles = base_tile,
 			draw_type = "liquid",
 			is_opaque = false,
+			is_collidable = false,
 			fog_depth = fog_depth,
 			fog_color = fog_color,
 			groups = { ci_ignore = 1 },
