@@ -31,6 +31,8 @@
 
 #include <sol/sol.hpp>
 
+#include <string>
+
 #include "common/core/IntTypes.hpp"
 #include "common/world/Heightmap.hpp"
 #include "server/world/TerrainBiomeSampler.hpp"
@@ -47,10 +49,19 @@ class TerrainGenerator {
 
 		void generate(ServerChunk &chunk);
 
-		void setSeed(s32 seed) { m_caveNoise.SetSeed(seed); }
+		void setSeed(s32 seed) { m_caveNoise.SetSeed(seed); m_seed = seed; }
 
 	private:
 		void fastNoiseGeneration(ServerChunk &chunk);
+
+		// 3D mineshaft generation (overworld only).
+		// The geometry is a pure function of (seed, world coordinates), so every
+		// chunk independently carves the same corridors in the cells it owns and
+		// tunnels align across chunk borders without cross-chunk writes.
+		void generateMineshafts(ServerChunk &chunk) const;
+
+		// TEMP: verification instrumentation, enabled with 2DMC_MINESHAFT_CHECK=1.
+		void logMineshaftCheck(ServerChunk &chunk) const;
 
 		bool tryPlaceTree(ServerChunk &chunk, int x, int y, int z, const Biome &biome, Random_t &rand) const;
 		bool tryPlaceFlora(ServerChunk &chunk, int x, int y, int z, const Biome &biome, Random_t &rand) const;
@@ -71,6 +82,9 @@ class TerrainGenerator {
 		Heightmap &m_heightmap;
 
 		FastNoiseLite m_caveNoise;
+
+		s32 m_seed = 0;
+		std::string m_dimensionStringID;
 };
 
 #endif // TERRAINGENERATOR_HPP_
