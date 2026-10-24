@@ -397,6 +397,11 @@ mod:item {
 	id = "bucket_empty",
 	name = "桶",
 	tiles = "bucket_empty.png",
+
+	on_item_activated = function(pos, block, player, world, client, server)
+		-- 桶取水/岩浆（逻辑见 fluids.lua；客户端持空桶时射线可选中液体）
+		return fluid_bucket_fill and fluid_bucket_fill(pos, block, player, world, client, server)
+	end
 }
 
 mod:item {

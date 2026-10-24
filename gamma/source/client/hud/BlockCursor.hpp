@@ -77,6 +77,9 @@ class BlockCursor : public Drawable {
 		const BlockState *m_currentBlock = nullptr;
 		const ItemStack *m_currentTool = nullptr;
 
+		// 持空桶时允许射线选中液体方块（桶取水/岩浆，见 mods/default/fluids.lua）
+		bool m_canTargetFluids = false;
+
 		Texture *m_blockDestroyTexture = nullptr;
 
 		const u16 m_activationRepeatDelay = 250;

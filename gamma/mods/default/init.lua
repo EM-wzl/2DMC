@@ -43,3 +43,7 @@ dofile("inventory.lua")
 
 dofile("item_drop.lua")
 
+-- 流体系统（水/岩浆流动、静置、黑曜石、桶）——必须最后加载，
+-- 保证新方块数字 ID 追加在所有既有方块之后（旧存档兼容）
+dofile("fluids.lua")
+

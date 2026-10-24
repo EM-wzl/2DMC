@@ -44,7 +44,7 @@ namespace BlockCursorRaycast {
 	                   const glm::dvec3 &lookAt, const double maxReach,
 	                   s32f &bestX, s32f &bestY, s32f &bestZ,
 	                   s8f &bestFace, double &bestDepth,
-	                   const ClientWorld &world);
+	                   const ClientWorld &world, bool canTargetFluids = false);
 } // namespace BlockCursorRaycast
 
 #endif // BLOCKCURSORRAYCAST_HPP_

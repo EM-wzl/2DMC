@@ -541,10 +541,23 @@ void ServerCommandHandler::stopServer() const {
 	m_server.setRunning(false);
 }
 
+// 服务端 Lua 修改方块后手动同步客户端（流体系统用，见 mods/default/fluids.lua）。
+// 包格式与 PlayerPlaceBlock 的广播一致：u32 = (param << 16) | blockID，
+// 客户端收到后 setBlock + setData。
+void ServerCommandHandler::sendBlockUpdate(s32 x, s32 y, s32 z, u16 blockID) const {
+	Network::Packet packet;
+	packet << Network::Command::BlockUpdate << x << y << z << u32(blockID & 0xffff);
+	m_server.sendToAllClients(packet);
+}
+
 // Please update 'docs/lua-api-cpp.md' if you change this
 void ServerCommandHandler::initUsertype(sol::state &lua) {
 	lua.new_usertype<ServerCommandHandler>("ServerCommandHandler",
 		"send_player_change_dimension", &ServerCommandHandler::sendPlayerChangeDimension,
-		"send_chat_message", &ServerCommandHandler::sendChatMessage
+		"send_chat_message", &ServerCommandHandler::sendChatMessage,
+
+		// 流体系统（mods/default/fluids.lua）用：同步方块修改与玩家背包
+		"send_block_update", &ServerCommandHandler::sendBlockUpdate,
+		"send_player_inv_update", &ServerCommandHandler::sendPlayerInvUpdate
 	);
 }

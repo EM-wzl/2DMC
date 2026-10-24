@@ -45,3 +45,18 @@ openminer:add_listener(Event.PlayerConnected, function(pos, player, client, serv
 	-- 进入游戏的欢迎 / 提示聊天文字已按需求移除
 end)
 
+-- ===== 流体系统（fluids.lua）=====
+-- 玩家挖/放方块时激活相邻静置/静态流体：
+--   挖掉支撑物 → 流体逐级回退消失；放置方块/流体 → 重新评估流动
+openminer:add_listener(Event.BlockDigged, function(pos, block, player, world, client, server)
+	if fluid_kick_neighbors then
+		fluid_kick_neighbors(world, server, pos.x, pos.y, pos.z)
+	end
+end)
+
+openminer:add_listener(Event.BlockPlaced, function(pos, block, player, world, client, server)
+	if fluid_on_placed then
+		fluid_on_placed(world, server, pos.x, pos.y, pos.z)
+	end
+end)
+

@@ -75,7 +75,7 @@ void BlockCursorRaycast::rayCastToAxis(const Axis axis, const glm::dvec3 &positi
                                        const glm::dvec3 &lookAt, const double maxReach,
                                        s32f &bestX, s32f &bestY, s32f &bestZ,
                                        s8f &bestFace, double &bestDepth,
-                                       const ClientWorld &world)
+                                       const ClientWorld &world, bool canTargetFluids)
 {
 	glm::dvec3 isect;
 	double posCoord, lookAtCoord;
@@ -137,7 +137,7 @@ void BlockCursorRaycast::rayCastToAxis(const Axis axis, const glm::dvec3 &positi
 			if (localCorner2.z < localCorner1.z) std::swap(localCorner1.z, localCorner2.z);
 		}
 
-		if (blockState->block().id() && blockState->drawType() != BlockDrawType::Liquid) {
+		if (blockState->block().id() && (blockState->drawType() != BlockDrawType::Liquid || canTargetFluids)) {
 			// Check bounding box; this should loop over all selection boxes
 			// when they are implemented
 			const glm::dvec3 cubePos{double(nx), double(ny), double(nz)};

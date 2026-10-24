@@ -35,7 +35,8 @@
 void ServerBlock::onTick(const glm::ivec3 &pos, ServerChunk &chunk, ServerWorld &world, ServerCommandHandler &server) const {
 	if (m_onTickEnabled && m_onTick) {
 		try {
-			m_onTick(pos, *this, chunk, world);
+			// 第 5 个参数把 ServerCommandHandler 传给 Lua（流体系统 fluids.lua 需要同步客户端）
+			m_onTick(pos, *this, chunk, world, server);
 
 			BlockData *blockData = world.getBlockData(pos.x, pos.y, pos.z);
 			if (blockData) {

@@ -89,7 +89,10 @@ void ServerChunk::onBlockDestroyed(int x, int y, int z, const Block &block) {
 
 void ServerChunk::tick() {
 	if (!m_tickingBlocks.empty()) {
-		for (auto &it : m_tickingBlocks) {
+		// Lua 的 on_tick 可能通过 world:set_block 增删本表（流体系统会静置/删除自身方块），
+		// 在副本上迭代以避免迭代器失效；本 tick 新注册的方块从下一次 tick 开始更新。
+		auto tickingBlocks = m_tickingBlocks;
+		for (auto &it : tickingBlocks) {
 			if (!it.second.isTickingRandomly() || m_random.get<bool>(it.second.tickProbability())) {
 				it.second.onTick(
 					glm::ivec3{

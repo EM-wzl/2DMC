@@ -90,6 +90,9 @@ void BlockCursor::update(const Hotbar &hotbar) {
 
 	m_selectedBlock = selectedBlock;
 
+	// 持空桶时允许射线选中液体方块（桶取水/岩浆，见 mods/default/fluids.lua）
+	m_canTargetFluids = (hotbar.currentItem().stringID() == "default:bucket_empty");
+
 	m_currentBlock = m_world.getBlockState(m_selectedBlock.x, m_selectedBlock.y, m_selectedBlock.z);
 	// if (block.boundingBox().intersects(FloatBox{m_selectedBlock.x, m_selectedBlock.y, m_selectedBlock.z, 1, 1, 1})) {
 	// 	selectedBlockChanged = false;
@@ -180,7 +183,15 @@ void BlockCursor::activateBlock(const Hotbar &hotbar) {
 		blockActivationSent = true;
 	}
 
-	if (block.id() && !itemActivationSent && !blockActivationSent && hotbar.currentItem().id() && item.isBlock()) {
+	// 流体桶：持水桶/岩浆桶右键方块面 → 放置静态水/岩浆（消耗后返还空桶，见 fluids.lua）
+	u16 fluidBlockID = 0;
+	const std::string &heldItemID = hotbar.currentItem().stringID();
+	if (heldItemID == "default:water_bucket")
+		fluidBlockID = Registry::getInstance().getBlockFromStringID("default:water").id();
+	else if (heldItemID == "default:lava_bucket")
+		fluidBlockID = Registry::getInstance().getBlockFromStringID("default:lava").id();
+
+	if (block.id() && !itemActivationSent && !blockActivationSent && hotbar.currentItem().id() && (item.isBlock() || fluidBlockID)) {
 		s8 face = (s8)m_selectedBlock.w;
 
 		s32 x = m_selectedBlock.x;
@@ -209,7 +220,7 @@ void BlockCursor::activateBlock(const Hotbar &hotbar) {
 			FloatBox boundingBox = newBlockState.boundingBox() + Vector3f(float(x - m_player.x()), float(y - m_player.y()), float(z - m_player.z()));
 			FloatBox playerBoundingBox = m_player.hitbox();
 			if (!boundingBox.intersects(playerBoundingBox) && newBlock.placementConstraints().check(m_world, {x, y, z})) {
-				u32 block = hotbar.currentItem().id();
+				u32 block = fluidBlockID ? fluidBlockID : hotbar.currentItem().id();
 				if (newBlock.isRotatable()) {
 					u16 data = m_player.getOppositeDirection() & 0x3;
 					m_world.setData(x, y, z, data);
@@ -221,11 +232,17 @@ void BlockCursor::activateBlock(const Hotbar &hotbar) {
 
 				m_client.sendPlayerPlaceBlock(x, y, z, block);
 
-				const ItemStack &currentStack = m_player.inventory().getStack((u16)hotbar.cursorPos(), 0);
-				m_player.inventory().setStack((u16)hotbar.cursorPos(), 0, currentStack.amount() > 1
-					? currentStack.item().stringID()
-					: "", currentStack.amount() - 1
-				);
+				if (fluidBlockID) {
+					// 流体桶：放置后返还空桶
+					m_player.inventory().setStack((u16)hotbar.cursorPos(), 0, "default:bucket_empty", 1);
+				}
+				else {
+					const ItemStack &currentStack = m_player.inventory().getStack((u16)hotbar.cursorPos(), 0);
+					m_player.inventory().setStack((u16)hotbar.cursorPos(), 0, currentStack.amount() > 1
+						? currentStack.item().stringID()
+						: "", currentStack.amount() - 1
+					);
+				}
 
 				m_client.sendPlayerInvUpdate();
 			}
@@ -383,9 +400,9 @@ glm::ivec4 BlockCursor::findSelectedBlock() const {
 
 	glm::dvec3 lookAtN = glm::normalize(lookAt);
 
-	BlockCursorRaycast::rayCastToAxis(AXIS_X, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world);
-	BlockCursorRaycast::rayCastToAxis(AXIS_Y, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world);
-	BlockCursorRaycast::rayCastToAxis(AXIS_Z, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world);
+	BlockCursorRaycast::rayCastToAxis(AXIS_X, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world, m_canTargetFluids);
+	BlockCursorRaycast::rayCastToAxis(AXIS_Y, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world, m_canTargetFluids);
+	BlockCursorRaycast::rayCastToAxis(AXIS_Z, position, lookAtN, maxReach, bestX, bestY, bestZ, bestFace, bestDepth, m_world, m_canTargetFluids);
 
 	return glm::ivec4{bestX, bestY, bestZ, bestFace};
 }
