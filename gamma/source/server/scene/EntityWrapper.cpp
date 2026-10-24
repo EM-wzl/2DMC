@@ -26,6 +26,27 @@
  */
 #include "server/scene/EntityWrapper.hpp"
 
+std::string EntityWrapper::getType() const {
+	auto *type = m_registry.try_get<std::string>(m_id);
+	return type ? *type : "";
+}
+
+std::tuple<double, double, double> EntityWrapper::getPosition() const {
+	auto *position = getPositionComponent();
+	if (!position) return {0.0, 0.0, 0.0};
+	return {position->x, position->y, position->z};
+}
+
+void EntityWrapper::setPosition(double x, double y, double z) {
+	auto *position = getPositionComponent();
+	if (!position) return;
+
+	position->x = x;
+	position->y = y;
+	position->z = z;
+	position->isUpdated = true; // 触发 NetworkController 下一 tick 广播 EntityPosition
+}
+
 // Please update 'docs/lua-api-cpp.md' if you change this
 void EntityWrapper::initUsertype(sol::state &lua) {
 	lua.new_usertype<EntityWrapper>("EntityWrapper",
@@ -33,6 +54,11 @@ void EntityWrapper::initUsertype(sol::state &lua) {
 
 		"position", &EntityWrapper::getPositionComponent,
 		"network", &EntityWrapper::getNetworkComponent,
-		"item_stack", &EntityWrapper::getItemStack
+		"item_stack", &EntityWrapper::getItemStack,
+
+		"type", &EntityWrapper::getType,
+		"get_position", &EntityWrapper::getPosition,
+		"set_position", &EntityWrapper::setPosition,
+		"valid", &EntityWrapper::isValid
 	);
 }

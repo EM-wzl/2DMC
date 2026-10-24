@@ -24,14 +24,57 @@
  *
  * =====================================================================================
  */
+#include <cstdlib>
+
 #include "common/core/EngineConfig.hpp"
 #include "common/core/GameClock.hpp"
+#include "common/core/Registry.hpp"
 #include "common/world/Dimension.hpp"
+#include "common/scene/component/NetworkComponent.hpp"
+#include "common/scene/component/PositionComponent.hpp"
 #include "server/core/PlayerList.hpp"
 #include "server/core/ServerConfig.hpp"
+#include "server/lua/ScriptEngine.hpp"
 #include "server/network/ServerCommandHandler.hpp"
+#include "server/scene/EntityWrapper.hpp"
 #include "server/world/ServerPlayer.hpp"
 #include "server/world/ServerWorld.hpp"
+
+// TEMP: 实体引擎验证钩子（仅 2DMC_ENTITYTEST=1 时由 ServerWorld::update 调用，验证后移除）。
+// 注册一个带 on_tick 的测试实体类型 2dmctest:mover（每 tick 沿 x 轴 +0.05），
+// 生成在维度 0 出生点附近，用于验证逐实体 tick 与位置写入/同步链路。
+// 不触碰 ServerApplication 的 2DMC_AUTOTEST 流体钩子。详见 _entity_research/entity_api_report.md。
+static void runEntityTestHook(ServerWorld &world, ServerCommandHandler &server) {
+	auto &registry = Registry::getInstance();
+
+	// 测试实体模型：无组件，spawn_entity 会补齐 Position/Network/类型组件
+	registry.registerEntity("2dmctest:mover");
+	registry.addEntityCallbackContainer("2dmctest:mover");
+
+	sol::state_view lua(server.scriptEngine().lua());
+
+	try {
+		registry.getEntityCallbackContainer("2dmctest:mover").tickCallback = lua.script(R"lua(
+			return function(entity, pos, world, server)
+				local x, y, z = entity:get_position()
+				entity:set_position(x + 0.05, y, z)
+			end
+		)lua");
+
+		lua["_2DMC_ENTITYTEST_SPAWN_Z"] = world.heightmap().getHighestBlockAt(8, 8) + 2;
+		lua.script(R"lua(
+			mods["default"]:spawn_entity("2dmctest:mover", {
+				position = {8.5, 8.5, _2DMC_ENTITYTEST_SPAWN_Z},
+				dimension = 0,
+			})
+		)lua");
+
+		logInfo() << "[ENTITYTEST] test entity '2dmctest:mover' spawned, on_tick moves it along +x";
+	}
+	catch (const sol::error &e) {
+		logError() << "[ENTITYTEST] hook failed:" << e.what();
+	}
+}
 
 ServerWorld::ServerWorld(PlayerList &players, const Dimension &dimension, s32 seed)
 	: m_players(players),
@@ -41,6 +84,8 @@ ServerWorld::ServerWorld(PlayerList &players, const Dimension &dimension, s32 se
 	  m_scene(players),
 	  m_seed(seed)
 {
+	// 实体 on_tick 回调需要访问所在 world（Lua 侧用于方块查询/寻路）
+	m_scene.setWorld(this);
 }
 
 void ServerWorld::update(bool doTick) {
@@ -49,6 +94,14 @@ void ServerWorld::update(bool doTick) {
 	processSendRequests();
 
 	if (doTick) {
+		// TEMP: 实体引擎验证钩子（2DMC_ENTITYTEST=1 时启用，验证后移除），
+		// 仅维度 0 的第一个 tick 触发一次；见文件顶部 runEntityTestHook
+		static bool entityTestHookDone = false;
+		if (!entityTestHookDone && m_dimension.id() == 0 && m_server && std::getenv("2DMC_ENTITYTEST")) {
+			entityTestHookDone = true;
+			runEntityTestHook(*this, *m_server);
+		}
+
 		for (auto &it : m_chunks) // TODO: Loop on a subset of this hashmap
 			it.second->tick();
 
@@ -264,6 +317,34 @@ void ServerWorld::initUsertype(sol::state &lua) {
 	lua.new_usertype<ServerWorld>("ServerWorld",
 		sol::base_classes, sol::bases<World>(),
 
-		"dimension", &ServerWorld::dimension
+		"dimension", &ServerWorld::dimension,
+
+		// 枚举本维度所有实体（网络实体，下标从 1 开始），供实体 AI 选目标
+		"get_entities", [](ServerWorld &self, sol::this_state s) {
+			sol::state_view state(s);
+			sol::table entities = state.create_table();
+
+				entt::registry &registry = self.scene().registry();
+				unsigned i = 1;
+				registry.view<PositionComponent, NetworkComponent>().each([&](auto entity, auto &, auto &) {
+					entities[i++] = EntityWrapper{entity, registry};
+				});
+
+				return entities;
+			},
+
+			"get_entities_by_type", [](ServerWorld &self, const std::string &type, sol::this_state s) {
+				sol::state_view state(s);
+				sol::table entities = state.create_table();
+
+				entt::registry &registry = self.scene().registry();
+				unsigned i = 1;
+				registry.view<PositionComponent, NetworkComponent, std::string>().each([&](auto entity, auto &, auto &, auto &id) {
+					if (id == type)
+						entities[i++] = EntityWrapper{entity, registry};
+				});
+
+				return entities;
+			}
 	);
 }

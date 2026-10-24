@@ -110,6 +110,7 @@ void extend_meta_type(const std::string &name, ComponentType type, bool isSerial
 
 #include "common/core/Box.hpp"
 #include "common/inventory/ItemStack.hpp"
+#include "common/scene/EntityCallbackContainer.hpp"
 #include "common/scene/component/AnimationComponent.hpp"
 #include "common/scene/component/DrawableDef.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
@@ -125,4 +126,8 @@ void Scene::registerComponents() {
 	extend_meta_type<PositionComponent>  ("PositionComponent",  ComponentType::Position,  true,  true);
 	extend_meta_type<RotationComponent>  ("RotationComponent",  ComponentType::Rotation,  true,  true);
 	extend_meta_type<std::string>        ("EntityID",           ComponentType::EntityID,  false, true);
+	// EntityTickTag 必须注册：NetworkController 的 registry.visit 会枚举实体上所有
+	// 组件类型并 entt::resolve，未注册的组件类型会导致崩溃。不序列化/不存档
+	// （serialize/save 对非 ISerializable 类型返回空包，发送/存储自然跳过）
+	extend_meta_type<EntityTickTag>      ("EntityTickTag",      ComponentType::EntityTick, false, false);
 }

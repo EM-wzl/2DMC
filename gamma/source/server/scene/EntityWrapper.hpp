@@ -27,6 +27,9 @@
 #ifndef ENTITYWRAPPER_HPP_
 #define ENTITYWRAPPER_HPP_
 
+#include <string>
+#include <tuple>
+
 #include <entt/entt.hpp>
 
 #include "common/inventory/ItemStack.hpp"
@@ -44,6 +47,17 @@ class EntityWrapper {
 		PositionComponent *getPositionComponent() const { return m_registry.try_get<PositionComponent>(m_id); }
 		NetworkComponent *getNetworkComponent() const { return m_registry.try_get<NetworkComponent>(m_id); }
 		ItemStack *getItemStack() const { return m_registry.try_get<ItemStack>(m_id); }
+
+		// 实体类型 string_id（如 "default:pig"），由 spawn 时写入的 std::string 组件提供
+		std::string getType() const;
+
+		// 服务端权威位置。set_position 写入后置 isUpdated，下一个 tick 由
+		// NetworkController 广播 EntityPosition (0x52) 包同步到所有客户端
+		std::tuple<double, double, double> getPosition() const;
+		void setPosition(double x, double y, double z);
+
+		// 实体是否仍存活（on_tick 里 despawn 其他实体后，缓存的 wrapper 需先检查）
+		bool isValid() const { return m_registry.valid(m_id); }
 
 		static void initUsertype(sol::state &lua);
 

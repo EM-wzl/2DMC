@@ -26,9 +26,13 @@
  */
 #include "server/scene/ServerScene.hpp"
 #include "server/scene/controller/CollisionController.hpp"
+#include "server/scene/controller/EntityTickController.hpp"
 #include "server/scene/controller/NetworkController.hpp"
 
 ServerScene::ServerScene(PlayerList &players) {
+	// 实体 tick 先于碰撞/网络：同一 tick 内 Lua 移动实体后，碰撞检测与新位置
+	// 立即生效，位置变更也在同 tick 被 NetworkController 广播
+	m_entityTickController = static_cast<EntityTickController *>(m_controllers.emplace_back(new EntityTickController).get());
 	m_collisionController = static_cast<CollisionController *>(m_controllers.emplace_back(new CollisionController(players)).get());
 	m_networkController = static_cast<NetworkController *>(m_controllers.emplace_back(new NetworkController).get());
 }
@@ -38,6 +42,11 @@ void ServerScene::sendEntities(const ClientInfo &client) {
 }
 
 void ServerScene::setServer(ServerCommandHandler *server) {
+	m_entityTickController->setServer(server);
 	m_collisionController->setServer(server);
 	m_networkController->setServer(server);
+}
+
+void ServerScene::setWorld(ServerWorld *world) {
+	m_entityTickController->setWorld(world);
 }

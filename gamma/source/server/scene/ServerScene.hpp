@@ -31,9 +31,11 @@
 
 class ClientInfo;
 class CollisionController;
+class EntityTickController;
 class NetworkController;
 class PlayerList;
 class ServerCommandHandler;
+class ServerWorld;
 
 class ServerScene : public Scene {
 	public:
@@ -42,8 +44,10 @@ class ServerScene : public Scene {
 		void sendEntities(const ClientInfo &client);
 
 		void setServer(ServerCommandHandler *server);
+		void setWorld(ServerWorld *world);
 
 	private:
+		EntityTickController *m_entityTickController = nullptr;
 		CollisionController *m_collisionController = nullptr;
 		NetworkController *m_networkController = nullptr;
 };

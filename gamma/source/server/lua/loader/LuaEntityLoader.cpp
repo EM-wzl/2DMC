@@ -26,6 +26,7 @@
  */
 #include "common/core/Debug.hpp"
 #include "common/core/Registry.hpp"
+#include "common/scene/EntityCallbackContainer.hpp"
 #include "common/scene/component/AnimationComponent.hpp"
 #include "common/scene/component/DrawableDef.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
@@ -79,6 +80,10 @@ void LuaEntityLoader::spawnEntity(const std::string &entityID, const sol::table 
 		registry.emplace<NetworkComponent>(entity, entity);
 		registry.emplace<std::string>(entity, entityID);
 
+		// 类型定义了 on_tick 的实体打上 tick 标记，EntityTickController 只遍历这些实体
+		if (Registry::getInstance().getEntityCallbackContainer(entityID).tickCallback.valid())
+			registry.emplace<EntityTickTag>(entity);
+
 		// FIXME: This code is too specific to the item drop entity
 		ItemStack *itemStack = tryLoadItemStack(table, registry, entity);
 		auto *drawable = registry.try_get<DrawableDef>(entity);
@@ -97,6 +102,13 @@ void LuaEntityLoader::tryLoadCallbacks(const sol::table &table) const {
 	sol::optional<sol::unsafe_function> onCollision = table["on_collision"];
 	if (onCollision != sol::nullopt) {
 		entityCallbackContainer.collisionCallback = onCollision.value();
+	}
+
+	// 逐实体 tick 回调：由 EntityTickController 每个服务端 tick 调用
+	// on_tick(entity, pos, world, server)，pos 为 {x, y, z} 表
+	sol::optional<sol::unsafe_function> onTick = table["on_tick"];
+	if (onTick != sol::nullopt) {
+		entityCallbackContainer.tickCallback = onTick.value();
 	}
 }
 
