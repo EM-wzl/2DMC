@@ -73,7 +73,7 @@ Minecraft/
 
 ### 一键编译（推荐）
 
-在 `gamma/` 目录下直接运行：
+在 `gamma/` 目录下直接运行，或在 2DMC 仓库根（及其上一级目录）运行根目录的 `build.bat`——它会自动寻找 gamma 文件夹并转发构建：
 
 ```bat
 build.bat

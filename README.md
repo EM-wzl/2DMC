@@ -36,6 +36,8 @@
 环境要求：Windows、CMake ≥ 3.12、MinGW-w64 的 g++、Git（首次编译联网拉取子模块）。
 
 ```bat
+build.bat              :: 仓库根直接运行（自动定位 gamma 文件夹）
+:: 或
 cd gamma
 build.bat
 ```
