@@ -47,3 +47,5 @@ dofile("item_drop.lua")
 -- 保证新方块数字 ID 追加在所有既有方块之后（旧存档兼容）
 dofile("fluids.lua")
 
+dofile("entities.lua")
+
