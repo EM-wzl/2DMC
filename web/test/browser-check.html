@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC Web 浏览器加载自检</title></head>
+<body>
+<div id="result">PENDING</div>
+<iframe id="fr" src="../index.html" style="width:1000px;height:640px;border:0"></iframe>
+<script>
+(function () {
+  const out = [];
+  const fr = document.getElementById('fr');
+  window.addEventListener('error', e => out.push('window_error=' + e.message));
+  fr.addEventListener('load', () => {
+    setTimeout(() => {
+      try {
+        const w = fr.contentWindow;
+        out.push('DMC=' + !!w.DMC);
+        out.push('game=' + !!w.game);
+        out.push('modules=' + Object.keys(w.DMC || {}).sort().join(','));
+        const r = w.DMC.SelfTest.run();
+        out.push('selftest=' + r.passed + '/' + (r.passed + r.failed));
+        r.lines.filter(l => l.startsWith('FAIL')).forEach(l => out.push('fail=' + l.slice(5)));
+        const t = w.document.querySelector('#toast');
+        out.push('startup=' + (t && /启动失败/.test(t.textContent) ? 'FAILED:' + t.textContent : 'OK'));
+        out.push('canvas=' + (w.document.querySelector('#game').width > 0));
+        out.push('world=' + (w.game ? w.game.world.dim + ':' + w.game.world.seed : 'none'));
+        out.push('dragon=' + (w.game && w.game.dragon ? w.game.dragon.segs.length : 0));
+      } catch (e) { out.push('EXCEPTION=' + e.message); }
+      document.getElementById('result').textContent = out.join(' | ');
+    }, 2200);
+  });
+})();
+</script>
+</body>
+</html>

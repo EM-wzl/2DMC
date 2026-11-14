@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC Web 截图</title>
+<style>html,body{margin:0;padding:0;overflow:hidden;background:#000}iframe{border:0;display:block;width:100vw;height:100vh}</style>
+</head>
+<body>
+<iframe id="fr" src="../index.html"></iframe>
+<script>
+document.getElementById('fr').addEventListener('load', function () {
+  var w = this.contentWindow;
+  setTimeout(function () {
+    try {
+      var b = w.document.getElementById('btn-new');
+      if (b) b.click();
+    } catch (e) { document.title = 'ERR ' + e.message; }
+  }, 1200);
+});
+</script>
+</body>
+</html>

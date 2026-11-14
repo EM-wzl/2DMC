@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC Web 末地截图</title>
+<style>html,body{margin:0;padding:0;overflow:hidden;background:#000}iframe{border:0;display:block;width:100vw;height:100vh}</style>
+</head>
+<body>
+<iframe id="fr" src="../index.html"></iframe>
+<script>
+document.getElementById('fr').addEventListener('load', function () {
+  var w = this.contentWindow;
+  setTimeout(function () {
+    try {
+      w.document.getElementById('btn-new').click();
+      w.game.command('end');
+      w.game.command('dragon');
+      // 把玩家放在龙下方一点，方便同时看到龙与中央岛
+      w.game.player.x = w.game.dragon.head.x;
+      w.game.player.y = w.game.dragon.head.y + 9;
+      w.game.renderer.camInit = false;
+    } catch (e) { document.title = 'ERR ' + e.message; }
+  }, 1200);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="2DMC Web — 浏览器里可玩的 2D Minecraft，含末地维度与链式末影龙 Boss">
+<title>2DMC Web · 方块世界</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud">
+    <div class="hud-row">
+      <div id="hearts" class="hearts"></div>
+      <div id="info" class="info"></div>
+      <div class="tools">
+        <button id="btn-save" class="icon-btn" title="保存世界">保存</button>
+        <button id="btn-lan" class="icon-btn" title="局域网联机">联机</button>
+        <button id="btn-help" class="icon-btn" title="帮助 (H)">帮助</button>
+      </div>
+    </div>
+    <div id="target-name" class="target-name"></div>
+    <div class="hud-bottom">
+      <div id="hotbar" class="hotbar"></div>
+      <div class="hint">左键 挖掘 / 攻击 · 右键 放置 / 交互 · E 背包 · 回车 命令 · H 帮助</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <div id="log" class="log"></div>
+  <div id="cursor" class="cursor"></div>
+  <input id="cmd" class="cmd" type="text" placeholder="输入命令，例如 /help、/end、/lan host、/give 钻石 8" spellcheck="false">
+
+  <!-- ============ 通用面板 ============ -->
+  <div id="panel" class="overlay panel-overlay">
+    <div class="panel-box">
+      <div class="panel-head">
+        <h2 id="panel-title">背包</h2>
+        <button id="btn-close-panel" class="close-btn">✕</button>
+      </div>
+      <div id="panel-body" class="panel-body"></div>
+      <div class="panel-foot">左键 拿起 / 放下整堆 · 右键 拿一半 / 放一个 · 关闭界面时手上物品自动退回背包</div>
+    </div>
+  </div>
+
+  <!-- ============ 帮助 ============ -->
+  <div id="help" class="overlay help-overlay">
+    <div class="panel-box help-box">
+      <div class="panel-head">
+        <h2>2DMC Web · 玩法说明</h2>
+        <button class="close-btn" onclick="document.getElementById('help').classList.remove('show')">✕</button>
+      </div>
+      <div class="help-body">
+        <h3>操作</h3>
+        <table>
+          <tr><td>A / D、← →</td><td>移动</td><td>空格 / W / ↑</td><td>跳跃</td></tr>
+          <tr><td>左键按住</td><td>挖掘 / 攻击</td><td>右键</td><td>放置 / 交互</td></tr>
+          <tr><td>1–9 / 滚轮</td><td>快捷栏</td><td>E</td><td>背包（2×2 合成）</td></tr>
+          <tr><td>F</td><td>切换创造模式</td><td>空格 / Shift</td><td>创造模式上升 / 下降</td></tr>
+          <tr><td>回车 或 /</td><td>命令</td><td>H / Esc</td><td>帮助 / 关闭面板</td></tr>
+        </table>
+        <h3>原版合成</h3>
+        <p>右键工作台打开 <b>3×3</b> 合成，随身背包是 <b>2×2</b>。有序配方按 3×3 图案匹配（支持网格内平移），无序配方按材料集合匹配。光标拿取完全按原版：左键拿整堆 / 放整堆 / 同类合并 / 异类交换，右键拿一半 / 放一个。</p>
+        <h3>维度与末影龙</h3>
+        <p><b>主世界 → 下界</b>：黑曜石门框 + 打火石（或直接 <code>/nether</code>）。<b>末地</b>：主世界地下要塞有末地传送门框架，手持龙蛋右键激活；也可以 <code>/end</code> 直接前往。</p>
+        <p>末影龙是一条<b>链式 Boss</b>（头部 + 12 节体节 + 尾部，体节沿链跟随），和「世界吞噬者」同一套骨架。行为循环：巡航盘旋 → 俯冲掠过玩家并喷龙息 → 降落到地面栖息（玩家主要输出窗口）。用剑或镐点击龙首近战命中会立刻把它打落。柱顶四枚<b>末影水晶</b>只要还活着，龙栖息时就会持续回血——把它们挖掉才能速战速决。击败后掉落<b>龙蛋</b>并激活退出传送门。</p>
+        <h3>局域网联机（同一浏览器多标签）</h3>
+        <p>标签 A 输入 <code>/lan host</code>，标签 B 输入 <code>/lan join</code>。主机权威，通过 BroadcastChannel 同步完整世界快照、方块变更、玩家位置、维度、末影龙状态与聊天。需要以 http(s) 打开（GitHub Pages 或本地静态服务器），<code>file://</code> 下浏览器限制跨标签通信。</p>
+        <h3>常用命令</h3>
+        <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
+        <h3>内容对标</h3>
+        <p>Minecraft Java 1.0 – 26.3 的 2D 化：矿脉 / 深板岩 / 紫水晶晶洞 / 幽匿块、八种群系（含樱花、红树、苍白之园）、下界与末地维度、原版合成与工具等级、熔炉 / 附魔台 / 酿造台、26.1 金蒲公英 / 命名牌 / 收纳袋、26.2 硫磺洞穴与硫磺方块怪 / 剪刀、26.3 荒野内容。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 启动页 ============ -->
+  <div id="splash" class="overlay splash">
+    <div class="splash-card">
+      <div class="logo">2DMC <span>WEB</span></div>
+      <p class="tagline">浏览器里的 2D 方块世界 · 末地 · 链式末影龙 · 局域网</p>
+      <div class="seed-row">
+        <label for="seed">世界种子</label>
+        <input id="seed" type="number" value="20261114">
+      </div>
+      <div class="splash-btns">
+        <button id="btn-new" class="btn primary">开始新世界</button>
+        <button id="btn-continue" class="btn">读取存档</button>
+        <button id="splash-help" class="btn ghost">玩法说明</button>
+      </div>
+      <div class="splash-foot">纯静态 · Canvas 2D · 无依赖 · 存档保存在浏览器 localStorage</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/items.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/lan.js"></script>
+<script src="js/selftest.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
