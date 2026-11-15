@@ -60,7 +60,8 @@
           <tr><td>左键按住</td><td>挖掘 / 攻击</td><td>右键</td><td>放置 / 交互</td></tr>
           <tr><td>1–9 / 滚轮</td><td>快捷栏</td><td>E</td><td>背包（2×2 合成）</td></tr>
           <tr><td>F</td><td>切换创造模式</td><td>空格 / Shift</td><td>创造模式上升 / 下降</td></tr>
-          <tr><td>回车 或 /</td><td>命令</td><td>H / Esc</td><td>帮助 / 关闭面板</td></tr>
+          <tr><td>T</td><td>原版贴图 / 程序化纹理切换</td><td>回车 或 /</td><td>命令</td></tr>
+          <tr><td>H / Esc</td><td>帮助 / 关闭面板</td><td>左键按住</td><td>持续挖掘</td></tr>
         </table>
         <h3>原版合成</h3>
         <p>右键工作台打开 <b>3×3</b> 合成，随身背包是 <b>2×2</b>。有序配方按 3×3 图案匹配（支持网格内平移），无序配方按材料集合匹配。光标拿取完全按原版：左键拿整堆 / 放整堆 / 同类合并 / 异类交换，右键拿一半 / 放一个。</p>
@@ -71,6 +72,8 @@
         <p>标签 A 输入 <code>/lan host</code>，标签 B 输入 <code>/lan join</code>。主机权威，通过 BroadcastChannel 同步完整世界快照、方块变更、玩家位置、维度、末影龙状态与聊天。需要以 http(s) 打开（GitHub Pages 或本地静态服务器），<code>file://</code> 下浏览器限制跨标签通信。</p>
         <h3>常用命令</h3>
         <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
+        <h3>贴图资源</h3>
+        <p>方块与物品图标直接使用项目文件夹里的贴图：<code>Default-Java-26.2/assets/minecraft/textures/{block,item}</code>（Minecraft Java 26.2 原版资源包，16×16）为主，<code>beta1.8/assets/tiles</code>（2DMC 自有贴图）补充，共 181 项。动画图集（水/岩浆/下界传送门等）只取第一帧；箱子、末地传送门保留程序化绘制。按 <b>T</b> 可在原版贴图与程序化纹理间切换。</p>
         <h3>内容对标</h3>
         <p>Minecraft Java 1.0 – 26.3 的 2D 化：矿脉 / 深板岩 / 紫水晶晶洞 / 幽匿块、八种群系（含樱花、红树、苍白之园）、下界与末地维度、原版合成与工具等级、熔炉 / 附魔台 / 酿造台、26.1 金蒲公英 / 命名牌 / 收纳袋、26.2 硫磺洞穴与硫磺方块怪 / 剪刀、26.3 荒野内容。</p>
       </div>
@@ -97,6 +100,7 @@
 </div>
 
 <script src="js/core.js"></script>
+<script src="js/textures.js"></script>
 <script src="js/items.js"></script>
 <script src="js/inventory.js"></script>
 <script src="js/world.js"></script>

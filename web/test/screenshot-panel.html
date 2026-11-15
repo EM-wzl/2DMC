@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>背包/合成面板贴图验证</title>
+<style>html,body{margin:0;padding:0;overflow:hidden;background:#000}iframe{border:0;display:block;width:100vw;height:100vh}</style>
+</head>
+<body>
+<iframe id="fr" src="../index.html"></iframe>
+<script>
+const wait = ms => new Promise(r => setTimeout(r, ms));
+document.getElementById('fr').addEventListener('load', async () => {
+  const fr = document.getElementById('fr');
+  const w = fr.contentWindow, d = fr.contentDocument;
+  await wait(900);
+  const b = d.getElementById('btn-new'); if (b) b.click();
+  await wait(1800);                       // 等 179 张贴图全部加载
+  try {
+    w.game.ui.openPanel('inv');
+    await wait(300);
+    document.title = 'panel=' + w.game.ui.panelKind +
+                     ' tex=' + Object.keys(w.game.textures.tiles).length;
+  } catch (e) { document.title = 'ERR ' + e.message; }
+});
+</script>
+</body>
+</html>
