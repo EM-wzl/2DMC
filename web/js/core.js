@@ -9,8 +9,19 @@
     TILE: 26,                   // 每格像素
     SEA: 118,                   // 海平面行号
     SURFACE: 96,                // 主世界基准地表
-    GRAVITY: 0.44,
-    MAX_FALL: 11,
+    // 所有速度单位统一为「格 / 帧」（60fps）。之前误用了像素级数值，
+    // 导致一次跳跃能升 ~74 格、怪物每帧下坠 0.4 格穿进方块。
+    GRAVITY: 0.022,             // 重力加速度
+    MAX_FALL: 0.55,             // 终端下落速度
+    JUMP_V: -0.25,              // 起跳速度 → 约 1.4 格高 / 0.38 秒滞空
+    WATER_JUMP: -0.09,
+    WALK_SPEED: 0.115,
+    WATER_SPEED: 0.06,
+    FLY_SPEED: 0.18,
+    MOB_GRAVITY: 0.022,
+    MOB_JUMP: -0.26,            // 怪物跨 1 格台阶
+    KNOCK_X: 0.18,
+    KNOCK_Y: -0.16,
     REACH: 5.5,
     SAVE_KEY: '2dmc-web-save-v1',
     SAVE_VERSION: 1,

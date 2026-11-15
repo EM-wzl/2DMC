@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC Web 自动试玩</title>
+<style>
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+iframe{border:0;display:block;width:100vw;height:100vh}
+#result{position:fixed;top:0;left:0;z-index:999;color:#0f0;background:#000;font:12px monospace;padding:2px}
+</style>
+</head>
+<body>
+<div id="result">PENDING</div>
+<iframe id="fr" src="../index.html"></iframe>
+<script>
+const out = [];
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function key(doc, type, k) {
+  doc.dispatchEvent(new KeyboardEvent(type, { key: k, bubbles: true, cancelable: true }));
+}
+document.getElementById('fr').addEventListener('load', async () => {
+  const fr = document.getElementById('fr');
+  const w = fr.contentWindow, d = fr.contentDocument;
+  w.addEventListener('error', e => out.push('jserror=' + e.message));
+  try {
+    await wait(900);                       // 等 game 构造 + 世界生成
+    const btn = d.getElementById('btn-new');
+    if (btn) btn.click();
+    await wait(300);
+    const g = w.game, E = w.DMC.Entities, p = g.player;
+    if (!g) throw new Error('game 未启动');
+    p.creative = true;                    // 试玩期间不被怪打死，但仍是正常重力/跳跃
+    p.fly = false;
+    // 手动驱动逻辑帧时，loop() 每次都会注册一个 rAF；虚拟时间下这些回调会
+    // 全部堆积并连锁触发导致渲染进程崩溃，所以试玩期间关掉 rAF 注册。
+    w.requestAnimationFrame = () => 0;
+    // headless 虚拟时间不推进 rAF，这里显式驱动真实主循环逐帧试玩。
+    // 逻辑帧完整跑，只跳过 Canvas 绘制（软件渲染逐帧太慢），结束前补画一帧。
+    const realRender = g.renderer.render.bind(g.renderer);
+    g.renderer.render = () => {};
+    const step = n => { for (let i = 0; i < n; i++) g.loop(); };
+
+    step(120);                            // 先站稳
+    const baseY = p.y, baseX = p.x;
+    out.push('start_onGround=' + p.onGround);
+
+    // ---- 1. 真实键盘事件：空格跳跃 ----
+    key(d, 'keydown', ' ');
+    out.push('keydown_works=' + (g.input.jump === 1));
+    let top = p.y, air = 0;
+    for (let i = 0; i < 45; i++) {
+      step(1);
+      top = Math.min(top, p.y);
+      if (!p.onGround) air++;
+    }
+    key(d, 'keyup', ' ');
+    step(90);                             // 等落地
+    out.push('jump_rise=' + (baseY - top).toFixed(2) + '格');
+    out.push('air_frames=' + air);
+    out.push('landed_back=' + (Math.abs(p.y - baseY) < 0.7));
+    out.push('onGround=' + p.onGround);
+
+    // ---- 1b. 点按一次（按 1 帧就松开），测单跳滞空 ----
+    key(d, 'keydown', ' ');
+    step(1);
+    key(d, 'keyup', ' ');
+    let tapAir = 0, tapTop = p.y;
+    for (let i = 0; i < 70; i++) {
+      step(1);
+      if (!p.onGround) tapAir++;
+      tapTop = Math.min(tapTop, p.y);
+    }
+    out.push('tap_air_frames=' + tapAir);
+    out.push('tap_rise=' + (baseY - tapTop).toFixed(2) + '格');
+
+    // ---- 2. 真实键盘事件：D 行走 ----
+    const x0 = p.x;
+    key(d, 'keydown', 'd');
+    step(60);
+    key(d, 'keyup', 'd');
+    const walkDx = p.x - x0;
+    out.push('walk_dx=' + walkDx.toFixed(2) + '格');
+    out.push('keyup_works=' + (g.input.right === 0));
+
+    // ---- 3. 放一群生物，跑 400 帧看会不会卡进方块 ----
+    const types = ['zombie', 'skeleton', 'spider', 'creeper', 'cube', 'sheep', 'enderman'];
+    let spawned = 0;
+    for (let i = 0; i < 12; i++) {
+      const t = types[i % types.length], def = E.MOB_DEFS[t];
+      const x = Math.floor(p.x) - 22 + i * 4 + 0.5;
+      const y = E.Physics.findSpawn(g.world, x, p.y, def.w, def.h);
+      if (y !== null) { g.mobs.push(new E.Mob(t, x, y)); spawned++; }
+    }
+    let stuck = 0, oob = 0, samples = 0, moved = 0;
+    const startX = g.mobs.map(m => m.x);
+    for (let f = 0; f < 400; f++) {
+      step(1);
+      for (const m of g.mobs) {
+        if (m.dead) continue;
+        samples++;
+        if (E.Physics.hitsSolid(g.world, E.Physics.boxOf(m))) stuck++;
+        if (m.y < 1 || m.y > w.DMC.C.H - 1) oob++;
+      }
+    }
+    g.mobs.forEach((m, i) => { if (Math.abs(m.x - (startX[i] !== undefined ? startX[i] : m.x)) > 0.5) moved++; });
+    out.push('mobs_spawned=' + spawned);
+    out.push('mob_samples=' + samples);
+    out.push('mob_stuck=' + stuck);
+    out.push('mob_oob=' + oob);
+    out.push('mobs_moved=' + moved);
+
+    // ---- 4. 末地：龙的状态机继续跑 ----
+    g.command('end');
+    step(120);
+    out.push('end_dim=' + g.world.dim);
+    out.push('dragon_segs=' + (g.dragon ? g.dragon.segs.length : 0));
+    out.push('dragon_state=' + (g.dragon ? g.dragon.state : '-'));
+    g.renderer.render = realRender;
+    step(1);                              // 恢复绘制并画一帧，验证渲染链路没坏
+    const rise = baseY - top;
+    out.push('RESULT=' + (stuck === 0 && oob === 0 && rise > 0.4 && rise < 2.6 &&
+                          tapAir >= 12 && tapAir <= 45 &&
+                          Math.abs(walkDx) > 0.5 && g.input.right === 0 ? 'PASS' : 'FAIL'));
+  } catch (e) { out.push('EXCEPTION=' + e.message); out.push('RESULT=FAIL'); }
+  document.getElementById('result').textContent = out.join(' | ');
+});
+</script>
+</body>
+</html>

@@ -332,8 +332,8 @@
           ctx.beginPath(); ctx.arc(px, py, 13, 0, Math.PI * 2); ctx.fill();
         }
       }
-      // 末影龙
-      if (g.dragon) this.drawDragon(ctx, g.dragon, sx, sy, g);
+      // 末影龙（只在末地维度出现；Boss 血条同样受维度门控）
+      if (g.dragon && world.dim === 2) this.drawDragon(ctx, g.dragon, sx, sy, g);
       // 远程玩家（局域网）
       for (const rp of (g.remotePlayers || [])) {
         const px = sx(rp.x), py = sy(rp.y);
