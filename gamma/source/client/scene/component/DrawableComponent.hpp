@@ -28,24 +28,41 @@
 #define DRAWABLECOMPONENT_HPP_
 
 #include <memory>
+#include <vector>
 
 #include "client/graphics/Drawable.hpp"
 
+// 一个实体可以有多块（身体 + 头 + 腿…）。原来的单指针实现导致生物
+// 只能显示一个方块（"动物没有身子"），这里改成列表，按顺序绘制。
 class DrawableComponent {
 	public:
 		template<typename T, typename... Args>
-		auto setDrawable(Args &&...args) -> typename std::enable_if<std::is_base_of<Drawable, T>::value, T &>::type {
-			m_drawable = std::make_shared<T>(std::forward<Args>(args)...);
-			return *std::static_pointer_cast<T>(m_drawable);
+		auto addDrawable(Args &&...args) -> typename std::enable_if<std::is_base_of<Drawable, T>::value, T &>::type {
+			auto drawable = std::make_shared<T>(std::forward<Args>(args)...);
+			m_drawables.emplace_back(drawable);
+			return *std::static_pointer_cast<T>(drawable);
 		}
 
+		// 兼容旧调用：清空后只放一个
+		template<typename T, typename... Args>
+		auto setDrawable(Args &&...args) -> typename std::enable_if<std::is_base_of<Drawable, T>::value, T &>::type {
+			m_drawables.clear();
+			return addDrawable<T>(std::forward<Args>(args)...);
+		}
+
+		void clear() { m_drawables.clear(); }
+
+		size_t count() const { return m_drawables.size(); }
+
 		void draw(RenderTarget &target, RenderStates states) {
-			if (m_drawable)
-				target.draw(*m_drawable, states);
+			for (auto &drawable : m_drawables) {
+				if (drawable)
+					target.draw(*drawable, states);
+			}
 		}
 
 	private:
-		std::shared_ptr<Drawable> m_drawable;
+		std::vector<std::shared_ptr<Drawable>> m_drawables;
 };
 
 #endif // DRAWABLECOMPONENT_HPP_

@@ -114,6 +114,7 @@ void extend_meta_type(const std::string &name, ComponentType type, bool isSerial
 #include "common/scene/component/AnimationComponent.hpp"
 #include "common/scene/component/DrawableDef.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
+#include "common/scene/component/HealthComponent.hpp"
 #include "common/scene/component/PositionComponent.hpp"
 #include "common/scene/component/RotationComponent.hpp"
 
@@ -130,4 +131,6 @@ void Scene::registerComponents() {
 	// 组件类型并 entt::resolve，未注册的组件类型会导致崩溃。不序列化/不存档
 	// （serialize/save 对非 ISerializable 类型返回空包，发送/存储自然跳过）
 	extend_meta_type<EntityTickTag>      ("EntityTickTag",      ComponentType::EntityTick, false, false);
+	// 生物血量：可序列化（EntityHealth 0x56）且可存档（随实体持久化）
+	extend_meta_type<HealthComponent>    ("HealthComponent",    ComponentType::Health,    true,  true);
 }

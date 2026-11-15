@@ -74,3 +74,22 @@ mod:sky {
 	},
 }
 
+-- 末地天空：暗紫黑色，无日夜循环、无太阳/月亮，只有稀疏星点
+mod:sky {
+	id = "sky_end",
+
+	color = {
+		day = {20, 10, 30},
+	},
+
+	fog_color = {
+		day = {24, 12, 36},
+	},
+
+	objects = {
+		stars = {
+			count = 400,
+			size = 3,
+		}
+	}
+}

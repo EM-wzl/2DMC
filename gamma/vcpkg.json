@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "openminer-gamma",
+  "version": "1.0.0",
+  "version-semver": "1.0.0",
+  "description": "2DMC gamma - OpenMiner fork (3D voxel game, bgfx + SDL2/SFML + Lua mod API)",
+  "homepage": "https://github.com/Unarelith/OpenMiner",
+  "documentation": "https://github.com/Unarelith/OpenMiner/wiki",
+  "license": "LGPL-2.1-or-later",
+  "supports": "windows | linux | osx",
+  "dependencies": [
+    "bgfx",
+    "entt",
+    "glm",
+    "lua",
+    "sdl2",
+    "sdl2-image",
+    {
+      "name": "sfml",
+      "default-features": false,
+      "features": [
+        "network"
+      ]
+    },
+    "sol2",
+    "tinyxml2",
+    "zlib"
+  ],
+  "overrides": [
+  ],
+  "builtin-baseline": "2024.09.30"
+}

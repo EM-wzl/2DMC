@@ -25,6 +25,7 @@
  * =====================================================================================
  */
 #include <algorithm> // std::max
+#include "common/core/Debug.hpp"
 
 #include "common/core/EventHandler.hpp"
 #include "common/core/Registry.hpp"
@@ -127,13 +128,40 @@ void ClientWorld::clear() {
 }
 
 void ClientWorld::changeDimension(u16 dimensionID) {
+	// 边界保护：dimensionID 来自服务端包，非法值会让
+	// Registry::getDimension() 的 vector 下标访问越界。
+	if (dimensionID >= Registry::getInstance().dimensions().size()) {
+		logError() << "ClientWorld::changeDimension: out-of-range dimension " << dimensionID;
+		return;
+	}
+
+	// **只有维度真的发生变化时**才清空旧维度的 chunk。
+	// ServerLoadingState 在进世界时也会调用本函数（此时维度没变，chunk 正在
+	// 陆续到达）；若无条件 clear()，会把刚收到的区块全部丢掉，表现为
+	// 「进世界后永远黑屏」（实测主世界也因此无法渲染）。
+	const bool dimensionChanged = (!m_dimension || m_dimension->id() != dimensionID);
+
 	World::clearUpdateQueues();
+
+	if (dimensionChanged) {
+		// 每个 ClientChunk 都持有创建时的 Dimension& 引用，若留着旧 chunk，
+		// 它们会继续用旧维度的天空/群系/重力渲染，与新维度混在同一张图里；
+		// 且切换后这些引用会悬垂。所以跨维度时必须清空。
+		clear();
+	}
 
 	const Dimension &dimension = Registry::getInstance().getDimension(dimensionID);
 	m_dimension = &dimension;
 
-	const Sky &sky = Registry::getInstance().getSkyFromStringID(dimension.sky());
-	m_sky = &sky;
+	try {
+		const Sky &sky = Registry::getInstance().getSkyFromStringID(dimension.sky());
+		m_sky = &sky;
+	}
+	catch (const std::exception &e) {
+		logError() << "ClientWorld::changeDimension: invalid sky '"
+			<< dimension.sky() << "': " << e.what();
+		m_sky = nullptr;
+	}
 }
 
 void ClientWorld::receiveChunkData(Network::Packet &packet) {

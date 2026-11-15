@@ -49,6 +49,9 @@ class WorldController {
 
 		ServerWorld &getWorld(u16 dimension);
 
+		// 维度总数（用于边界检查：getWorld 是 deque 下标访问，越界是 UB）
+		u16 getWorldCount() const { return u16(m_worldList.size()); }
+
 		const ServerCommandHandler *server() const { return m_server; }
 		void setServer(ServerCommandHandler &server) { m_server = &server; }
 

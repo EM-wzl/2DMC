@@ -152,7 +152,16 @@ void Window::initBGFX() {
 	init.resolution.width = m_size.x;
 	init.resolution.height = m_size.y;
 	init.resolution.reset = (Config::isVerticalSyncEnabled) ? BGFX_RESET_VSYNC : BGFX_RESET_NONE;
+	// Renderer backend selection:
+	//   * macOS / iOS: bgfx only ships a Metal backend on Apple platforms in this
+	//     vendored snapshot (there is no NSGL/EAGL GL context implementation),
+	//     and macOS shaders are compiled as Metal (resources/shaders/CMakeLists.txt).
+	//   * Windows / Linux: OpenGL, as before (keeps the existing GLSL shaders).
+#if defined(__APPLE__)
+	init.type = bgfx::RendererType::Metal;
+#else
 	init.type = bgfx::RendererType::OpenGL;
+#endif
 	init.callback = &m_callback;
 
 	extern bool BGFX_setupPlatformData(SDL_Window *window, bgfx::PlatformData &pd);

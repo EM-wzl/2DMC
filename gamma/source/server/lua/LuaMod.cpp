@@ -83,9 +83,31 @@ void LuaMod::initUsertype(sol::state &lua) {
 		"entity",          DEF_FUNC(DefinitionType::Entity),
 
 		"option", [&] (LuaMod &self, const std::string &name, sol::object defaultValue) {
-			auto it = ServerConfig::options.find(name);
-			if (it == ServerConfig::options.end())
-				ServerConfig::options.emplace(self.m_id + ":" + name, defaultValue);
+			// 用带 mod 前缀的完整键查找/插入。
+			//
+			// 优先级规则（重要，改错了会导致「玩家改了配置没效果」）：
+			//   1. **玩家显式设置过的值优先**（config/server.lua 里存在该键，
+			//      或玩家用 /option 命令改过）——mod 的默认值不能覆盖它。
+			//      否则玩家在 config/server.lua 里把 mobs_enabled 改成 true
+			//      会被 mod 里声明的 false 覆盖，功能永远开不起来。
+			//   2. 玩家没设置过的键，mod 声明的默认值用 insert_or_assign 写入，
+			//      这样 mod 改了默认值能立即生效（不会残留上次的旧值）。
+			//
+			// 执行顺序保证：config 先加载（标记 userOptions）→ mod 加载（受此规则约束）。
+			const std::string key = self.m_id + ":" + name;
+
+			// 玩家已显式设置：不覆盖，保留玩家值。
+			if (ServerConfig::isUserDefined(key))
+				return;
+
+			if (defaultValue.valid()) {
+				switch (defaultValue.get_type()) {
+					case sol::type::boolean: ServerConfig::options.insert_or_assign(key, defaultValue.as<bool>()); break;
+					case sol::type::number:  ServerConfig::options.insert_or_assign(key, defaultValue.as<double>()); break;
+					case sol::type::string:  ServerConfig::options.insert_or_assign(key, defaultValue.as<std::string>()); break;
+					default: break;
+				}
+			}
 		}
 	);
 }

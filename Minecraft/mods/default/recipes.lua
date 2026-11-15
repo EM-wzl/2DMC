@@ -1376,3 +1376,151 @@ mod:crafting_recipe {
 	},
 	keys = {["#"] = "default:obsidian"}
 }
+
+-- ===== 下界材料 =====
+
+-- 石英块 ↔ 4 下界石英
+mod:crafting_recipe {
+	result = {id = "default:quartz_block", amount = 1},
+	pattern = {
+		"##",
+		"##"
+	},
+	keys = {["#"] = "default:nether_quartz"}
+}
+
+mod:crafting_recipe {
+	result = {id = "default:nether_quartz", amount = 4},
+	pattern = {"#"},
+	keys = {["#"] = "default:quartz_block"}
+}
+
+-- 4 岩浆膏 → 岩浆块
+mod:crafting_recipe {
+	result = {id = "default:magma_block", amount = 1},
+	pattern = {
+		"##",
+		"##"
+	},
+	keys = {["#"] = "default:magma_cream"}
+}
+
+-- 下界疣块 ↔ 9 下界疣
+mod:crafting_recipe {
+	result = {id = "default:nether_wart_block", amount = 1},
+	pattern = {
+		"###",
+		"###",
+		"###"
+	},
+	keys = {["#"] = "default:nether_wart"}
+}
+
+mod:crafting_recipe {
+	result = {id = "default:nether_wart", amount = 9},
+	pattern = {"#"},
+	keys = {["#"] = "default:nether_wart_block"}
+}
+
+-- 黑石可代替圆石制作熔炉
+mod:crafting_recipe {
+	result = {id = "default:furnace", amount = 1},
+	pattern = {
+		"###",
+		"# #",
+		"###"
+	},
+	keys = {["#"] = "default:blackstone"}
+}
+
+-- 石英矿与下界金矿也可熔炼
+mod:smelting_recipe {
+	input = {id = "default:nether_quartz_ore", amount = 1},
+	output = {id = "default:nether_quartz", amount = 1}
+}
+
+mod:smelting_recipe {
+	input = {id = "default:nether_gold_ore", amount = 1},
+	output = {id = "default:gold_nugget", amount = 3}
+}
+
+-- ===== 末地配方 =====
+-- 4 末地碎片 -> 1 紫珀块（末地城建材的主要来源）
+mod:crafting_recipe {
+	result = {id = "default:purpur_block", amount = 1},
+	pattern = {
+		"##",
+		"##"
+	},
+	keys = {["#"] = "default:end_shard"}
+}
+
+-- 紫珀块 -> 紫珀柱（竖排 2 个）
+mod:crafting_recipe {
+	result = {id = "default:purpur_pillar", amount = 2},
+	pattern = {
+		"#",
+		"#"
+	},
+	keys = {["#"] = "default:purpur_block"}
+}
+
+-- 4 末地石 -> 4 末地石砖（2x2）
+mod:crafting_recipe {
+	result = {id = "default:end_bricks", amount = 4},
+	pattern = {
+		"##",
+		"##"
+	},
+	keys = {["#"] = "default:end_stone"}
+}
+
+-- 末地水晶方块：末地碎片 + 玻璃
+mod:crafting_recipe {
+	result = {id = "default:end_crystal_block", amount = 1},
+	pattern = {
+		"#G",
+		"G#"
+	},
+	keys = {["#"] = "default:end_shard", ["G"] = "default:glass"}
+}
+
+-- ===== 末地补充配方（让 end_portal_frame / chorus_fruit 有实际用途）=====
+-- 末地传送门框架：末地石 + 末地碎片（3x3 环形）
+mod:crafting_recipe {
+	result = {id = "default:end_portal_frame", amount = 4},
+	pattern = {
+		"###",
+		"#S#",
+		"###"
+	},
+	keys = {["#"] = "default:end_stone", ["S"] = "default:end_shard"}
+}
+
+-- 紫颂果 → 末地碎片（末地资源循环：植株掉果实，果实可提炼碎片）
+mod:crafting_recipe {
+	result = {id = "default:end_shard", amount = 1},
+	pattern = {
+		"##",
+		"##"
+	},
+	keys = {["#"] = "default:chorus_fruit"}
+}
+
+-- 紫颂果可烧制成紫颂干（作为食物替代品，暂为装饰性材料）
+mod:smelting_recipe {
+	input = {id = "default:chorus_fruit", amount = 1},
+	output = {id = "default:end_shard", amount = 1}
+}
+
+
+-- 末地传送门（主世界版）：末地石 + 末地碎片环形合成
+mod:crafting_recipe {
+	result = {id = "default:end_portal_overworld", amount = 1},
+	pattern = {
+		"EEE",
+		"ESE",
+		"EEE"
+	},
+	keys = {["E"] = "default:end_stone", ["S"] = "default:end_shard"}
+}

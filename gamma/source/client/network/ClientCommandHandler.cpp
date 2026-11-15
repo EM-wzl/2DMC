@@ -33,9 +33,11 @@
 #include "common/scene/component/AnimationComponent.hpp"
 #include "common/scene/component/DrawableDef.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
+#include "common/scene/component/HealthComponent.hpp"
 #include "common/scene/component/PositionComponent.hpp"
 #include "common/scene/component/RotationComponent.hpp"
 
+#include "client/core/Config.hpp"
 #include "client/core/GameConfig.hpp"
 #include "client/graphics/Camera.hpp"
 #include "client/network/Client.hpp"
@@ -106,6 +108,26 @@ void ClientCommandHandler::sendPlayerChunkPosUpdate() const {
 	m_client.send(packet);
 }
 
+void ClientCommandHandler::sendPlayerAttackEntity(entt::entity entityID) {
+	// entityID 是客户端本地的 entt 实体句柄，**不能**直接发给服务端：
+	// 客户端与服务端的 entt::registry 是两套独立分配器，本地句柄的数值和
+	// 服务端的网络实体 ID 没有任何对应关系（只在双方创建顺序完全一致时才
+	// 偶然相等，任何一次 despawn/回收都会让两边错位）。
+	// 之前直接发本地句柄，结果攻击经常落到"服务端另一个恰好存在的实体"上：
+	// 要么是无 HealthComponent 的 item_drop（静默 return，不掉血），要么是
+	// 别的生物（血掉在别人身上），表现为"打到 1 血就锁住、再也打不死"。
+	// 正确做法：用 NetworkComponent::entityID（服务端广播 EntitySpawn 时用的
+	// 那个 ID）作为攻击目标。
+	auto &registry = m_world.scene().registry();
+	NetworkComponent *network = registry.try_get<NetworkComponent>(entityID);
+	if (!network)
+		return; // 目标已被 EntityDespawn 移除（HUD 缓存的句柄失效），不发送
+
+	Network::Packet packet;
+	packet << Network::Command::PlayerAttackEntity << network->entityID;
+	m_client.send(packet);
+}
+
 void ClientCommandHandler::sendBlockActivated(const glm::ivec4 &selectedBlock) {
 	Network::Packet packet;
 	packet << Network::Command::BlockActivated
@@ -132,6 +154,15 @@ void ClientCommandHandler::sendItemActivated(const glm::ivec4 &selectedBlock) {
 		<< s32(selectedBlock.z)
 		<< u16(Config::screenWidth) << u16(Config::screenHeight) << u8(Config::guiScale);
 	m_client.send(packet);
+}
+
+// 请求服务端下发局域网信息（端口 + 本机 IP 列表）
+void ClientCommandHandler::requestLanInfo() {
+	Network::Packet packet;
+	packet << Network::Command::LanInfoRequest;
+	m_client.send(packet);
+
+	m_lanInfoRequested = true;
 }
 
 void ClientCommandHandler::sendChatMessage(const std::string &message) {
@@ -170,11 +201,17 @@ void ClientCommandHandler::setupCallbacks() {
 		u16 clientID;
 		packet >> clientID;
 
+		// 玩家断开：先从 Client::m_players 移除，再销毁 m_playerBoxes 里的对象。
+		//
+		// 原实现写反了：先 addPlayer()（往 m_players 里加引用）再 erase() 掉
+		// m_playerBoxes 里的对象 —— m_players 存的是 Player&，对象被销毁后
+		// 引用立即悬垂，HUD 遍历 players() 读名字时会访问已释放内存
+		// （表现为崩溃或乱码名字）。这里改成先 removePlayer() 再 erase。
+		m_client.removePlayer(clientID);
+
 		auto it = m_playerBoxes.find(clientID);
-		if (it != m_playerBoxes.end()) {
-			m_client.addPlayer(m_playerBoxes.at(clientID));
+		if (it != m_playerBoxes.end())
 			m_playerBoxes.erase(it);
-		}
 	});
 
 	m_client.setCommandCallback(Network::Command::ServerTick, [this](Network::Packet &packet) {
@@ -237,6 +274,57 @@ void ClientCommandHandler::setupCallbacks() {
 		}
 		else
 			packet >> m_playerBoxes.at(clientId).inventory();
+	});
+
+	m_client.setCommandCallback(Network::Command::LanInfo, [this](Network::Packet &packet) {
+		u16 port = 0;
+		u32 count = 0;
+		packet >> port >> count;
+
+		m_lanPort = port;
+		m_lanAddresses.clear();
+		for (u32 i = 0; i < count; ++i) {
+			std::string addr;
+			packet >> addr;
+			m_lanAddresses.emplace_back(std::move(addr));
+		}
+		m_lanInfoRequested = false;
+
+		logInfo() << "LAN info received: port" << m_lanPort << "| addresses:" << m_lanAddresses.size();
+	});
+
+	m_client.setCommandCallback(Network::Command::PlayerHealth, [this](Network::Packet &packet) {
+		u16 clientId;
+		u8 health, maxHealth;
+		packet >> clientId >> health >> maxHealth;
+
+		if (clientId == m_client.id()) {
+			m_player.setHealth(health);
+			m_player.setMaxHealth(maxHealth);
+		}
+		else {
+			auto it = m_playerBoxes.find(clientId);
+			if (it != m_playerBoxes.end()) {
+				it->second.setHealth(health);
+				it->second.setMaxHealth(maxHealth);
+			}
+		}
+	});
+
+	m_client.setCommandCallback(Network::Command::PlayerGamemode, [this](Network::Packet &packet) {
+		u16 clientId;
+		u8 gamemode;
+		packet >> clientId >> gamemode;
+
+		if (clientId == m_client.id()) {
+			m_player.setGamemode(gamemode);
+			Config::isFlyModeEnabled = (gamemode == 0);
+		}
+		else {
+			auto it = m_playerBoxes.find(clientId);
+			if (it != m_playerBoxes.end())
+				it->second.setGamemode(gamemode);
+		}
 	});
 
 	m_client.setCommandCallback(Network::Command::PlayerPosUpdate, [this](Network::Packet &packet) {
@@ -370,6 +458,9 @@ void ClientCommandHandler::setupCallbacks() {
 		auto it = m_entityMap.find(entityID);
 		if (it != m_entityMap.end()) {
 			m_world.scene().registry().destroy(it->second);
+			// 必须从映射里移除：否则该网络 ID 之后被复用时，
+			// EntitySpawn 会以为实体已存在而跳过创建（表现为生物"隐身"/打不死）
+			m_entityMap.erase(it);
 		}
 		else
 			logError() << "EntityDespawn: Entity ID" << std::underlying_type_t<entt::entity>(entityID) << "is invalid";
@@ -379,4 +470,5 @@ void ClientCommandHandler::setupCallbacks() {
 	addComponentCommandCallback<RotationComponent>(Network::Command::EntityRotation, m_client, m_entityMap, m_world);
 	addComponentCommandCallback<AnimationComponent>(Network::Command::EntityAnimation, m_client, m_entityMap, m_world);
 	addComponentCommandCallback<DrawableDef>(Network::Command::EntityDrawableDef, m_client, m_entityMap, m_world);
+	addComponentCommandCallback<HealthComponent>(Network::Command::EntityHealth, m_client, m_entityMap, m_world);
 }

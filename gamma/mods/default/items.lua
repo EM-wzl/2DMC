@@ -511,3 +511,34 @@ mod:item {
 	name = "下界锭",
 	tiles = "netherite_ingot.png",
 }
+
+mod:item {
+	id = "nether_quartz",
+	name = "下界石英",
+	tiles = "nether_quartz.png",
+}
+
+-- ===== 末地专属物品 =====
+-- 紫颂果：末地植株的果实（末地探索补给）
+mod:item {
+	id = "chorus_fruit",
+	name = "紫颂果",
+	tiles = "chorus_plant.png",
+	max_stack_size = 64,
+}
+
+-- 末地碎片：末地水晶碎片，用于合成紫珀块
+mod:item {
+	id = "end_shard",
+	name = "末地碎片",
+	tiles = "end_crystal.png",
+	max_stack_size = 64,
+}
+
+-- 火药：苦力怕掉落物（追加在末尾，保持既有物品数字 ID 不变）
+mod:item {
+	id = "gunpowder",
+	name = "火药",
+	tiles = "gunpowder.png",
+	max_stack_size = 64,
+}

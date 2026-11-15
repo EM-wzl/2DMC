@@ -37,13 +37,18 @@
 
 void RenderingController::update(entt::registry &registry) {
 	registry.view<DrawableDef>(entt::exclude<DrawableComponent>).each([&](auto entity, auto &drawableDef) {
-		const InventoryCubeDef &cubeDef = drawableDef.getInventoryCubeDef();
-
 		DrawableComponent &drawable = registry.get_or_emplace<DrawableComponent>(entity);
 
-		InventoryCube &cube = drawable.setDrawable<InventoryCube>(cubeDef.size, true);
-		cube.setOrigin(cubeDef.origin);
-		cube.updateVertexBuffer(Registry::getInstance().getBlockFromStringID(cubeDef.blockID));
+		// 一个实体可以有多个方块部件（身体/头/腿）。每个部件用各自的
+		// size 与 origin 生成一个 InventoryCube，绘制时按顺序叠加。
+		// 原实现只取 getInventoryCubeDef()（=back()），所以生物只显示一块
+		// （"动物没有身子"）。
+		for (const InventoryCubeDef &cubeDef : drawableDef.cubes()) {
+			InventoryCube &cube = drawable.addDrawable<InventoryCube>(cubeDef.size, true);
+			cube.setOrigin(cubeDef.origin);
+			cube.setOffset(cubeDef.offset);
+			cube.updateVertexBuffer(Registry::getInstance().getBlockFromStringID(cubeDef.blockID));
+		}
 
 		registry.remove<DrawableDef>(entity);
 	});

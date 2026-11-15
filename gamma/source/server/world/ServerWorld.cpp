@@ -28,8 +28,11 @@
 
 #include "common/core/EngineConfig.hpp"
 #include "common/core/GameClock.hpp"
+#include "common/core/GameTime.hpp"
 #include "common/core/Registry.hpp"
 #include "common/world/Dimension.hpp"
+#include "common/world/EntityPath.hpp"
+#include "common/scene/EntityCallbackContainer.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
 #include "common/scene/component/PositionComponent.hpp"
 #include "server/core/PlayerList.hpp"
@@ -69,7 +72,85 @@ static void runEntityTestHook(ServerWorld &world, ServerCommandHandler &server) 
 			})
 		)lua");
 
+		// TEMP(第二批补充): 额外生成 2 只 default:pig（真实 on_tick 游荡 AI），
+		// z 取地表 +1.01，与 entities.lua find_surface_z 的落点一致
+		//（脚部格为空气、正下方为固体，AI 的地面探测才能成立）。
+		// 移除：删除本块即可（与 mover 钩子同属 TEMP 验证代码）。
+		lua["_2DMC_ENTITYTEST_MOB_Z"] = (double)world.heightmap().getHighestBlockAt(10, 8) + 1.01;
+		lua.script(R"lua(
+			mods["default"]:spawn_entity("default:pig", {
+				position = {10.5, 8.5, _2DMC_ENTITYTEST_MOB_Z},
+				dimension = 0,
+			})
+			mods["default"]:spawn_entity("default:pig", {
+				position = {8.5, 10.5, _2DMC_ENTITYTEST_MOB_Z},
+				dimension = 0,
+			})
+		)lua");
+
 		logInfo() << "[ENTITYTEST] test entity '2dmctest:mover' spawned, on_tick moves it along +x";
+		logInfo() << "[ENTITYTEST] 2x default:pig spawned (real wandering AI on_tick test)";
+
+		// TEMP(第二批诊断): 验证完成后随本 TEMP 钩子一并移除。
+		// ① pig 回调容器在钩子时刻的状态；② 生成的 pig 实体是否带 EntityTickTag；
+		// ③ 用 safe_script 显式暴露 Lua 侧错误
+		lua["_diag_world"] = &world;
+		auto &pigCallbacks = Registry::getInstance().getEntityCallbackContainer("default:pig");
+		logInfo() << "[ENTITYTEST] pig tickCallback valid (hook time): " << (pigCallbacks.tickCallback.valid() ? 1 : 0)
+			<< ", collisionCallback valid: " << (pigCallbacks.collisionCallback.valid() ? 1 : 0);
+
+		entt::registry &sceneReg = world.scene().registry();
+		sceneReg.view<PositionComponent, std::string>().each([&](auto e, auto &, auto &sid) {
+			if (sid.rfind("default:pig", 0) == 0)
+				logInfo() << "[ENTITYTEST] pig entity has_tick_tag: " << (sceneReg.all_of<EntityTickTag>(e) ? 1 : 0);
+			if (sid == "2dmctest:mover")
+				logInfo() << "[ENTITYTEST] mover entity has_tick_tag: " << (sceneReg.all_of<EntityTickTag>(e) ? 1 : 0);
+		});
+
+		auto diag_result = lua.safe_script(R"lua(
+			local w = _diag_world
+			local function grid(cx, cy)
+				local t = {}
+				for dz = 79, 82 do
+					local row = {}
+					for dy = -1, 1 do
+						for dx = -1, 1 do
+							row[#row+1] = w:get_block(cx+dx, cy+dy, dz)
+						end
+					end
+					t[#t+1] = "z=" .. dz .. " [" .. table.concat(row, ",") .. "]"
+				end
+				return table.concat(t, " ")
+			end
+			__diag_pig1 = grid(10, 8)
+			__diag_pig2 = grid(8, 10)
+		)lua", sol::script_pass_on_error);
+		if (!diag_result.valid()) {
+			sol::error err = diag_result;
+			logError() << "[ENTITYTEST] diag script error: " << err.what();
+		}
+		else {
+			logInfo() << "[ENTITYTEST] diag pig1(10,8): " << lua["_diag_pig1"].get_or(std::string("<nil>"));
+			logInfo() << "[ENTITYTEST] diag pig2(8,10): " << lua["_diag_pig2"].get_or(std::string("<nil>"));
+		}
+
+		lua["__pig_ticks"] = 0;
+		lua["__orig_pig_tick"] = pigCallbacks.tickCallback;
+		auto wrap_result = lua.safe_script(R"lua(
+			local orig = __orig_pig_tick
+			__wrapped_pig_tick = function(entity, pos, world, server)
+				__pig_ticks = __pig_ticks + 1
+				return orig(entity, pos, world, server)
+			end
+		)lua", sol::script_pass_on_error);
+		if (!wrap_result.valid()) {
+			sol::error err = wrap_result;
+			logError() << "[ENTITYTEST] wrap script error: " << err.what();
+		}
+		else {
+			pigCallbacks.tickCallback = lua["__wrapped_pig_tick"];
+			logInfo() << "[ENTITYTEST] pig tickCallback wrapped for counting";
+		}
 	}
 	catch (const sol::error &e) {
 		logError() << "[ENTITYTEST] hook failed:" << e.what();
@@ -318,6 +399,50 @@ void ServerWorld::initUsertype(sol::state &lua) {
 		sol::base_classes, sol::bases<World>(),
 
 		"dimension", &ServerWorld::dimension,
+
+		// 地表高度查询（Lua 生成生物/传送用；返回该列最高地形方块的 z）
+		"heightmap", &ServerWorld::heightmap,
+
+		// 光照查询（Lua 生物 AI 用）：返回 (x,y,z) 处方块接收到的最大光照强度 0..15，
+		// 取阳光与火把光中的较大者。区块未加载或尚未初始化时返回 -1
+		// （与「全黑 = 0」区分开，Lua 侧可据此判断该位置是否可查询）。
+		"get_light", [](ServerWorld &self, int x, int y, int z) -> int {
+			Chunk *chunk = self.getChunkAtBlockPos(x, y, z);
+			if (!chunk || !chunk->isInitialized())
+				return -1;
+
+			// 方块坐标 → 区块内局部坐标（C++ 对负数取模为负，用位与等价于取模 2 的幂）
+			const int lx = x & (CHUNK_WIDTH - 1);
+			const int ly = y & (CHUNK_DEPTH - 1);
+			const int lz = z & (CHUNK_HEIGHT - 1);
+
+			const ChunkLightmap &lightmap = chunk->lightmap();
+			const u8 sunlight = lightmap.getSunlight(lx, ly, lz);
+			const u8 torchlight = lightmap.getTorchlight(lx, ly, lz);
+
+			return (int)(sunlight > torchlight ? sunlight : torchlight);
+		},
+
+		// 是否白天（Lua 生物 AI 用）：仅主世界（dimension 0）有昼夜循环，
+		// 下界/末地恒为 false。0..12000 tick 为白天，12000..24000 为夜晚。
+		"is_daytime", [](ServerWorld &self) -> bool {
+			if (self.dimension().id() != 0)
+				return false;
+
+			return (u32)(GameTime::getTicks() % GameTime::dayLength) < 12000;
+		},
+
+		// 游戏总 tick 数（Lua 侧做 AI 冷却/计时用；20 tick = 1 秒）
+		"get_ticks", [](ServerWorld &self) {
+			return GameTime::getTicks();
+		},
+
+		// 视线检测（Lua 生物 AI 用）：from→to 之间是否没有可碰撞方块阻挡。
+		// 未加载区块视为「不挡」，详见 EntityPath.hpp 顶部注释。
+		"path_clear", [](ServerWorld &self, double fx, double fy, double fz,
+		                              double tx, double ty, double tz) {
+			return clearPath(self, Vector3d{fx, fy, fz}, Vector3d{tx, ty, tz});
+		},
 
 		// 枚举本维度所有实体（网络实体，下标从 1 开始），供实体 AI 选目标
 		"get_entities", [](ServerWorld &self, sol::this_state s) {

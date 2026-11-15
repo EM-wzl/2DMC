@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "bgfx",
+  "version": "1.129.8945-2dmc",
+  "description": "Cross-platform rendering library (2DMC patched: force-include <stdint.h> for g++ 16)",
+  "homepage": "https://github.com/bkaradzic/bgfx",
+  "license": "BSD-2-Clause",
+  "supports": "windows | linux | osx",
+  "dependencies": [
+    "bx",
+    "bimg"
+  ],
+  "features": {
+    "tools": {
+      "description": "Build bgfx tools (geometryc, texturec, shaderc)"
+    }
+  }
+}

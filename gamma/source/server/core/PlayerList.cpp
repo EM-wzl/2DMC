@@ -34,26 +34,34 @@ ServerPlayer &PlayerList::addPlayer(const std::string &name, bool isNewPlayer) {
 ServerPlayer *PlayerList::connectPlayer(const std::string &name, ClientInfo &client, bool isSingleplayer) {
 	ServerPlayer *player = nullptr;
 
-	static bool isFirstPlayer = true;
-	if (isFirstPlayer && isSingleplayer && !m_players.empty()) {
-		if (m_players.size() == 1) {
+	// isSingleplayer 表示「这个客户端是单机主机玩家」（只有本机回环连接的第一个
+	// 客户端才是，见 Server::handleNewConnections），不是「服务端是单机模式」——
+	// 局域网访客永远是 false，必须按普通玩家处理。
+	if (isSingleplayer && !m_players.empty()) {
+		// 单机主机接管存档里的角色：
+		// 1) 优先精确匹配同名角色（主机用自己的用户名连自己的存档，最常见）；
+		auto it = m_players.find(name);
+		if (it != m_players.end() && !it->second.isOnline()) {
+			player = &it->second;
+			logInfo() << name << "is online";
+		}
+		// 2) 否则若存档里只有一个角色，沿用旧行为把它改名为当前用户名；
+		else if (it == m_players.end() && m_players.size() == 1 && !m_players.begin()->second.isOnline()) {
 			std::string oldname = m_players.begin()->second.name();
-			if (oldname != name) {
-				m_players.emplace(name, m_players.begin()->second);
-				m_players.erase(oldname);
-			}
+			m_players.emplace(name, m_players.begin()->second);
+			m_players.erase(oldname);
 
 			player = &m_players.at(name);
 			player->setName(name);
 
 			logInfo() << name << "is online";
 		}
-		else {
-			logWarning() << "Multiple players in singleplayer mode not handled yet";
-			return nullptr;
-		}
+		// 3) 存档里有多个角色（之前开放过局域网，存档里多了访客角色）：
+		//    继续走下面的普通连接路径（新建/复用同名角色），而不是像上游那样
+		//    直接返回 nullptr 拒绝——否则主机再也进不了自己的世界。
 	}
-	else {
+
+	if (!player) {
 		auto it = m_players.find(name);
 		if (it != m_players.end()) {
 			if (!it->second.isOnline()) {
@@ -75,8 +83,6 @@ ServerPlayer *PlayerList::connectPlayer(const std::string &name, ClientInfo &cli
 	player->setClientID(client.id);
 
 	client.playerName = name;
-
-	isFirstPlayer = false;
 
 	return player;
 }

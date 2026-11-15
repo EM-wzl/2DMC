@@ -49,6 +49,8 @@ void Shader::loadFromFile(const std::string &name) {
 	else if (bgfx::getRendererType() == bgfx::RendererType::Direct3D11
 		  || bgfx::getRendererType() == bgfx::RendererType::Direct3D12)
 		suffix = "s_5_0";
+	else if (bgfx::getRendererType() == bgfx::RendererType::Metal)
+		suffix = "metal";
 
 	m_vertexShader = loadShader("resources/shaders/" + name + "." + suffix + ".vs.bin");
 	m_fragmentShader = loadShader("resources/shaders/" + name + "." + suffix + ".fs.bin");

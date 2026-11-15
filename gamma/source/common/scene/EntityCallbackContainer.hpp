@@ -38,6 +38,10 @@ struct EntityCallbackContainer {
 
 	// 逐实体 tick 回调（mod:entity 定义的 on_tick），由 EntityTickController 每个服务端 tick 调用
 	sol::unsafe_function tickCallback;
+
+	// 该实体类型的最大生命值（mod:entity 表的 max_health 字段，缺省 0 = 不是生物）。
+	// spawn 时据此给运行时实体挂 HealthComponent。
+	u16 maxHealth = 0;
 };
 
 // 打在有 on_tick 回调的运行时实体上：让 EntityTickController 的 view

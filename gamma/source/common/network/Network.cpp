@@ -52,6 +52,11 @@ std::string Network::commandToString(Network::Command command) {
 		{Network::Command::PlayerHeldItemChanged, "PlayerHeldItemChanged"},
 		{Network::Command::PlayerReady,           "PlayerReady"},
 		{Network::Command::PlayerChunkPosUpdate,  "PlayerChunkPosUpdate"},
+		{Network::Command::PlayerHealth,          "PlayerHealth"},
+		{Network::Command::PlayerGamemode,        "PlayerGamemode"},
+		{Network::Command::PlayerAttackEntity,    "PlayerAttackEntity"},
+		{Network::Command::LanInfoRequest,        "LanInfoRequest"},
+		{Network::Command::LanInfo,               "LanInfo"},
 
 		{Network::Command::BlockUpdate,           "BlockUpdate"},
 		{Network::Command::BlockActivated,        "BlockActivated"},
@@ -71,6 +76,7 @@ std::string Network::commandToString(Network::Command command) {
 		{Network::Command::EntityRotation,        "EntityRotation"},
 		{Network::Command::EntityAnimation,       "EntityAnimation"},
 		{Network::Command::EntityDrawableDef,     "EntityDrawableDef"},
+		{Network::Command::EntityHealth,          "EntityHealth"},
 
 		{Network::Command::KeyPressed,            "KeyPressed"},
 	};

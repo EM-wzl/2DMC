@@ -77,6 +77,10 @@ class Client {
 		void removePlayer(u16 clientID) { m_players.erase(clientID); }
 		Player &getPlayer(u16 clientID) { return m_players.at(clientID); }
 
+		// 遍历所有其他玩家（用于在头顶绘制名字）。
+		// 注意：m_players 存的是引用，调用方需保证 Client 存活。
+		const std::unordered_map<u16, Player &> &players() const { return m_players; }
+
 	private:
 		bool m_isConnected = false;
 		bool m_isSingleplayer = false;

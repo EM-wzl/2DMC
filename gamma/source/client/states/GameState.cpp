@@ -111,11 +111,11 @@ void GameState::onEvent(const SDL_Event &event) {
 			}
 		}
 		else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) {
-			m_stateStack->push<PauseMenuState>(m_client, this);
+			m_stateStack->push<PauseMenuState>(m_client, m_clientCommandHandler, this);
 		}
 		else if (event.type == SDL_WINDOWEVENT) {
 			if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST) {
-				m_stateStack->push<PauseMenuState>(m_client, this);
+				m_stateStack->push<PauseMenuState>(m_client, m_clientCommandHandler, this);
 
 				Mouse::setCursorGrabbed(false);
 				Mouse::setCursorVisible(true);
@@ -258,6 +258,23 @@ void GameState::draw(RenderTarget &target, RenderStates states) const {
 				target.draw(it.second, states);
 
 		target.draw(m_hud.blockCursor(), states);
+
+		// bgfx 每个 view 每帧只保留最后一次 setViewTransform（重复设置会整帧覆盖，
+		// 而不是只影响之后的 draw call）。世界物体全部按“相机在原点”的相机相对
+		// 坐标渲染（见 ChunkRenderer::draw 的说明），但上面的 clouds / PlayerBox /
+		// BlockCursor 在切换 shader 时会触发 RenderTarget::applyCurrentView，用已经
+		// 还原的真实相机位置重设 World view 矩阵，导致相机位置被减两次（实际渲染
+		// 相机 = 2P，画面像从高空俯视世界）。这里在所有 World view 绘制之后，用
+		// “相机在原点”的矩阵做最后一次覆盖，修正整帧的 World view 变换。
+		{
+			const glm::mat4 worldView = glm::lookAt(
+				glm::vec3{0.f, 0.f, 0.f},
+				glm::vec3{m_camera.getDirection().x, m_camera.getDirection().y, m_camera.getDirection().z},
+				glm::vec3{m_camera.getUpVector().x, m_camera.getUpVector().y, m_camera.getUpVector().z}
+			);
+
+			bgfx::setViewTransform(BgfxView::World, &worldView[0][0], m_camera.getTransform().getRawMatrix());
+		}
 	}
 
 	states.view = BgfxView::HUD;

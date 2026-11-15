@@ -38,10 +38,20 @@ mod:dimension {
 	id = "nether",
 	name = "下界",
 
-	biomes = {"default:netherland"},
+	biomes = {"default:netherland", "default:nether_wastes", "default:soul_sand_valley", "default:basalt_deltas"},
 
 	sky = "default:sky_nether",
 
 	gravity = 1.4,
 }
 
+mod:dimension {
+	id = "end",
+	name = "末地",
+
+	biomes = {"default:end_barrens", "default:end_highlands"},
+
+	sky = "default:sky_end",
+
+	gravity = 1.0,
+}

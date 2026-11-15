@@ -33,6 +33,15 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 elseif (MSVC)
 	# Disable iterator debug, improves performance of debug builds
 	add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=0>)
+
+	# The sources are UTF-8 (without BOM) and contain Chinese comments / string
+	# literals. Without this flag MSVC reads them using the system ANSI codepage
+	# (e.g. 936/GBK), which corrupts the comments (a trailing multibyte sequence
+	# can swallow the line break and break the following declaration) and would
+	# also encode narrow string literals as GBK instead of UTF-8 (SFML expects
+	# UTF-8). GCC/Clang already treat sources and literals as UTF-8, so this only
+	# brings MSVC in line with the MinGW build.
+	add_compile_options(/utf-8)
 endif()
 
 #------------------------------------------------------------------------------

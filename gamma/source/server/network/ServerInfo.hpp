@@ -44,6 +44,13 @@ class ServerInfo {
 
 	private:
 		std::vector<ClientInfo> m_clients;
+
+		// 下一个要分配的 client id。绝不复用已经分配过的 id：
+		// 客户端在 PlayerSpawn / PlayerPosUpdate / ChatMessage 等包里按 client id
+		// 区分玩家，服务端在 PlayerInvUpdate / ChunkData 里也按 id 查人。
+		// 如果用 clients().size() + 1 分配，有人中途退出后再进来就会拿到一个
+		// 仍在线玩家正在用的 id（局域网里玩家频繁进出时必现），两人的数据流会串。
+		u16 m_nextClientID = 1;
 };
 
 #endif // SERVERINFO_HPP_

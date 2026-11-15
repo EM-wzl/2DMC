@@ -49,3 +49,5 @@ dofile("fluids.lua")
 
 dofile("entities.lua")
 
+-- 生物掉落表（依赖 entities.lua 里的生物定义，放在最后加载）
+dofile("mob_drops.lua")

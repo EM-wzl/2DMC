@@ -1,0 +1,25 @@
+diff --git a/include/sol/optional_implementation.hpp b/include/sol/optional_implementation.hpp
+--- a/include/sol/optional_implementation.hpp
++++ b/include/sol/optional_implementation.hpp
+@@ -2183,10 +2183,20 @@
+ 			// 2DMC patch: MinGW/g++ 16 的引用特化里没有 construct()，
+ 			// 原实现 this->construct(...) 无法编译，改用赋值构造。
++			// 但该替换在 MSVC 下会因 detail::enable_if_t<...> 默认模板实参
++			// 解析失败而报 C2061，因此必须加平台守卫：MSVC 走上游原版。
++#if defined(__MINGW32__)
+ 			template <class U = T, detail::enable_if_t<
+ 				std::is_constructible<T, U&&>::value>* = nullptr>
+ 			T& emplace(U&& u) {
+ 				this->construct(std::forward<U>(u));
+ 				return this->value();
+ 			}
++#else
++			template <class... Args>
++			T& emplace(Args&&... args) {
++				this->construct(std::forward<Args>(args)...);
++				return this->value();
++			}
++#endif
+ 		};
+ 	}
+ }

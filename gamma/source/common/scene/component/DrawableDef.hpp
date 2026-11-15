@@ -47,6 +47,10 @@ class DrawableDef : public ISerializable {
 		InventoryCubeDef &getInventoryCubeDef() { return m_cubes.back(); }
 		const InventoryCubeDef &getInventoryCubeDef() const { return m_cubes.back(); }
 
+		// 全部方块部件（身体/头/腿…），按添加顺序绘制
+		std::vector<InventoryCubeDef> &cubes() { return m_cubes; }
+		const std::vector<InventoryCubeDef> &cubes() const { return m_cubes; }
+
 		void serialize(sf::Packet &packet) const override;
 		void deserialize(sf::Packet &packet) override;
 		Network::Command packetType = Network::Command::EntityDrawableDef;

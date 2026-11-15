@@ -30,6 +30,7 @@
 #include "common/scene/component/AnimationComponent.hpp"
 #include "common/scene/component/DrawableDef.hpp"
 #include "common/scene/component/NetworkComponent.hpp"
+#include "common/scene/component/HealthComponent.hpp"
 #include "common/scene/component/PositionComponent.hpp"
 #include "common/scene/component/RotationComponent.hpp"
 #include "server/lua/LuaMod.hpp"
@@ -84,6 +85,16 @@ void LuaEntityLoader::spawnEntity(const std::string &entityID, const sol::table 
 		if (Registry::getInstance().getEntityCallbackContainer(entityID).tickCallback.valid())
 			registry.emplace<EntityTickTag>(entity);
 
+		// 生物血量：取该实体类型 max_health（mod:entity 顶层字段，缺省 0 = 非生物）。
+		// item_drop 等没有 max_health 的实体不会带 HealthComponent。
+		// 注意：必须先用 hasEntityCallbacks 守住，否则 item_drop 这类没有回调
+		// 容器的类型会触发 getEntityCallbackContainer() 的 .at() 抛异常。
+		if (Registry::getInstance().hasEntityCallbacks(entityID)) {
+			u16 typeMaxHealth = Registry::getInstance().getEntityCallbackContainer(entityID).maxHealth;
+			if (typeMaxHealth > 0)
+				registry.emplace<HealthComponent>(entity, typeMaxHealth, typeMaxHealth);
+		}
+
 		// FIXME: This code is too specific to the item drop entity
 		ItemStack *itemStack = tryLoadItemStack(table, registry, entity);
 		auto *drawable = registry.try_get<DrawableDef>(entity);
@@ -110,27 +121,50 @@ void LuaEntityLoader::tryLoadCallbacks(const sol::table &table) const {
 	if (onTick != sol::nullopt) {
 		entityCallbackContainer.tickCallback = onTick.value();
 	}
+
+	// 生物最大生命值：mod:entity 表顶层的 max_health（缺省 0 = 不是生物）
+	entityCallbackContainer.maxHealth = (u16)table["max_health"].get_or(0);
 }
 
 void LuaEntityLoader::tryLoadVisual(const sol::table &table, entt::registry &registry, entt::entity entity) const {
+	// 支持两种写法：
+	//   visual = {type="inventorycube", size=..., origin=..., block_id=...}   —— 单部件（旧）
+	//   parts  = { {size=...,origin=...,block_id=...}, {...} }                —— 多部件（身体/头/腿）
+	// 多部件是为了让生物有"身子"，而不是只显示一个方块。
+	auto loadCube = [](DrawableDef &drawable, const sol::table &def) {
+		auto &cube = drawable.addInventoryCube();
+		cube.size = def["size"].get_or(1.0f);
+
+		sol::optional<sol::table> origin = def["origin"];
+		if (origin != sol::nullopt)
+			cube.origin = {origin.value()[1], origin.value()[2], origin.value()[3]};
+
+		sol::optional<sol::table> offset = def["offset"];
+		if (offset != sol::nullopt)
+			cube.offset = {offset.value()[1], offset.value()[2], offset.value()[3]};
+
+		sol::optional<std::string> blockID = def["block_id"];
+		if (blockID != sol::nullopt)
+			cube.blockID = blockID.value();
+	};
+
+	sol::optional<sol::table> parts = table["parts"];
+	if (parts != sol::nullopt) {
+		DrawableDef &drawable = registry.emplace<DrawableDef>(entity);
+		for (size_t i = 1; i <= parts.value().size(); ++i) {
+			sol::optional<sol::table> part = parts.value()[i];
+			if (part != sol::nullopt)
+				loadCube(drawable, part.value());
+		}
+		return;
+	}
+
 	sol::optional<sol::table> visual = table["visual"];
 	if (visual != sol::nullopt) {
 		std::string type = visual.value()["type"];
 		if (type == "inventorycube") {
-			auto &drawable = registry.emplace<DrawableDef>(entity);
-			auto &cube = drawable.addInventoryCube();
-
-			cube.size = visual.value()["size"].get_or(1.0f);
-
-			sol::optional<sol::table> origin = visual.value()["origin"];
-			if (origin != sol::nullopt) {
-				cube.origin = {origin.value()[1], origin.value()[2], origin.value()[3]};
-			}
-
-			sol::optional<std::string> blockID = visual.value()["block_id"];
-			if (blockID != sol::nullopt) {
-				cube.blockID = blockID.value();
-			}
+			DrawableDef &drawable = registry.emplace<DrawableDef>(entity);
+			loadCube(drawable, visual.value());
 		}
 		else
 			logError() << ("For entity '" + m_stringID + "': Visual type '" + type + "' unknown").c_str();

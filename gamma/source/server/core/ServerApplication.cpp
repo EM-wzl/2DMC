@@ -139,8 +139,30 @@ bool ServerApplication::init() {
 
 	logInfo() << ("Server is running on localhost:" + std::to_string(m_server.port())).c_str();
 
-	if (!m_worldName.empty())
-		m_worldController.load(m_worldName);
+	// 监听地址是 0.0.0.0（SFML TcpListener::listen 默认 IpAddress::Any），
+	// 所以局域网内其它机器可以直接连。把可用地址打印到日志，方便玩家告知朋友；
+	// 游戏内也可以随时用 /publish（别名 /openlan、/lan）重新查询。
+	{
+		std::vector<std::string> addresses = Server::localIPv4Addresses();
+		for (const std::string &address : addresses)
+			logInfo() << ("LAN: " + address + ":" + std::to_string(m_server.port())).c_str();
+	}
+
+	// 加载存档。损坏/被截断的存档不能让整个服务端崩溃退出：
+	// 记录错误后以「空世界」继续运行（玩家仍可进入并重新生成地形）。
+	if (!m_worldName.empty()) {
+		try {
+			m_worldController.load(m_worldName);
+		}
+		catch (const std::exception &e) {
+			logError() << "Failed to load world '" << m_worldName << "': " << e.what()
+				<< " (starting with an empty world instead)";
+		}
+		catch (...) {
+			logError() << "Failed to load world '" << m_worldName
+				<< "': unknown exception (starting with an empty world instead)";
+		}
+	}
 
 	// TEMP: 流体验证自动测试钩子（2DMC_AUTOTEST=1 时启用，验证后移除）
 	if (std::getenv("2DMC_AUTOTEST"))
@@ -167,6 +189,7 @@ int ServerApplication::run(bool isProtected) {
 
 			ServerConfig::saveConfigToFile("config/server.lua");
 			ServerConfig::options.clear();
+			ServerConfig::userOptions.clear();
 
 			m_serverCommandHandler.sendServerClosed(std::string("Server error ") + e.what());
 
@@ -192,6 +215,7 @@ int ServerApplication::run(bool isProtected) {
 
 		ServerConfig::saveConfigToFile("config/server.lua");
 		ServerConfig::options.clear();
+			ServerConfig::userOptions.clear();
 
 		m_serverCommandHandler.sendServerClosed("Server closed.");
 
@@ -219,6 +243,17 @@ void ServerApplication::update() {
 	}
 
 	m_worldController.update(doTick);
+
+	// 服务端 tick 事件：Lua 侧生物 AI/自然生成的主驱动（20tps）。
+	// 放在世界更新之后，保证本 tick 的区块与实体状态已经就绪。
+	if (doTick) {
+		try {
+			m_scriptEngine.luaCore().onEvent(LuaEventType::ServerTick, m_serverCommandHandler);
+		}
+		catch (const std::exception &e) {
+			logError() << "[ServerTick] " << e.what();
+		}
+	}
 
 	// TEMP: 流体验证自动测试触发（到点后调用 Lua 全局，验证后移除）
 	if (m_autotestCountdown > 0 && !m_autotestDone) {

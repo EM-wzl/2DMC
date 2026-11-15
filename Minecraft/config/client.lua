@@ -27,6 +27,6 @@ isChunkMinimapEnabled = false
 isLightmapViewerEnabled = false
 isProfilerWindowEnabled = false
 
-defaultUsername = ""
+defaultUsername = "Player"
 defaultServerAddress = "localhost:4242"
 texturePack = "minecraft"

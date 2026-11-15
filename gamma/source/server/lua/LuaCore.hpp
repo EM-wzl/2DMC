@@ -45,21 +45,32 @@ enum class LuaEventType {
 	ItemActivated,
 
 	PlayerConnected,
+
+	// 生物被玩家击杀。参数：(pos, entity, player, world, client, server)。
+	// 掉落表在 Lua 侧（entities.lua）配置，引擎只负责在血量归零时触发。
+	EntityKilled,
+
+	// 每个服务端 tick（20tps）触发一次，参数为 ServerCommandHandler。
+	// 生物自然生成/游荡 AI 依赖它，避免依赖实体的 on_tick 标记（存档重载后不恢复）。
+	ServerTick,
 };
 
 class LuaCore {
 	public:
 		void addListener(LuaEventType eventType, const sol::function &listener);
 
+		// 用 protected_function 调用监听器：Lua 错误作为返回值处理，
+		// 不会以 Windows SEH 异常逃逸到 C++（LuaJIT 的 lj_err_throw 无法被
+		// C++ catch 捕获，曾导致服务端在 Lua 报错时直接崩溃）。
 		template<typename... Args>
 		void onEvent(LuaEventType eventType, Args &&...args) {
 			for (auto &it : m_listeners) {
 				if (it.first == eventType) {
-					try {
-						it.second(std::forward<Args>(args)...);
-					}
-					catch (const sol::error &e) {
-						logError() << e.what();
+					sol::protected_function listener = it.second;
+					sol::protected_function_result result = listener(std::forward<Args>(args)...);
+					if (!result.valid()) {
+						sol::error err = result;
+						logError() << ("Lua event error: " + std::string{err.what()}).c_str();
 					}
 				}
 			}
@@ -74,7 +85,7 @@ class LuaCore {
 		Registry *m_registry = nullptr;
 		ServerModLoader *m_modLoader = nullptr;
 
-		std::unordered_multimap<LuaEventType, sol::unsafe_function> m_listeners;
+		std::unordered_multimap<LuaEventType, sol::protected_function> m_listeners;
 };
 
 #endif // LUACORE_HPP_

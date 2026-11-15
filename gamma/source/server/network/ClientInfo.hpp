@@ -41,6 +41,11 @@ class ClientInfo {
 		u16 id;
 		bool isReady = false;
 
+		// 该客户端是否被当作「单机主机玩家」（单机内嵌服务端 + 回环连接）。
+		// 单机世界里主机玩家沿用存档里的角色（改名接管），局域网玩家必须走正常
+		// 的「新玩家」路径，否则第二个玩家会顶掉主机的角色。
+		bool isSingleplayer = false;
+
 		u32 previousKeyTimestamp = 0;
 
 		std::shared_ptr<sf::TcpSocket> tcpSocket;

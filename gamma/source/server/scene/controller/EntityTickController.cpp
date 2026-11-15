@@ -47,8 +47,19 @@ void EntityTickController::update(entt::registry &registry) {
 	static u64 s_entityTestLogTick = 0;
 	if (s_entityTestLogging && (s_entityTestLogTick++ % 20 == 0)) {
 		registry.view<PositionComponent, std::string>().each([&](auto, auto &position, auto &id) {
-			if (id == "2dmctest:mover")
-				logInfo() << "[ENTITYTEST] mover pos:" << position.x << position.y << position.z;
+			// TEMP(第二批补充): 除 mover 外也记录 default: 生物的位置（真实游荡 AI 验证）
+			if (id == "2dmctest:mover" || id.rfind("default:", 0) == 0)
+				logInfo() << "[ENTITYTEST] " << id << " pos:" << position.x << position.y << position.z;
+			// TEMP(第二批诊断): 附带输出 pig on_tick 实际调用次数（钩子包装的全局计数器）
+			if (id.rfind("default:", 0) == 0) {
+				auto &cbs = Registry::getInstance().getEntityCallbackContainer(id);
+				if (cbs.tickCallback.valid()) {
+					sol::state_view lua(cbs.tickCallback.lua_state());
+					sol::object cnt = lua["__pig_ticks"];
+					if (cnt.valid())
+						logInfo() << "[ENTITYTEST] " << id << " tick_count:" << cnt.as<u64>();
+				}
+			}
 		});
 	}
 

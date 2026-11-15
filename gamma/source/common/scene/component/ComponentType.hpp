@@ -40,6 +40,7 @@ enum class ComponentType {
 	Hitbox      = 6,
 	ItemStack   = 7,
 	EntityTick  = 8,
+	Health      = 9,
 };
 
 sf::Packet &operator<<(sf::Packet &packet, ComponentType type);

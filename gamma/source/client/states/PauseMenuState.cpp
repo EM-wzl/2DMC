@@ -34,13 +34,15 @@
 #include "client/core/GameConfig.hpp"
 #include "client/core/Mouse.hpp"
 #include "client/network/Client.hpp"
+#include "client/network/ClientCommandHandler.hpp"
+#include "client/states/LanPublishState.hpp"
 #include "client/states/PauseMenuState.hpp"
 #include "client/states/SettingsMenuState.hpp"
 #include "client/states/TitleScreenState.hpp"
 #include "client/states/WorldSavingState.hpp"
 
-PauseMenuState::PauseMenuState(Client &client, DrawableState *parent)
-	: InterfaceState(parent), m_client(client)
+PauseMenuState::PauseMenuState(Client &client, ClientCommandHandler &clientCommandHandler, DrawableState *parent)
+	: InterfaceState(parent), m_client(client), m_clientCommandHandler(clientCommandHandler)
 {
 	Mouse::setCursorGrabbed(false);
 	Mouse::setCursorVisible(true);
@@ -57,6 +59,11 @@ PauseMenuState::PauseMenuState(Client &client, DrawableState *parent)
 
 	m_menuWidget.addButton("选项…", [this] (TextButton &) {
 		m_stateStack->push<SettingsMenuState>(this);
+	});
+
+	// 开放局域网：进入后可选端口、显示本机 IP，方便朋友加入。
+	m_menuWidget.addButton("开放局域网", [this] (TextButton &) {
+		m_stateStack->push<LanPublishState>(m_client, m_clientCommandHandler, this);
 	});
 
 	m_menuWidget.addButton("标题界面", [this] (TextButton &) {

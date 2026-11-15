@@ -33,15 +33,22 @@ InventoryCubeDef &DrawableDef::addInventoryCube() {
 }
 
 void DrawableDef::serialize(sf::Packet &packet) const {
+	// 先写部件数量，再逐个写（反序列化据此读全部部件）
+	packet << (u32)m_cubes.size();
 	for (auto &it : m_cubes)
 		packet << u8(DrawableType::InventoryCube) << it;
 }
 
 void DrawableDef::deserialize(sf::Packet &packet) {
-	u8 type;
-	packet >> type;
-	if (type == DrawableType::InventoryCube) {
-		m_cubes.emplace_back();
-		packet >> m_cubes.back();
+	u32 count = 0;
+	packet >> count;
+	m_cubes.clear();
+	for (u32 i = 0; i < count; ++i) {
+		u8 type = 0;
+		packet >> type;
+		if (type == DrawableType::InventoryCube) {
+			m_cubes.emplace_back();
+			packet >> m_cubes.back();
+		}
 	}
 }

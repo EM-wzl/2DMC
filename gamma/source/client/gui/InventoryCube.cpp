@@ -150,6 +150,14 @@ void InventoryCube::draw(RenderTarget &target, RenderStates states) const {
 	states.transform *= getTransform();
 	states.transform *= m_transform.getTransform();
 
+	// 部件偏移：在实体自身变换之后施加，所以多部件跟着身体一起转身，
+	// 不会因为各自的旋转枢轴不同而散开。
+	if (m_offset.x != 0.f || m_offset.y != 0.f || m_offset.z != 0.f) {
+		Transform offsetTransform;
+		offsetTransform.translate(m_offset);
+		states.transform *= offsetTransform;
+	}
+
 	// NOTE: This matrix has Y inverted as well as Z. This means that
 	// negative Z is closer to the user, and that the bottom side is visible
 	// at start.
@@ -157,7 +165,9 @@ void InventoryCube::draw(RenderTarget &target, RenderStates states) const {
 
 	states.texture = &m_textureAtlas->texture();
 
-	states.isDepthTestEnabled = false;
+	// 实体（生物）必须开启深度测试，否则多部件（身体/头/腿）互相穿透，
+	// 表现为身上出现条纹状穿模。UI 里的物品图标仍然关闭深度测试。
+	states.isDepthTestEnabled = m_isEntity;
 
 	target.drawElements(m_vbo, target.cubeIndexBuffer(), 0, 0, states);
 }

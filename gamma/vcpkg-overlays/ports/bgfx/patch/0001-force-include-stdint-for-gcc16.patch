@@ -1,0 +1,14 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -0,0 +1,12 @@
++# 2DMC patch: g++ 16 / MinGW 需要强制 include <stdint.h>
++#
++# bgfx 内置的 2019 年版 3rdparty（glslang / spirv-tools / glsl-optimizer）
++# 使用 uint32_t 等类型却没有 include <stdint.h>。老版 libstdc++ 会间接引入，
++# g++ 16 不会，导致编译失败。
++#
++# 只对 GCC/Clang 生效：MSVC 不认识 -include，且其 CRT 头已经引入 <stdint.h>。
++if(NOT MSVC)
++    add_compile_options(-include stdint.h)
++endif()

@@ -1,18 +1,72 @@
-.vs/
+# ===== 构建产物 / 二进制 =====
 *.exe
+*.dll
 *.7z
-*.txt
-*.png
+*.bin
+*.mp3
+*.ps1
+*.log
+_*.log
+*.dat
+*.sav
+*.bak
+
+# ===== 目录 =====
+.vs/
+.vscode/
+.workbuddy/
 .uploads/
 as_chunks/
 2DMC-launch-video/
-*.bin
-savelist.txt
+2DMC-remotion-video/
 video/
+saves/
+logs/
+
+# ===== 本地 / 私人文件 =====
+savelist.txt
 2DMC_记忆导出.md
 记忆.md
-2DMC-remotion-video/
-bata/power.bat
 元气骑士改编提示词.md
-*.mp3
-*.ps1
+bata/power.bat
+beta/power.bat
+Default-Java-26.2/
+gamma-promo/
+gamma-video/
+gamma-story/
+gamma/_fluids_research/
+gamma/_mobs3_research/
+gamma/_savefmt*/
+gamma/_enddim*/
+Checksum
+Downloading
+Extracting
+Fetching
+Installing
+Latest
+Verifying
+nul
+install.cmd
+suggestion.txt
+
+# ===== 文本文件（第三方 vendor 文档 / 调试转储）=====
+# 注意：这条规则曾经被误删，导致 173 个 .txt 被批量 staged，
+# 而真正的源码改动却一个都没进暂存区。不要移除。
+*.txt
+!gamma/tools/name_map.txt
+!README.md
+!WIKI.md
+!CONTRIBUTORS.md
+!LICENSE*
+
+# ===== 贴图 =====
+# 引擎 TextureAtlas 要求 texturepack 与 mods/default/textures 下的贴图
+# 随仓库分发（客户端进世界时只读这些目录，缺一张或尺寸不一致就会崩溃）。
+# 全局忽略 *.png，但把游戏必需的三处贴图目录取反放行。
+*.png
+!Minecraft/texturepacks/
+!Minecraft/texturepacks/**
+!Minecraft/mods/default/textures/
+!Minecraft/mods/default/textures/**
+!gamma/mods/default/textures/
+!gamma/mods/default/textures/**

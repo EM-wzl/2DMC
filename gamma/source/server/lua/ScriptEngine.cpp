@@ -26,6 +26,7 @@
  */
 #include "common/core/Registry.hpp"
 #include "common/world/BlockMetadata.hpp"
+#include "common/world/Heightmap.hpp"
 #include "server/lua/LuaCore.hpp"
 #include "server/lua/LuaGUI.hpp"
 #include "server/lua/LuaMod.hpp"
@@ -60,6 +61,7 @@ void ScriptEngine::initUsertypes() {
 	Chunk               ::initUsertype(m_lua);
 	Dimension           ::initUsertype(m_lua);
 	EntityWrapper       ::initUsertype(m_lua);
+	Heightmap           ::initUsertype(m_lua);
 	Inventory           ::initUsertype(m_lua);
 	Item                ::initUsertype(m_lua);
 	ItemStack           ::initUsertype(m_lua);

@@ -2183,6 +2183,7 @@ namespace sol {
 		/// one.
 		///
 		/// \group emplace
+#if defined(__MINGW32__)
 		// 本地修复（MinGW/g++ 16）：引用特化里没有 construct()，原实现
 		// this->construct(...) 无法编译。引用只能重绑定到左值引用，
 		// 这里与构造函数 optional(U&&) 保持完全一致的语义。
@@ -2194,6 +2195,19 @@ namespace sol {
 			m_value = std::addressof(u);
 			return *m_value;
 		}
+#else
+		// Upstream sol2 3.2.3 implementation. MSVC cannot parse the MinGW-only
+		// override above (it fails with C2061 on the defaulted
+		// detail::enable_if_t template argument), so non-MinGW toolchains keep
+		// the original upstream code path.
+		template <class... Args>
+		T& emplace(Args&&... args) noexcept {
+			static_assert(std::is_constructible<T, Args&&...>::value, "T must be constructible with Args");
+
+			*this = nullopt;
+			this->construct(std::forward<Args>(args)...);
+		}
+#endif // __MINGW32__
 
 		/// Swaps this optional with the other.
 		///

@@ -72,6 +72,13 @@ void Player::initUsertype(sol::state &lua) {
 
 		"client_id", &Player::clientID,
 
+		"health", &Player::health,
+		"max_health", &Player::maxHealth,
+		"set_health", &Player::setHealth,
+		"set_max_health", &Player::setMaxHealth,
+		"gamemode", &Player::gamemode,
+		"set_gamemode", &Player::setGamemode,
+
 		"inventory", &Player::inventory,
 
 		"held_item_stack", &Player::heldItemStack

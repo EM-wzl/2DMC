@@ -43,10 +43,14 @@ class InventoryCube : public Drawable, public Transformable {
 
 		float size() const { return m_size; }
 
+		// 部件偏移（旋转之后施加，多部件保持刚性）
+		void setOffset(const Vector3f &offset) { m_offset = offset; }
+
 	private:
 		void draw(RenderTarget &target, RenderStates states) const override;
 
 		float m_size = 1.0f;
+		Vector3f m_offset{0, 0, 0};
 
 		const TextureAtlas *m_textureAtlas;
 

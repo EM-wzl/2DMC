@@ -130,6 +130,9 @@ class Registry : public ISerializable {
 
 		EntityCallbackContainer &addEntityCallbackContainer(const std::string &stringID);
 		EntityCallbackContainer &getEntityCallbackContainer(const std::string &stringID);
+		bool hasEntityCallbacks(const std::string &stringID) const {
+			return m_entityCallbacks.find(stringID) != m_entityCallbacks.end();
+		}
 
 		void serialize(sf::Packet &packet) const override;
 		void deserialize(sf::Packet &packet) override;

@@ -31,6 +31,10 @@
 #include "client/states/ServerConnectState.hpp"
 #include "client/states/ServerLoadingState.hpp"
 
+// 默认端口：与服务端 ServerApplication / Server::init 的默认值一致。
+// 地址栏只输主机名（localhost / 192.168.1.5）时用这个端口。
+static constexpr int DEFAULT_PORT = 4242;
+
 ServerConnectState::ServerConnectState(DrawableState *parent) : InterfaceState(parent) {
 	m_background.setScale(Config::guiScale * 2.f, Config::guiScale * 2.f);
 
@@ -50,34 +54,47 @@ ServerConnectState::ServerConnectState(DrawableState *parent) : InterfaceState(p
 	m_usernameInput.setFocus(false);
 
 	m_addressInput.setString(Config::defaultServerAddress);
-	m_addressInput.setCharacterLimit(15 + 1 + 6);
+	m_addressInput.setCharacterLimit(63 + 1 + 5); // 主机名 + ':' + 5 位端口
 	m_addressInput.setBackgroundSize(150, 20);
 	m_addressInput.setBackgroundOutline(1, Color::White);
 	m_addressInput.setPadding(5, 6);
 	m_addressInput.setScale(Config::guiScale, Config::guiScale);
-	m_addressInput.setPlaceholder("服务器地址");
+	m_addressInput.setPlaceholder("服务器地址（IP:端口）");
 	m_addressInput.setFocus(false);
 
 	m_menuWidget.setScale(Config::guiScale, Config::guiScale);
 	m_menuWidget.addButton("加入服务器", [this](TextButton &) {
-		size_t sep = m_addressInput.string().find_first_of(':');
-		std::string host = m_addressInput.string().substr(0, sep);
+		// 支持 "host" 与 "host:port" 两种写法；省略端口时用默认端口。
+		// 「开放局域网」的 /publish 输出是 IP:端口，可以整段粘贴到这里。
+		const std::string &address = m_addressInput.string();
+
+		size_t sep = address.find_first_of(':');
+		std::string host = address.substr(0, sep);
 
 		bool isPortInvalid = false;
-		int port = 0;
+		int port = DEFAULT_PORT;
 		if (sep != std::string::npos) {
+			const std::string portString = address.substr(sep + 1);
 			try {
-				port = std::stoi(m_addressInput.string().substr(sep + 1));
+				size_t processed = 0;
+				port = std::stoi(portString, &processed);
+
+				// std::stoi 会静默接受 "4630abc" 这种前缀合法串，这里要求整串都是数字
+				if (processed != portString.size())
+					isPortInvalid = true;
 			}
 			catch (std::invalid_argument &) {
+				isPortInvalid = true;
+			}
+			catch (std::out_of_range &) {
 				isPortInvalid = true;
 			}
 		}
 
 		std::string username = m_usernameInput.string();
 
-		if (port == 0 || isPortInvalid) {
-			m_errorText.setString("错误：服务器地址无效");
+		if (host.empty() || port <= 0 || port > 65535 || isPortInvalid) {
+			m_errorText.setString("错误：服务器地址无效（格式 IP 或 IP:端口）");
 			m_errorText.updateVertexBuffer();
 			updateWidgetPosition();
 		}

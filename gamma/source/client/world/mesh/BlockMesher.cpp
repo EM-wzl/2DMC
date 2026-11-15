@@ -158,6 +158,10 @@ void BlockMesher::addBlockFace(s8f x, s8f y, s8f z, s8f f, ChunkMeshBuildingJob 
 	}
 
 	// Prepare vertex information for VBO
+	// Config 收敛：isSmoothLightingEnabled 在一次网格构建期间不会变，
+	// 提到循环外按值读取，避免逐顶点（每区块上万次）访问全局可变状态。
+	const bool smoothLighting = Config::isSmoothLightingEnabled;
+
 	Vertex vertices[nVertsPerFace];
 	for (s8f v = 0; v < nVertsPerFace; ++v) {
 		if (blockState.drawType() == BlockDrawType::Cactus) {
@@ -200,14 +204,14 @@ void BlockMesher::addBlockFace(s8f x, s8f y, s8f z, s8f f, ChunkMeshBuildingJob 
 		vertices[v].texCoord[0] = math::qlerpf(blockTexCoords.x, blockTexCoords.x + blockTexCoords.sizeX, U);
 		vertices[v].texCoord[1] = math::qlerpf(blockTexCoords.y, blockTexCoords.y + blockTexCoords.sizeY, V);
 
-		if (Config::isSmoothLightingEnabled)
+		if (smoothLighting)
 			vertices[v].lightValue[0] = getLightForVertex(LightType::Sun, x, y, z, *neighbourOfs[v], normal, job.chunkData);
 		else if (blockState.isOpaque())
 			vertices[v].lightValue[0] = job.chunkData.getSunlight(sx, sy, sz);
 		else
 			vertices[v].lightValue[0] = job.chunkData.getSunlight(x, y, z);
 
-		if (Config::isSmoothLightingEnabled && !blockState.isLightSource())
+		if (smoothLighting && !blockState.isLightSource())
 			vertices[v].lightValue[1] = getLightForVertex(LightType::Torch, x, y, z, *neighbourOfs[v], normal, job.chunkData);
 		else if (blockState.isOpaque())
 			vertices[v].lightValue[1] = job.chunkData.getTorchlight(sx, sy, sz);

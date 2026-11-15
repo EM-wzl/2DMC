@@ -222,6 +222,83 @@ mod:block {
 	bounding_box = {0, 0, 0, 1, 1, 0.5}
 }
 
+-- ============================================================
+--  传送门（Minecraft 风格：维度专属门 + 目标维度留返回门）
+-- ============================================================
+--
+--  MC 的规则是「双向配对」，不是维度循环：
+--    主世界的门  → 下界的门（紫色的 nether_portal）
+--    下界的门    → 主世界的门
+--    末地的门    → 主世界的门
+--
+--  所以从主世界进下界后，站在下界那扇紫色门旁右键就能原路返回，
+--  而不是像之前那样按 (dim+1)%3 循环（那样在末地会莫名其妙跳到主世界）。
+--
+--  坐标换算（MC 的 1:8 缩放）：
+--    下界/末地坐标 = (主世界坐标 - 64) / 8
+--  本引擎没有做缩放，直接用同坐标，简单可预期。
+--
+local function portal_target_dimension(portal_kind)
+	-- portal_kind: "overworld" | "overworld_end" | "nether" | "end"
+	if portal_kind == "nether" then return 0 end
+	if portal_kind == "end" then return 0 end
+	if portal_kind == "overworld_end" then return 2 end  -- 主世界的末地门 -> 末地
+	return 1 -- 主世界的门 -> 下界
+end
+
+-- 在目标维度找一扇已经存在的传送门（避免每次传送都造一扇新的）。
+--
+-- 以「玩家当前位置」为中心做粗略扫描（±32 格，步长 4）。
+-- 注意 world:get_block(x,y,z) 用的是世界坐标，x/z 是水平轴、y 是垂直轴。
+local function find_existing_portal(world, portal_block_id, cx, cy, cz)
+	if not world then return nil end
+
+	for dx = -32, 32, 4 do
+		for dz = -32, 32, 4 do
+			for dy = -24, 24, 4 do
+				local bx, by, bz = cx + dx, cy + dy, cz + dz
+
+				local ok, id = pcall(function() return world:get_block(bx, by, bz) end)
+				if ok and id and id ~= 0 then
+					local ok2, sid = pcall(function()
+						return world:get_block_def(bx, by, bz):string_id()
+					end)
+					if ok2 and sid == portal_block_id then
+						return {x = bx, y = by, z = bz}
+					end
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+-- 执行一次「维度专属传送门」的传送。
+local function activate_portal(portal_kind, target_portal_id, frame_id, player, client, server)
+	local target_dim = portal_target_dimension(portal_kind)
+
+	local px = math.floor(player:x())
+	local py = math.floor(player:y())
+	local pz = math.floor(player:z())
+
+	-- 在目标维度找已有的返回门（以玩家当前位置为中心）
+	local target_world = server:get_world(target_dim)
+	local existing = find_existing_portal(target_world, target_portal_id, px, py, pz)
+
+	local dest_x, dest_y, dest_z
+	if existing then
+		dest_x, dest_y, dest_z = existing.x, existing.y, existing.z
+	else
+		-- 没有现成的门：在目标维度就地造一扇（4x5，底部留一格门框）
+		dest_x, dest_y, dest_z = px, py, pz
+		server:create_portal(target_dim, dest_x, dest_y, dest_z, target_portal_id, frame_id)
+	end
+
+	server:send_player_change_dimension(client.id, dest_x, dest_y, dest_z, target_dim, client)
+end
+
+-- 主世界的门（紫色外观），通往下界
 mod:block {
 	id = "portal",
 	name = "传送门",
@@ -231,14 +308,8 @@ mod:block {
 	is_opaque = false,
 
 	on_block_activated = function(pos, block, player, world, client, server)
-		local dim = (player:dimension() + 1) % 2
-		local pos = {
-			x = math.floor(player:x()),
-			y = math.floor(player:y()),
-			z = math.floor(player:z())
-		}
-
-		server:send_player_change_dimension(client.id, pos.x, pos.y, pos.z, dim, client)
+		activate_portal("overworld", "default:nether_portal", "default:obsidian",
+			player, client, server)
 	end,
 }
 
@@ -769,6 +840,10 @@ mod:block {
 	harvest_requirements = Capability.Pickaxe,
 }
 
+
+
+
+
 mod:block {
 	id = "hay_block",
 	name = "干草捆",
@@ -800,4 +875,181 @@ mod:block {
 	tiles = {"ancient_debris_top.png", "ancient_debris_top.png", "ancient_debris_side.png"},
 	hardness = 8,
 	harvest_requirements = Capability.Pickaxe,
+}
+
+-- ===== 下界扩展（仅追加，保持旧存档方块数字 ID 稳定）=====
+mod:block {
+	id = "nether_quartz_ore",
+	name = "下界石英矿",
+	tiles = "nether_quartz_ore.png",
+	hardness = 3,
+	harvest_requirements = Capability.Pickaxe,
+	item_drop = {
+		id = mod:id() .. ":nether_quartz",
+		amount = 1,
+	},
+}
+
+mod:block {
+	id = "magma_block",
+	name = "岩浆块",
+	tiles = "magma_block.png",
+	hardness = 2,
+	harvest_requirements = Capability.Pickaxe,
+	is_light_source = true,
+}
+
+mod:block {
+	id = "basalt",
+	name = "玄武岩",
+	tiles = {"basalt_top.png", "basalt_top.png", "basalt_side.png"},
+	hardness = 2,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+mod:block {
+	id = "nether_wart_block",
+	name = "下界疣块",
+	tiles = "nether_wart_block.png",
+	hardness = 1,
+}
+
+mod:block {
+	id = "blackstone",
+	name = "黑石",
+	tiles = {"blackstone_top.png", "blackstone_top.png", "blackstone.png"},
+	hardness = 2,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+mod:block {
+	id = "quartz_block",
+	name = "石英块",
+	tiles = {"quartz_block_top.png", "quartz_block_bottom.png", "quartz_block_side.png"},
+	hardness = 1,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+-- ===== 末地专属方块 =====
+-- 紫珀块：末地城的主要建材（淡紫色，带斑点纹理）
+mod:block {
+	id = "purpur_block",
+	name = "紫珀块",
+	tiles = "purpur_block.png",
+	hardness = 1.5,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+-- 紫珀柱：末地城的柱子，六面用竖条纹贴图（顶/底用紫珀块）
+mod:block {
+	id = "purpur_pillar",
+	name = "紫珀柱",
+	-- 六面顺序 {Top, Bottom, East, West, South, North}：顶/底为紫珀块，四侧为竖条纹柱子
+	tiles = {"purpur_block.png", "purpur_block.png", "purpur_pillar.png", "purpur_pillar.png", "purpur_pillar.png", "purpur_pillar.png"},
+	hardness = 1.5,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+-- 末地水晶：发光装饰方块（可放置，用于末地城顶部的"水晶"效果）。
+-- 挖掉掉落末地碎片，让 4 个末地合成配方在生存模式里可闭环获取。
+mod:block {
+	id = "end_crystal_block",
+	name = "末地水晶",
+	tiles = "end_crystal.png",
+	hardness = 0.5,
+	is_light_source = true,
+	draw_type = "glass",
+	is_opaque = false,
+	is_collidable = false,
+	harvest_requirements = Capability.Pickaxe,
+	item_drop = {
+		id = mod:id()..":end_shard",
+		amount = 2,
+	},
+}
+
+-- 末地传送门框架：暗绿石框，带符文（用于搭建末地传送门）
+mod:block {
+	id = "end_portal_frame",
+	name = "末地传送门框架",
+	tiles = "end_portal_frame.png",
+	hardness = 3,
+	harvest_requirements = Capability.Pickaxe,
+}
+
+-- 紫颂植株：末地特有的 xshape 植物（可放置装饰）。
+-- 挖掉掉落紫颂果，让末地食物在生存模式里可获取。
+mod:block {
+	id = "chorus_plant",
+	name = "紫颂植株",
+	tiles = "chorus_plant.png",
+	hardness = 0.2,
+	is_opaque = false,
+	is_collidable = false,
+	draw_type = "xshape",
+	item_drop = {
+		id = mod:id()..":chorus_fruit",
+		amount = 1,
+	},
+}
+
+-- ============================================================
+--  维度专属传送门（Minecraft 风格）
+--
+--  放在文件末尾：方块的数字 ID 必须追加在所有既有方块之后，
+--  否则旧存档里存的是数字 ID，方块顺序一变就会错乱。
+-- ============================================================
+
+-- 下界传送门（紫色）：只存在于下界，右键回到主世界。
+-- 站在主世界的门里进下界后，服务端会在下界生成一扇这个方块，
+-- 玩家右键它就能原路返回。
+mod:block {
+	id = "nether_portal",
+	name = "下界传送门",
+	tiles = "nether_portal.png",
+
+	draw_type = "glass",
+	is_opaque = false,
+	is_collidable = false,
+
+	on_block_activated = function(pos, block, player, world, client, server)
+		activate_portal("nether", "default:portal", "default:obsidian",
+			player, client, server)
+	end,
+}
+
+-- 末地传送门（绿色带黑点）：末地的返回门，右键回到主世界。
+mod:block {
+	id = "end_portal",
+	name = "末地传送门",
+	tiles = "end_portal.png",
+
+	draw_type = "glass",
+	is_opaque = false,
+	is_collidable = false,
+
+	on_block_activated = function(pos, block, player, world, client, server)
+		activate_portal("end", "default:portal", "default:obsidian",
+			player, client, server)
+	end,
+}
+
+
+-- 末地传送门（主世界版）：可合成、可放置在主世界，右键进入末地（维度 2）。
+-- 与末地的返回门用同一套贴图；分开两个 id 是因为同一个方块在不同维度要
+-- 走不同的目标维度，而本引擎的 on_block_activated 拿不到「当前维度」以外的
+-- 上下文，用两个 id 最直观（对应 MC 里主世界要塞的末地门 vs 末地的返回门）。
+mod:block {
+	id = "end_portal_overworld",
+	name = "末地传送门（主世界）",
+	tiles = "end_portal.png",
+
+	draw_type = "glass",
+	is_opaque = false,
+	is_collidable = false,
+
+	on_block_activated = function(pos, block, player, world, client, server)
+		activate_portal("overworld_end", "default:end_portal", "default:end_stone",
+			player, client, server)
+	end,
 }

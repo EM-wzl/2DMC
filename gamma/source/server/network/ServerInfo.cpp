@@ -27,7 +27,14 @@
 #include "server/network/ServerInfo.hpp"
 
 ClientInfo &ServerInfo::addClient(const std::shared_ptr<sf::TcpSocket> &socket) {
-	m_clients.emplace_back(u16(m_clients.size() + 1), socket);
+	// 单调递增分配，跳过 0（0 在聊天包等协议里表示「系统消息」）以及仍在使用的 id。
+	// 上游用 clients().size() + 1，在局域网里有人退出后再加入时会和在线玩家撞 id。
+	while (m_nextClientID == 0 || getClient(m_nextClientID))
+		++m_nextClientID;
+
+	m_clients.emplace_back(m_nextClientID, socket);
+	++m_nextClientID;
+
 	return m_clients.back();
 }
 

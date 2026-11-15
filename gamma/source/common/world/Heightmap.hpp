@@ -32,6 +32,8 @@
 
 #include <FastNoiseLite.hpp>
 
+#include <sol/sol.hpp>
+
 #include "common/core/EngineConfig.hpp"
 #include "common/core/IntTypes.hpp"
 #include "common/core/Vector2.hpp"
@@ -69,6 +71,9 @@ class Heightmap {
 		int getHighestChunkAt(s32 blockX, s32 blockY);
 
 		void setSeed(s32 seed);
+
+		// Lua 侧地表高度查询（生物生成 / 命令使用）
+		static void initUsertype(sol::state &lua);
 
 		FastNoiseLite noise1;
 		FastNoiseLite noise2;

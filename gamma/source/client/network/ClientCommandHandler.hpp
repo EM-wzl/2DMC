@@ -27,7 +27,9 @@
 #ifndef CLIENTCOMMANDHANDLER_HPP_
 #define CLIENTCOMMANDHANDLER_HPP_
 
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <entt/entt.hpp>
 
@@ -54,8 +56,19 @@ class ClientCommandHandler {
 		void sendBlockActivated(const glm::ivec4 &selectedBlock);
 		void sendBlockInvUpdate(Inventory &inventory);
 		void sendItemActivated(const glm::ivec4 &selectedBlock);
+		void sendPlayerAttackEntity(entt::entity entityID);
 		void sendChatMessage(const std::string &message);
 		void sendKeyPressed(u16 keyID);
+
+		// 请求服务端下发「局域网开放信息」（端口 + 本机 IP 列表）。
+		// 服务端回 LanInfo 包，结果缓存在 m_lanPort / m_lanAddresses。
+		void requestLanInfo();
+		bool isLanInfoRequested() const { return m_lanInfoRequested; }
+		void clearLanInfoRequest() { m_lanInfoRequested = false; }
+		// 清空缓存的局域网信息（重新打开界面时调用，避免用旧值）
+		void clearLanInfo() { m_lanPort = 0; m_lanAddresses.clear(); m_lanInfoRequested = false; }
+		u16 lanPort() const { return m_lanPort; }
+		const std::vector<std::string> &lanAddresses() const { return m_lanAddresses; }
 
 		void setupCallbacks();
 
@@ -79,6 +92,11 @@ class ClientCommandHandler {
 		bool m_isRegistryInitialized = false;
 
 		bool m_isSingleplayer = false;
+
+		// 局域网信息（/publish 与 ESC 菜单「开放局域网」共用）
+		bool m_lanInfoRequested = false;
+		u16 m_lanPort = 0;
+		std::vector<std::string> m_lanAddresses;
 };
 
 #endif // CLIENTCOMMANDHANDLER_HPP_

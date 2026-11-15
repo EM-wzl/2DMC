@@ -54,11 +54,33 @@ class TerrainGenerator {
 	private:
 		void fastNoiseGeneration(ServerChunk &chunk);
 
+		// Nether-only terrain decoration (lava lakes, basalt columns, glowstone
+		// clusters, soul sand patches). A no-op for every other dimension.
+		// Like generateMineshafts(), it is a pure function of (seed, world
+		// coordinates) and only writes inside the chunk it is given.
+		void generateNetherFeatures(ServerChunk &chunk) const;
+
 		// 3D mineshaft generation (overworld only).
 		// The geometry is a pure function of (seed, world coordinates), so every
 		// chunk independently carves the same corridors in the cells it owns and
 		// tunnels align across chunk borders without cross-chunk writes.
 		void generateMineshafts(ServerChunk &chunk) const;
+
+		// End-only structures: end city (tower) + end gateway (obsidian frame).
+		// A no-op for every other dimension (including dimensions that do not
+		// exist yet: only the runtime dimension string id is compared).
+		// Pure function of (seed, region cell), so chunks agree at their borders
+		// and nothing is ever written outside the chunk being generated.
+		void generateEndCity(ServerChunk &chunk) const;
+
+	// 下界要塞：桥廊 + 塔楼（仅 default:nether）
+	void generateNetherFortress(ServerChunk &chunk) const;
+
+	// 下界隧道网络 + 大型岩浆湖（仅 default:nether）
+	void generateNetherTunnels(ServerChunk &chunk) const;
+
+	// 村庄：房屋 + 水井 + 道路（仅 default:overworld）
+	void generateVillages(ServerChunk &chunk) const;
 
 		// TEMP: verification instrumentation, enabled with 2DMC_MINESHAFT_CHECK=1.
 		void logMineshaftCheck(ServerChunk &chunk) const;

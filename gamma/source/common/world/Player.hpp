@@ -59,6 +59,15 @@ class Player : public ISerializable {
 
 		u16 clientID() const { return m_clientID; }
 
+		// 生命值与游戏模式（服务端权威；不写入存档，旧存档兼容）
+		u8 health() const { return m_health; }
+		u8 maxHealth() const { return m_maxHealth; }
+		u8 gamemode() const { return m_gamemode; } // 0 = 创造, 1 = 生存
+
+		void setHealth(u8 health) { m_health = health; }
+		void setMaxHealth(u8 maxHealth) { m_maxHealth = maxHealth; }
+		void setGamemode(u8 gamemode) { m_gamemode = gamemode; }
+
 		Inventory &inventory() { return m_inventory; }
 
 		void setName(const std::string &name) { m_name = name; }
@@ -69,7 +78,14 @@ class Player : public ISerializable {
 
 		const FloatBox &hitbox() const { return m_hitbox; }
 
-		const ItemStack &heldItemStack() { return m_inventory.getStack(m_heldItemSlot, 0); }
+		// m_heldItemSlot 默认 -1（尚未收到 PlayerHeldItemChanged 时）。
+		// 直接传给 getStack 会转成 u16(65535) 再 m_items.at() → 越界抛异常，
+		// 曾导致"攻击生物时服务端崩溃"。这里做槽位范围保护，越界时返回空栈。
+		const ItemStack &heldItemStack() {
+			if (m_heldItemSlot < 0 || m_heldItemSlot >= 9)
+				return ItemStack::Empty;
+			return m_inventory.getStack(m_heldItemSlot, 0);
+		}
 		s8 heldItemSlot() const { return m_heldItemSlot; }
 		void setHeldItemSlot(u8 heldItemSlot) { m_heldItemSlot = heldItemSlot; }
 
@@ -89,6 +105,13 @@ class Player : public ISerializable {
 		float m_viewAngleRoll = 0;
 
 		u16 m_clientID = 0;
+
+		// 生命值与游戏模式（beta 命令系统移植：/heal /life /kill /gamemode）
+		// 刻意不参与 serialize/deserialize：旧存档没有这两个字段，追加会破坏
+		// 存档兼容性；每次进入世界按默认值初始化即可。
+		u8 m_health = 20;
+		u8 m_maxHealth = 20;
+		u8 m_gamemode = 1;
 
 		Inventory m_inventory{9, 4};
 

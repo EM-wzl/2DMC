@@ -59,6 +59,14 @@ class EntityWrapper {
 		// 实体是否仍存活（on_tick 里 despawn 其他实体后，缓存的 wrapper 需先检查）
 		bool isValid() const { return m_registry.valid(m_id); }
 
+		// 血量（HealthComponent 缺失时返回默认值，不崩溃）
+		int getHealth() const;
+		int getMaxHealth() const;
+		// 造成伤害：扣血、置 hurtTimer 闪红；血量可降到 0（生物死亡）
+		void damage(int amount);
+		// 血量是否已归零（调用方据此移除实体）
+		bool isDead() const;
+
 		static void initUsertype(sol::state &lua);
 
 	private:

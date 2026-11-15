@@ -31,11 +31,12 @@
 #include "client/states/InterfaceState.hpp"
 
 class Client;
+class ClientCommandHandler;
 struct GuiScaleChangedEvent;
 
 class PauseMenuState : public InterfaceState {
 	public:
-		PauseMenuState(Client &client, DrawableState *parent = nullptr);
+		PauseMenuState(Client &client, ClientCommandHandler &clientCommandHandler, DrawableState *parent = nullptr);
 
 		void init() override;
 
@@ -48,9 +49,10 @@ class PauseMenuState : public InterfaceState {
 
 		void draw(RenderTarget &target, RenderStates states) const override;
 
-		MenuWidget m_menuWidget{1, 4};
+		MenuWidget m_menuWidget{1, 5};
 
 		Client &m_client;
+		ClientCommandHandler &m_clientCommandHandler;
 };
 
 #endif // PAUSEMENUSTATE_HPP_

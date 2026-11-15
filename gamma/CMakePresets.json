@@ -1,0 +1,135 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "displayName": "Base (shared settings)",
+      "description": "Shared settings for every platform. Dependencies are still vendored under external/ (no vcpkg yet), so a plain 'cmake --preset <name>' is enough to configure.",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "OM_BUILD_TESTS": "ON",
+        "GIT_SUBMODULE": "ON",
+        "OM_SHADERS_COPY_TO_SOURCE_TREE": "OFF"
+      }
+    },
+    {
+      "name": "win-mingw",
+      "inherits": "base",
+      "displayName": "Windows / MinGW-w64 (Ninja)",
+      "description": "Ninja + MinGW-w64 g++ (the same toolchain gamma/build.bat uses). Requires 'gcc', 'g++' and 'ninja' in PATH (e.g. C:/mingw64/bin).",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "win-msvc",
+      "inherits": "base",
+      "displayName": "Windows / MSVC (Ninja)",
+      "description": "Ninja + MSVC. Run from a Visual Studio Developer PowerShell (vcvars64) so that 'cl' is in PATH.",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "inherits": "base",
+      "displayName": "Linux / GCC (Ninja)",
+      "description": "Ninja + GCC. Requires 'gcc', 'g++' and 'ninja' in PATH.",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "macos-clang",
+      "inherits": "base",
+      "displayName": "macOS / Clang arm64 (Ninja)",
+      "description": "Ninja + Apple Clang, arm64 (Apple Silicon). Requires 'clang', 'clang++' and 'ninja' in PATH; macOS shaders are compiled as Metal + SPIR-V by resources/shaders/CMakeLists.txt. Deployment target 11.0 is the minimum for arm64 and guarantees bgfx's Metal backend (bgfx requires macOS >= 10.11 for Metal).",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "architecture": {
+        "value": "arm64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-mingw",
+      "configurePreset": "win-mingw",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "win-msvc",
+      "configurePreset": "win-msvc",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos-clang",
+      "configurePreset": "macos-clang",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    }
+  ]
+}

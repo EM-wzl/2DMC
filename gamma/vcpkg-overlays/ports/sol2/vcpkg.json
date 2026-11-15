@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "sol2",
+  "version": "3.2.3-2dmc",
+  "description": "C++ <-> Lua binding (2DMC patched: guard MinGW-only optional<T&>::emplace fix)",
+  "homepage": "https://github.com/ThePhD/sol2",
+  "license": "MIT",
+  "supports": "windows | linux | osx",
+  "dependencies": [
+    "lua"
+  ]
+}

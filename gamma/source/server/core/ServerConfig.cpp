@@ -41,9 +41,32 @@ u16 ServerConfig::maxItemStackSize = 64;
 u8 ServerConfig::renderDistance = 8;
 
 // Mod-defined options
-std::unordered_map<std::string, sol::object> ServerConfig::options;
+std::unordered_map<std::string, ServerConfig::OptionValue> ServerConfig::options;
+
+// 用户显式设置过的选项（配置文件里存在，或被 /option 命令改过）。
+// 用来区分「mod 声明的默认值」和「玩家想要的配置」——见 ServerConfig.hpp 的说明。
+std::unordered_map<std::string, ServerConfig::OptionValue> ServerConfig::userOptions;
+
+bool ServerConfig::isUserDefined(const std::string &name) {
+	return userOptions.find(name) != userOptions.end();
+}
 
 static sol::state lua;
+
+// 把任意 Lua 值转成与 Lua state 无关的 OptionValue。
+// config/server.lua 是在上面这个临时 sol::state 里解析的，若把它的
+// sol::object 直接存下来，之后返回给游戏 Lua（另一个 state）会得到 nil。
+static ServerConfig::OptionValue toOptionValue(const sol::object &value) {
+	if (!value.valid())
+		return std::monostate{};
+
+	switch (value.get_type()) {
+		case sol::type::boolean: return value.as<bool>();
+		case sol::type::number:  return value.as<double>();
+		case sol::type::string:  return value.as<std::string>();
+		default:                 return std::monostate{};
+	}
+}
 
 void ServerConfig::loadConfigFromFile(const char *file) {
 	if (fs::exists(file)) {
@@ -57,7 +80,13 @@ void ServerConfig::loadConfigFromFile(const char *file) {
 
 			if (lua["mod_options"].valid() && lua["mod_options"].get_type() == sol::type::table) {
 				for (auto &it : lua["mod_options"].get<sol::table>()) {
-					options.emplace(it.first.as<std::string>(), it.second);
+					const std::string key = it.first.as<std::string>();
+					const OptionValue value = toOptionValue(it.second);
+
+					// 配置文件里存在的键 = 玩家当前配置意图，
+					// 优先于 mod 声明的默认值（mod 加载时会用 insert_or_assign）。
+					options.insert_or_assign(key, value);
+					userOptions.insert_or_assign(key, value);
 				}
 			}
 
@@ -76,18 +105,23 @@ void ServerConfig::saveConfigToFile(const char *filename) {
 	file << "render_distance = " << (u16)renderDistance << std::endl;
 	file << "mod_options = {" << std::endl;
 
-	for (auto &it : options) {
+	// 只写「用户显式设置过」的选项。
+	//
+	// mod 声明的默认值不写进文件：它们每次启动都由 mod 重新声明，
+	// 写进去会让陈旧的旧值在下次启动时压过新的默认值
+	// （例如 mod 把生物上限从 40 改成 12，却因为文件里还留着 40 而不生效）。
+	// 而用户改过的值必须写进去，否则重启就丢了。
+	for (auto &it : userOptions) {
 		file << "\t[\"" << it.first << "\"] = ";
 
-		if (it.second.get_type() == sol::type::boolean) {
-			bool value = it.second.as<bool>();
-			file << (value ? "true" : "false");
+		if (std::holds_alternative<bool>(it.second)) {
+			file << (std::get<bool>(it.second) ? "true" : "false");
 		}
-		else if (it.second.get_type() == sol::type::number) {
-			file << it.second.as<double>();
+		else if (std::holds_alternative<double>(it.second)) {
+			file << std::get<double>(it.second);
 		}
-		else if (it.second.get_type() == sol::type::string) {
-			file << it.second.as<std::string>();
+		else if (std::holds_alternative<std::string>(it.second)) {
+			file << "\"" << std::get<std::string>(it.second) << "\"";
 		}
 		else {
 			file << "nil";
@@ -104,11 +138,13 @@ bool ServerConfig::assignOption(const std::string &name, const std::string &valu
 	if (it != options.end()) {
 		try {
 			sol::object object = lua.load("return " + value)().get<sol::object>();
-			if (object.valid()
-				&& (object.get_type() == sol::type::boolean
-				 || object.get_type() == sol::type::number
-				 || object.get_type() == sol::type::string)) {
-				it->second = object;
+			OptionValue converted = toOptionValue(object);
+			if (!std::holds_alternative<std::monostate>(converted)) {
+				it->second = converted;
+
+				// /option 命令改过的值 = 玩家显式设置，
+				// 后续 mod 加载默认值时不能覆盖它，且会被保存到 config/server.lua。
+				userOptions.insert_or_assign(name, converted);
 				return true;
 			}
 		}

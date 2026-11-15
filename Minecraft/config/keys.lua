@@ -47,12 +47,12 @@ keys = {
 		name = "Block info toggle",
 		value = "P"
 	},
-	["creative_inventory:creative_inventory"] = {
-		name = "创造模式物品栏",
-		value = "H"
-	},
 	["default:inventory"] = {
 		name = "背包",
 		value = "E"
+	},
+	["creative_inventory:creative_inventory"] = {
+		name = "创造模式物品栏",
+		value = "H"
 	},
 }

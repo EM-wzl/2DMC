@@ -51,16 +51,44 @@ class ChatCommandHandler {
 		void timeCommand(const std::vector<std::string> &command, ClientInfo &client) const;
 		void tpCommand(const std::vector<std::string> &command, ClientInfo &client) const;
 		void tpsCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void publishCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+
+		// 控制台版（beta 1.6 / beta 2.x）命令移植
+		void giveCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void healCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void lifeCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void killCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void gamemodeCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void clearCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void summonCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void cheatCommand(const std::vector<std::string> &command, ClientInfo &client) const;
+		void dimensionCommand(const std::vector<std::string> &command, ClientInfo &client) const;
 
 		ServerCommandHandler &m_server;
 
 		std::map<std::string, CommandCallback> m_commands = {
-			{"help",   &ChatCommandHandler::helpCommand},
-			{"option", &ChatCommandHandler::optionCommand},
-			{"stop",   &ChatCommandHandler::stopCommand},
-			{"time",   &ChatCommandHandler::timeCommand},
-			{"tp",     &ChatCommandHandler::tpCommand},
-			{"tps",    &ChatCommandHandler::tpsCommand},
+			{"help",     &ChatCommandHandler::helpCommand},
+			{"option",   &ChatCommandHandler::optionCommand},
+			{"stop",     &ChatCommandHandler::stopCommand},
+			{"time",     &ChatCommandHandler::timeCommand},
+			{"tp",       &ChatCommandHandler::tpCommand},
+			{"tps",      &ChatCommandHandler::tpsCommand},
+
+			// 开放局域网（Open to LAN）：聊天栏输出本机 IP:端口，方便朋友加入
+			{"publish",  &ChatCommandHandler::publishCommand},
+			{"openlan",  &ChatCommandHandler::publishCommand},
+			{"lan",      &ChatCommandHandler::publishCommand},
+
+			{"give",     &ChatCommandHandler::giveCommand},
+			{"heal",     &ChatCommandHandler::healCommand},
+			{"life",     &ChatCommandHandler::lifeCommand},
+			{"kill",     &ChatCommandHandler::killCommand},
+			{"gamemode", &ChatCommandHandler::gamemodeCommand},
+			{"clear",    &ChatCommandHandler::clearCommand},
+			{"summon",   &ChatCommandHandler::summonCommand},
+			{"cheat",    &ChatCommandHandler::cheatCommand},
+			{"EM_wzl",   &ChatCommandHandler::cheatCommand},
+			{"dimension", &ChatCommandHandler::dimensionCommand},
 		};
 };
 

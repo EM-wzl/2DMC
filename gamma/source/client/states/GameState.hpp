@@ -88,6 +88,14 @@ class GameState : public DrawableState {
 
 		Client m_client;
 
+		// 注意：m_world 必须在所有引用它的成员之前声明！
+		// C++ 按**声明顺序**初始化成员，而不是初始化列表顺序。
+		// 原代码把 m_world 放在最后（第 101 行），但 m_clientCommandHandler、
+		// m_hud、m_skybox 都在初始化列表里引用它 —— 那些成员拿到的是
+		// 「尚未构造的 ClientWorld」引用，属于未定义行为（可能偶发崩溃、
+		// 或 world 内部状态为垃圾值）。
+		ClientWorld m_world;
+
 		std::unordered_map<u16, PlayerBox> m_playerBoxes;
 
 		ClientCommandHandler m_clientCommandHandler{m_client, m_world, m_player, m_playerBoxes};
@@ -97,8 +105,6 @@ class GameState : public DrawableState {
 		TextureAtlas &m_textureAtlas;
 
 		Registry m_registry;
-
-		ClientWorld m_world;
 
 		KeyboardHandler *m_keyboardHandler;
 		bool m_areModKeysLoaded = false;

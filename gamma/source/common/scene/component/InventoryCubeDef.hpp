@@ -37,10 +37,12 @@
 struct InventoryCubeDef : public ISerializable {
 	float size = 1.f;
 	Vector3f origin{0, 0, 0};
+	// 部件相对实体旋转枢轴的偏移（在旋转之后施加，因此多部件在转身时保持刚性）
+	Vector3f offset{0, 0, 0};
 	std::string blockID{BLOCK_AIR};
 
-	void serialize(sf::Packet &packet) const override { packet << size << origin << blockID; }
-	void deserialize(sf::Packet &packet) override { packet >> size >> origin >> blockID; }
+	void serialize(sf::Packet &packet) const override { packet << size << origin << offset << blockID; }
+	void deserialize(sf::Packet &packet) override { packet >> size >> origin >> offset >> blockID; }
 };
 
 #endif // INVENTORYCUBEDEF_HPP_

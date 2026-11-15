@@ -27,6 +27,11 @@
 #ifndef HUD_HPP_
 #define HUD_HPP_
 
+#include <memory>
+#include <vector>
+
+#include <entt/entt.hpp>
+
 #include "client/hud/BlockCursor.hpp"
 #include "client/hud/BlockInfoWidget.hpp"
 #include "client/hud/Chat.hpp"
@@ -40,6 +45,8 @@
 #include "client/graphics/View.hpp"
 
 struct GuiScaleChangedEvent;
+
+class ClientCommandHandler;
 
 class HUD : public Transformable, public Drawable {
 	public:
@@ -63,8 +70,14 @@ class HUD : public Transformable, public Drawable {
 	private:
 		void draw(RenderTarget &target, RenderStates states) const override;
 
+		void updateMobHealthText();
+
+		// 其他玩家头顶名字：世界坐标 → 屏幕投影
+		void updatePlayerNameLabels();
+
 		ClientPlayer &m_player;
 		ClientWorld &m_world;
+		ClientCommandHandler &m_clientCommandHandler;
 
 		Shader m_shader;
 		View m_view;
@@ -81,6 +94,18 @@ class HUD : public Transformable, public Drawable {
 		BlockInfoWidget m_blockInfoWidget;
 
 		Text m_fpsText;
+		Text m_healthText;      // 玩家自己的 HP
+		Text m_mobHealthText;   // 准星指向的生物 HP
+		entt::entity m_mobHealthTarget = entt::null; // 当前指向的生物（左键攻击用）
+
+		// 其他玩家头顶的名字（多人游戏时显示）。
+		// 用 clientID 作为稳定 key，Text 缓存复用，避免每帧重建。
+		// 注意：Text 不可移动/拷贝，所以用 unique_ptr 存，容器才支持 erase。
+		struct PlayerNameLabel {
+			u16 clientID = 0;
+			std::unique_ptr<Text> text;
+		};
+		std::vector<std::unique_ptr<PlayerNameLabel>> m_playerNameLabels;
 
 		Chat m_chat;
 

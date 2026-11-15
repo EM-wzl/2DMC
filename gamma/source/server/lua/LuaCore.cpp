@@ -32,7 +32,6 @@
 void LuaCore::addListener(LuaEventType eventType, const sol::function &listener) {
 	m_listeners.emplace(eventType, listener);
 }
-
 void LuaCore::initUsertype(sol::state &lua) {
 	lua["Event"] = lua.create_table_with(
 		"BlockPlaced", LuaEventType::BlockPlaced,
@@ -41,7 +40,12 @@ void LuaCore::initUsertype(sol::state &lua) {
 
 		"ItemActivated", LuaEventType::ItemActivated,
 
-		"PlayerConnected", LuaEventType::PlayerConnected
+		"PlayerConnected", LuaEventType::PlayerConnected,
+
+		// 生物被击杀（掉落表在 Lua 侧配置）
+		"EntityKilled", LuaEventType::EntityKilled,
+
+		"ServerTick", LuaEventType::ServerTick
 	);
 
 	lua.new_usertype<LuaCore>("LuaCore",
@@ -49,14 +53,27 @@ void LuaCore::initUsertype(sol::state &lua) {
 		"mod_loader", &LuaCore::m_modLoader,
 
 		"add_listener", &LuaCore::addListener,
-		"get_config", [&](const std::string &option) {
+		// 在调用方的 Lua state 里重建选项值：ServerConfig::options 存的是
+		// 与 state 无关的纯 C++ 值（见 ServerConfig.hpp 的说明）。
+		// 注意：必须把 self（LuaCore&）作为第一个参数显式列出，否则 Lua 用
+		// 冒号语法 openminer:get_config("x") 时 self 会占掉 option 的位置，
+		// 导致 option 变成空串（曾表现为 "Option \"\" doesn't exist"）。
+		"get_config", [](LuaCore &, const std::string &option, sol::this_state s) {
 			auto it = ServerConfig::options.find(option);
 			if (it == ServerConfig::options.end()) {
 				logWarning() << "Option" << option << "doesn't exist";
 				return sol::object{};
 			}
 
-			return it->second;
+			sol::state_view state(s);
+			const ServerConfig::OptionValue &value = it->second;
+			if (std::holds_alternative<bool>(value))
+				return sol::object{state, sol::in_place_type<bool>, std::get<bool>(value)};
+			if (std::holds_alternative<double>(value))
+				return sol::object{state, sol::in_place_type<double>, std::get<double>(value)};
+			if (std::holds_alternative<std::string>(value))
+				return sol::object{state, sol::in_place_type<std::string>, std::get<std::string>(value)};
+			return sol::object{};
 		}
 	);
 }

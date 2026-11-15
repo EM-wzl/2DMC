@@ -56,6 +56,12 @@ namespace Network {
 		PlayerHeldItemChanged = 0x37,
 		PlayerReady           = 0x38,
 		PlayerChunkPosUpdate  = 0x39,
+		PlayerHealth          = 0x3A,
+		PlayerGamemode        = 0x3B,
+		PlayerAttackEntity    = 0x3C,
+		// 客户端请求/服务端下发「局域网开放信息」（端口 + 本机 IP 列表）
+		LanInfoRequest        = 0x3D,
+		LanInfo               = 0x3E,
 
 		BlockUpdate           = 0x40,
 		BlockActivated        = 0x41,
@@ -69,6 +75,7 @@ namespace Network {
 		EntityRotation        = 0x53,
 		EntityAnimation       = 0x54,
 		EntityDrawableDef     = 0x55,
+		EntityHealth          = 0x56,
 
 		ItemActivated         = 0x60,
 

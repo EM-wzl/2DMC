@@ -109,3 +109,11 @@ void Heightmap::setSeed(s32 seed) {
 	noise3.SetSeed(seed);
 	noise4.SetSeed(seed);
 }
+
+// Please update 'docs/lua-api-cpp.md' if you change this
+void Heightmap::initUsertype(sol::state &lua) {
+	lua.new_usertype<Heightmap>("Heightmap",
+		"get_highest_block_at", &Heightmap::getHighestBlockAt,
+		"get_highest_chunk_at", &Heightmap::getHighestChunkAt
+	);
+}

@@ -40,8 +40,10 @@
 
 namespace {
 	// 云片尺寸（方块）与高度
+	// 注意：本引擎是 Z-up（Z 为竖直高度轴，见 Player/ClientPlayer 的 eye height、
+	// 重力与 BlockMesher 的 coord3d[2]），所以云平面水平铺在 X/Y 上、高度用 Z。
 	constexpr float CELL_SIZE = 16.f;
-	constexpr float CLOUD_Y   = 128.f;
+	constexpr float CLOUD_Z   = 128.f;
 
 	// 以玩家为中心生成的格子半径（每边 2*HALF+1 个格子）
 	constexpr int HALF = 48;
@@ -121,7 +123,7 @@ void Clouds::draw(RenderTarget &target, RenderStates states) const {
 	const double A = double(DRIFT_SPEED) * t - camPos.x;
 
 	const int baseCi = (int)std::floor(-A / double(CELL_SIZE));
-	const int baseCj = (int)std::floor(camPos.z / double(CELL_SIZE));
+	const int baseCj = (int)std::floor(camPos.y / double(CELL_SIZE));
 
 	if (baseCi != m_baseCi || baseCj != m_baseCj) {
 		rebuild(baseCi, baseCj);
@@ -132,19 +134,17 @@ void Clouds::draw(RenderTarget &target, RenderStates states) const {
 	if (m_vertexCount == 0)
 		return;
 
-	logInfo() << "CLOUDS-DEBUG: verts" << m_vertexCount << "baseCi" << baseCi << "baseCj" << baseCj
-	          << "fracX" << fracX << "fracZ" << fracZ << "camY" << camPos.y;
-
+	// 相机相对坐标（Z-up）：X 为漂移方向，Y 为另一水平轴，Z 为高度
 	const double fracX = -A - double(baseCi) * double(CELL_SIZE);
-	const double fracZ = camPos.z - double(baseCj) * double(CELL_SIZE);
+	const double fracY = camPos.y - double(baseCj) * double(CELL_SIZE);
 
 	states.shader = &m_shader;
 	states.texture = &m_whiteTexture;
 	states.isCullFaceEnabled = false;
 	states.isDepthTestEnabled = true;
 
-	// 平移到相机相对坐标（x/z 用格内小数部分，y 用相机高度）
-	states.transform.translate(float(-fracX), float(-camPos.y), float(-fracZ));
+	// 平移到相机相对坐标（x/y 用格内小数部分，z 为相机高度）
+	states.transform.translate(float(-fracX), float(-fracY), float(-camPos.z));
 
 	target.draw(m_vbo, 0, m_vertexCount, states);
 }
@@ -167,15 +167,16 @@ void Clouds::rebuild(int baseCi, int baseCj) const {
 
 			const float x0 = float(ci - baseCi) * CELL_SIZE;
 			const float x1 = x0 + CELL_SIZE;
-			const float z0 = float(cj - baseCj) * CELL_SIZE;
-			const float z1 = z0 + CELL_SIZE;
+			const float y0 = float(cj - baseCj) * CELL_SIZE;
+			const float y1 = y0 + CELL_SIZE;
 
-			// 一个平铺的四边面片（从下方可见，因此关闭了背面剔除）
+			// 一个平铺的四边面片，水平位于 z = CLOUD_Z 高度（从下方可见，
+			// 因此绘制时关闭了背面剔除）
 			const float corners[4][3] = {
-				{x0, CLOUD_Y, z0},
-				{x1, CLOUD_Y, z0},
-				{x0, CLOUD_Y, z1},
-				{x1, CLOUD_Y, z1},
+				{x0, y0, CLOUD_Z},
+				{x1, y0, CLOUD_Z},
+				{x0, y1, CLOUD_Z},
+				{x1, y1, CLOUD_Z},
 			};
 			const int order[6] = {0, 2, 1, 1, 2, 3};
 
