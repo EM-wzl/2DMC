@@ -5,6 +5,78 @@
   const { B, I, C, Core, DEF } = DMC;
   const { clamp, dist, makeRNG } = Core;
 
+  /* ============ 共享 AABB 物理（玩家与生物同一套，避免穿墙/卡方块） ============ */
+  function boxOf(e) {
+    return { x0: e.x - e.w / 2, x1: e.x + e.w / 2,
+             y0: e.y - e.h / 2, y1: e.y + e.h / 2 };
+  }
+  function hitsSolid(world, b) {
+    const x0 = Math.floor(b.x0 + 0.001), x1 = Math.floor(b.x1 - 0.001);
+    const y0 = Math.floor(b.y0 + 0.001), y1 = Math.floor(b.y1 - 0.001);
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++)
+        if (world.solid(x, y)) return true;
+    return false;
+  }
+  // 分轴、小步长推进；返回碰撞信息。noClip 用于创造模式飞行。
+  function moveAABB(ent, world, dx, dy, noClip) {
+    const r = { hitX: false, hitY: false, ground: false };
+    if (noClip) { ent.x += dx; ent.y += dy; return r; }
+    const STEP = 0.18;
+    const axisMove = (axis, delta) => {
+      const n = Math.max(1, Math.ceil(Math.abs(delta) / STEP));
+      const s = delta / n;
+      for (let i = 0; i < n; i++) {
+        const b = boxOf(ent);
+        if (axis === 0) { b.x0 += s; b.x1 += s; }
+        else { b.y0 += s; b.y1 += s; }
+        if (hitsSolid(world, b)) {
+          if (axis === 0) { r.hitX = true; ent.vx = 0; }
+          else { r.hitY = true; if (s > 0) r.ground = true; ent.vy = 0; }
+          return;
+        }
+        if (axis === 0) ent.x += s; else ent.y += s;
+      }
+    };
+    axisMove(0, dx);
+    axisMove(1, dy);
+    return r;
+  }
+  // 已经嵌进方块时把实体推回空气里；实在救不回来就返回 false（由调用方移除）
+  function unstick(ent, world) {
+    if (!hitsSolid(world, boxOf(ent))) return true;
+    const ox = ent.x, oy = ent.y;
+    for (const dir of [-1, 1]) {
+      for (let k = 1; k <= 16; k++) {
+        ent.y = oy + dir * k * 0.25;
+        if (!hitsSolid(world, boxOf(ent))) { ent.vy = 0; return true; }
+      }
+    }
+    ent.y = oy;
+    for (const dx of [-1.5, 1.5, -3, 3]) {
+      ent.x = ox + dx;
+      if (!hitsSolid(world, boxOf(ent))) { ent.vy = 0; return true; }
+    }
+    ent.x = ox; ent.y = oy;
+    return false;
+  }
+  // 找一个「头顶够高 + 脚下有支撑」的生成点，返回实体中心 y
+  function findSpawn(world, x, fromY, w, h) {
+    const x0 = Math.floor(x - w / 2), x1 = Math.floor(x + w / 2);
+    const start = clamp(Math.floor(fromY) - 6, 3, C.H - 8);
+    for (let sy = start; sy < C.H - 3; sy++) {
+      let support = true, clear = true;
+      for (let cx = x0; cx <= x1; cx++) {
+        if (!world.solid(cx, sy + 1)) support = false;
+        for (let cy = sy - Math.ceil(h) + 1; cy <= sy; cy++)
+          if (world.solid(cx, cy)) clear = false;
+      }
+      if (support && clear) return sy + 1 - h / 2 - 0.001;
+    }
+    return null;
+  }
+  const Physics = { boxOf, hitsSolid, moveAABB, unstick, findSpawn };
+
   /* ============ 玩家 ============ */
   class Player {
     constructor(x, y) {
@@ -27,40 +99,11 @@
       return { x0: this.x - this.w / 2, x1: this.x + this.w / 2,
                y0: this.y - this.h / 2, y1: this.y + this.h / 2 };
     }
-    static hitsSolid(world, b) {
-      const x0 = Math.floor(b.x0 + 0.001), x1 = Math.floor(b.x1 - 0.001);
-      const y0 = Math.floor(b.y0 + 0.001), y1 = Math.floor(b.y1 - 0.001);
-      for (let y = y0; y <= y1; y++)
-        for (let x = x0; x <= x1; x++)
-          if (world.solid(x, y)) return true;
-      return false;
-    }
+    static hitsSolid(world, b) { return hitsSolid(world, b); }
     move(world, dx, dy) {
-      if (this.fly && this.creative) { this.x += dx; this.y += dy; return; }
-      // 分轴推进，逐格消解
-      const stepX = (d) => {
-        const n = Math.ceil(Math.abs(d) / 0.25);
-        const s = d / Math.max(1, n);
-        for (let i = 0; i < n; i++) {
-          const nb = this.box(); nb.x0 += s; nb.x1 += s;
-          if (!Player.hitsSolid(world, nb)) this.x += s;
-          else { this.vx = 0; return; }
-        }
-      };
-      const stepY = (d) => {
-        const n = Math.ceil(Math.abs(d) / 0.25);
-        const s = d / Math.max(1, n);
-        for (let i = 0; i < n; i++) {
-          const nb = this.box(); nb.y0 += s; nb.y1 += s;
-          if (!Player.hitsSolid(world, nb)) this.y += s;
-          else {
-            if (s > 0) this.onGround = true;
-            this.vy = 0; return;
-          }
-        }
-      };
-      stepX(dx);
-      stepY(dy);
+      const r = moveAABB(this, world, dx, dy, !!(this.fly && this.creative));
+      if (r.ground) this.onGround = true;
+      return r;
     }
     update(world, input) {
       if (this.invuln > 0) this.invuln--;
@@ -68,23 +111,25 @@
       if (this.dead) return;
       const inWater = world.get(Math.floor(this.x), Math.floor(this.y)) === B.WATER;
       if (this.creative && this.fly) {
-        const sp = 0.24;
+        const sp = C.FLY_SPEED;
         this.vx = (input.right - input.left) * sp;
         this.vy = (input.down - input.jump) * sp;
         this.facing = this.vx < 0 ? -1 : this.vx > 0 ? 1 : this.facing;
         this.move(world, this.vx, this.vy);
         this.onGround = false;
       } else {
-        const accel = this.onGround ? 0.09 : 0.045;
-        const target = (input.right - input.left) * (inWater ? 0.10 : 0.19);
+        const accel = this.onGround ? 0.020 : 0.010;
+        const target = (input.right - input.left) *
+                       (inWater ? C.WATER_SPEED : C.WALK_SPEED);
         this.vx += clamp(target - this.vx, -accel, accel);
         this.vx *= this.onGround ? 0.80 : 0.94;
         if (input.left) this.facing = -1;
         if (input.right) this.facing = 1;
-        this.vy = Math.min(C.MAX_FALL, this.vy + (inWater ? C.GRAVITY * 0.35 : C.GRAVITY));
+        this.vy = Math.min(C.MAX_FALL,
+                           this.vy + (inWater ? C.GRAVITY * 0.35 : C.GRAVITY));
         if (inWater) this.vy *= 0.86;
-        if (input.jump && this.onGround) { this.vy = -8.1; this.onGround = false; }
-        if (input.jump && inWater) this.vy = -3.0;
+        if (input.jump && this.onGround) { this.vy = C.JUMP_V; this.onGround = false; }
+        if (input.jump && inWater) this.vy = C.WATER_JUMP;
         this.onGround = false;
         this.move(world, this.vx, this.vy);
       }
@@ -101,8 +146,8 @@
       if (this.invuln > 0 || this.creative) return false;
       this.life -= dmg;
       this.invuln = 40;
-      this.vx = (this.x < fromX ? -1 : 1) * 5;
-      this.vy = -5;
+      this.vx = (this.x < fromX ? -1 : 1) * C.KNOCK_X;
+      this.vy = C.KNOCK_Y;
       if (this.life <= 0) { this.life = 0; this.dead = true; }
       return true;
     }
@@ -144,7 +189,7 @@
       this.hp = d.hp; this.maxHp = d.hp;
       this.cd = 0; this.fuse = 0; this.wander = Math.random() * 200;
       this.facing = 1; this.held = 0; this.arche = Math.floor(Math.random() * 6);
-      this.hurtFlash = 0; this.dead = false;
+      this.hurtFlash = 0; this.dead = false; this.onGround = false;
     }
     get w() { return this.def.w; }
     get h() { return this.def.h; }
@@ -152,8 +197,6 @@
       if (this.dead) return;
       if (this.cd > 0) this.cd--;
       if (this.hurtFlash > 0) this.hurtFlash--;
-      const b = { x0: this.x - this.w / 2, x1: this.x + this.w / 2,
-                  y0: this.y - this.h / 2, y1: this.y + this.h / 2 };
       const distP = dist(this.x, this.y, player.x, player.y);
       const hostile = this.type !== 'sheep';
       let dir = 0;
@@ -164,24 +207,24 @@
         dir = this.facing;
         if (this.type === 'cube' && Math.random() < 0.02) dir = -dir;
       }
+      // 已经嵌进方块先推回空气里；救不回来就移除，避免永久卡住
+      if (!unstick(this, world)) { this.dead = true; return; }
       this.vx = dir * this.def.speed;
       this.facing = dir < 0 ? -1 : 1;
-      // 重力 + 碰撞（简化：脚下有方块就停）
-      this.vy = Math.min(11, this.vy + 0.4);
-      const footY = Math.floor(this.y + this.h / 2 + 0.05);
-      if (world.solid(Math.floor(this.x), footY) ||
-          world.solid(Math.floor(this.x - this.w / 2), footY) ||
-          world.solid(Math.floor(this.x + this.w / 2), footY)) {
-        this.vy = 0;
-        this.y = footY - this.h / 2 - 0.001;
-        if (dir !== 0 && world.solid(Math.floor(this.x + dir * 0.6), footY - 1) &&
-            !world.solid(Math.floor(this.x + dir * 0.6), footY - 2)) this.vy = -5.5;
+      // 与玩家共用同一套 AABB 分轴碰撞，速度单位统一为格/帧
+      this.vy = Math.min(C.MAX_FALL, this.vy + C.MOB_GRAVITY);
+      const r = moveAABB(this, world, this.vx, this.vy, false);
+      this.onGround = r.ground;
+      if (r.hitX && this.onGround && dir !== 0) {
+        // 前方正好是 1 格台阶 → 起跳越过去
+        const ahead = Math.floor(this.x + dir * (this.w / 2 + 0.35));
+        const foot = Math.floor(this.y + this.h / 2 + 0.05);
+        if (world.solid(ahead, foot) && !world.solid(ahead, foot - 1) &&
+            !world.solid(ahead, foot - 2)) this.vy = C.MOB_JUMP;
+        else this.facing *= -1;
       }
-      let nx = this.x + this.vx;
-      if (world.solid(Math.floor(nx + (this.vx > 0 ? this.w / 2 : -this.w / 2)),
-                      Math.floor(this.y))) { this.vx = 0; nx = this.x; this.facing *= -1; }
-      this.x = clamp(nx, 2, C.W - 2);
-      this.y = clamp(this.y + this.vy, 2, C.H - 2);
+      this.x = clamp(this.x, 2, C.W - 2);
+      this.y = clamp(this.y, 2, C.H - 2);
       // 苦力怕引信
       if (this.type === 'creeper' && distP < 2.2) {
         this.fuse++;
@@ -208,7 +251,7 @@
     update(world, player) {
       this.life--;
       this.x += this.vx; this.y += this.vy;
-      if (this.type === 'arrow') this.vy += 0.035;
+      if (this.type === 'arrow') this.vy += 0.002;
       if (this.life <= 0 || !Core.inWorld(this.x, this.y)) { this.dead = true; return; }
       if (world.solid(Math.floor(this.x), Math.floor(this.y)) &&
           this.type !== 'breath') { this.dead = true; return; }
@@ -383,7 +426,7 @@
   }
 
   DMC.Entities = {
-    Player, Mob, MOB_DEFS, Projectile, EnderDragon,
+    Player, Mob, MOB_DEFS, Projectile, EnderDragon, Physics,
     followChain, constrainChain, flyTo, DRAGON_HP, SEGMENT_COUNT
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

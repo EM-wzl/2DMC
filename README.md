@@ -89,7 +89,9 @@ web/
   test/selftest.cjs       Node 自检（vm 加载纯逻辑模块）
   test/serve.cjs          本地静态服务器
   test/browser-check.html headless 浏览器加载自检
-  test/screenshot*.html   截图验证页
+  test/playtest.html      自动试玩：真实键盘事件逐帧跑主循环
+  test/playtest-shot.html 跳跃 / 生物站位的视觉验证页
+  test/screenshot*.html   主世界 / 末地截图验证页
 ```
 
 `core / items / inventory / world / entities / selftest` 是纯逻辑模块，不碰 DOM，因此可以同时被浏览器和 Node 加载。
@@ -97,13 +99,38 @@ web/
 ## 自检
 
 ```bash
-node test/selftest.cjs              # 52 项
+node test/selftest.cjs              # 62 项
 node test/selftest.cjs --verbose    # 打印明细
 ```
 
-52 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、玩家重力与落地。
+62 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、**玩家重力/落地/单次跳跃高度与滞空/行走速度**、**生物生成点校验、跑动 400 帧不卡方块、不掉出世界、会走动、被埋能自动脱困**。
 
 游戏内输入 `/selftest` 会跑同一套断言并把结果显示在聊天区。
+
+## 自动试玩
+
+`test/playtest.html` 会在真实浏览器里加载游戏、派发**真实键盘事件**（空格跳跃、D 行走），
+显式驱动真实主循环逐帧运行，并生成 12 只生物跑 400 帧：
+
+```bash
+node test/serve.cjs 8765
+# Chrome headless:
+chrome --headless=new --virtual-time-budget=15000 --dump-dom \
+  http://127.0.0.1:8765/test/playtest.html
+```
+
+实测输出（修复后）：
+
+```
+jump_rise=1.60格 | tap_air_frames=24 | tap_rise=1.55格 | landed_back=true
+walk_dx=4.48格 | mob_stuck=0/6094 | mob_oob=0 | mobs_moved=12
+dragon_segs=14 | RESULT=PASS
+```
+
+> 修复前跳跃初速是 `-8.1 格/帧`、重力 `0.44 格/帧²`，一次跳跃能升约 **74 格**（看起来像飞）；
+> 生物每帧下坠 `0.4 格` 且只检测单点碰撞，会穿进方块。现在所有速度统一为「格/帧」，
+> 玩家与生物共用同一套 AABB 分轴碰撞，生成点会校验头顶空间与脚下支撑，
+> 已经嵌进方块的生物每帧会尝试脱困。
 
 ## 与 C++ 主线的对照
 

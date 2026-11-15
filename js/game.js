@@ -167,7 +167,8 @@
             dist(p.x, p.y, m.x, m.y) < 3.6) {
           if (p.attackCd <= 0) {
             const killed = m.hurt(p.attackDamage(this.inv) + (this.enchantBonus || 0));
-            m.vx = (m.x > p.x ? 1 : -1) * 3; m.vy = -3;
+            m.vx = (m.x > p.x ? 1 : -1) * C.KNOCK_X * 1.2;
+            m.vy = C.KNOCK_Y;
             p.attackCd = 22;
             this.renderer.emit(m.x, m.y, '#ff6666', 6);
             if (killed) this.killMob(m);
@@ -355,11 +356,13 @@
         ? ['zombie', 'skeleton', 'creeper', 'spider', 'enderman', 'sheep', 'cube']
         : ['piglin', 'cube', 'cube'];
       const type = types[Math.floor(Math.random() * types.length)];
-      const x = Math.floor(p.x + (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 20));
+      const d = Entities.MOB_DEFS[type];
+      const x = Math.floor(p.x + (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 20)) + 0.5;
       if (x < 4 || x > C.W - 4) return;
-      const y = w.groundY(x, clamp(p.y - 6, 10, C.H - 12));
-      if (w.solid(x, y) || !w.solid(x, y + 1)) return;
-      this.mobs.push(new Entities.Mob(type, x + 0.5, y));
+      // 只生成在「头顶够高 + 脚下有支撑」的位置，避免一出生就嵌在方块里
+      const y = Entities.Physics.findSpawn(w, x, clamp(p.y - 6, 10, C.H - 12), d.w, d.h);
+      if (y === null || dist(x, y, p.x, p.y) > 46) return;
+      this.mobs.push(new Entities.Mob(type, x, y));
     }
     updateDrops() {
       for (let i = this.drops.length - 1; i >= 0; i--) {
@@ -436,8 +439,12 @@
         case 'spawn': {
           const t = (args[0] || 'zombie').toLowerCase();
           if (!Entities.MOB_DEFS[t]) { g.ui.log('未知生物：' + t); break; }
-          g.mobs.push(new Entities.Mob(t, g.player.x + 3, g.player.y - 1));
-          g.ui.toast('生成 ' + Entities.MOB_DEFS[t].name); break;
+          const d = Entities.MOB_DEFS[t];
+          const sx = g.player.x + 3;
+          const sy = Entities.Physics.findSpawn(g.world, sx, g.player.y, d.w, d.h);
+          if (sy === null) { g.ui.log('附近没有足够空间生成生物'); break; }
+          g.mobs.push(new Entities.Mob(t, sx, sy));
+          g.ui.toast('生成 ' + d.name); break;
         }
         case 'dragon':
           if (g.world.dim !== 2) { g.backPos = { x: g.player.x, y: g.player.y }; g.switchDim(2); }

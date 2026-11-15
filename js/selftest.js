@@ -230,16 +230,80 @@
       ck(deaths > 0 && !d.alive && world.dragonDead, '死亡回调 + 清状态');
     }
 
-    /* ---- 6. 玩家物理 ---- */
+    /* ---- 6. 玩家物理 / 跳跃不是飞行 ---- */
     {
       const w = new World(7); w.generateOverworld();
       const p = new Entities.Player(C.W / 2, 40);
       const zero = { left: 0, right: 0, jump: 0, up: 0, down: 0 };
-      let y0 = p.y;
+      const y0 = p.y;
       for (let i = 0; i < 40; i++) p.update(w, zero);
       ck(p.y > y0, '重力生效');
       for (let i = 0; i < 300; i++) p.update(w, zero);
       ck(p.y < C.H - 2, '落地不会穿出世界');
+      ck(p.onGround, '落地后 onGround 为真');
+
+      // 单次跳跃：高度必须是「格」级而不是「飞」
+      const groundY = p.y;
+      p.update(w, Object.assign({}, zero, { jump: 1 }));
+      let top = p.y;
+      let airborne = 0;
+      for (let i = 0; i < 150; i++) {
+        p.update(w, zero);
+        top = Math.min(top, p.y);
+        if (!p.onGround) airborne++;
+      }
+      const rise = groundY - top;
+      ck(rise > 0.6 && rise < 2.6,
+         '单次跳跃高度 ' + rise.toFixed(2) + ' 格（0.6~2.6，不能像飞行）');
+      ck(airborne > 8 && airborne < 60, '滞空 ' + airborne + ' 帧（不是长时间漂浮）');
+      ck(Math.abs(p.y - groundY) < 0.6, '跳跃后回到地面');
+
+      // 行走速度也是格/帧量级
+      const walkStart = p.x;
+      for (let i = 0; i < 60; i++) p.update(w, Object.assign({}, zero, { right: 1 }));
+      const walked = p.x - walkStart;
+      ck(walked > 0.5 && walked < 10, '行走 60 帧位移 ' + walked.toFixed(2) + ' 格');
+    }
+
+    /* ---- 7. 生物不卡方块 ---- */
+    {
+      const w = new World(31); w.generateOverworld();
+      const p0 = new Entities.Player(C.W / 2, 40);
+      const zero = { left: 0, right: 0, jump: 0, up: 0, down: 0 };
+      for (let i = 0; i < 300; i++) p0.update(w, zero);
+      const player = new Entities.Player(p0.x, p0.y);
+      player.creative = true;
+      const api = { explode() {} };
+      const types = ['zombie', 'skeleton', 'creeper', 'spider', 'enderman', 'cube', 'sheep'];
+      const mobs = [];
+      for (let i = 0; i < 12; i++) {
+        const t = types[i % types.length];
+        const d = Entities.MOB_DEFS[t];
+        const x = Math.floor(p0.x) - 30 + i * 5 + 0.5;
+        const y = Entities.Physics.findSpawn(w, x, p0.y, d.w, d.h);
+        if (y !== null) mobs.push(new Entities.Mob(t, x, y));
+      }
+      ck(mobs.length >= 8, '生物生成点（头顶够高 + 脚下有支撑）' + mobs.length + '/12');
+      let stuck = 0, oob = 0, moved = 0;
+      const startX = mobs.map(m => m.x);
+      for (let f = 0; f < 400; f++) {
+        for (const m of mobs) {
+          m.update(w, player, api);
+          if (Entities.Physics.hitsSolid(w, Entities.Physics.boxOf(m))) stuck++;
+          if (m.y < 1 || m.y > C.H - 1 || m.x < 1 || m.x > C.W - 1) oob++;
+        }
+      }
+      eq(stuck, 0, '12 只生物跑动 400 帧，0 帧出现卡在方块里');
+      eq(oob, 0, '生物不会掉出世界');
+      mobs.forEach((m, i) => { if (Math.abs(m.x - startX[i]) > 0.5) moved++; });
+      ck(moved >= 4, '生物确实会走动（' + moved + '/12）');
+
+      // 故意把生物埋进方块，验证 unstick 自救
+      const buried = new Entities.Mob('zombie', Math.floor(p0.x) + 0.5, p0.y);
+      w.set(Math.floor(buried.x), Math.floor(buried.y), B.STONE);
+      const ok = Entities.Physics.unstick(buried, w);
+      ck(ok && !Entities.Physics.hitsSolid(w, Entities.Physics.boxOf(buried)),
+         '被方块埋住的生物能自动脱困');
     }
 
     return { passed: pass, failed: fail, lines, ok: fail === 0 };
