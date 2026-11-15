@@ -27,6 +27,19 @@
       this.dragon = new Entities.EnderDragon(this.world);
       this.lan = new LAN(this);
       this.ui = new UI(this);
+      // 项目内的原版贴图包（Default-Java-26.2 资源包 + 2DMC 自有 tiles）
+      this.textures = new DMC.TexturePack();
+      DMC.texpack = this.textures;
+      this.textures.load(() => {
+        this.renderer.tiles.clear();      // 让已缓存的程序化方块重建为贴图
+        this.ui.iconVersion++;
+        this.ui.buildHotbar();
+        this.ui.renderCursor();
+        if (this.ui.panelOpen) this.ui.buildPanel();
+        this.ui.toast('原版贴图已加载 ' +
+          (this.textures.total - this.textures.failed) + '/' + this.textures.total +
+          ' 张 · T 键可切换');
+      });
       this.input = { left: 0, right: 0, up: 0, down: 0, jump: 0 };
       this.mouse = { x: 0, y: 0, left: false, right: false };
       this.target = { x: 0, y: 0, valid: false, id: 0 };
@@ -102,6 +115,18 @@
           this.ui.toast(this.player.creative ? '创造模式（空格上升 / Shift 下降）' : '生存模式');
         }
         if (k === 'escape') this.ui.closePanel();
+        if (k === 't') {
+          const tp = DMC.texpack;
+          if (tp) {
+            tp.enabled = !tp.enabled;
+            this.renderer.tiles.clear();
+            this.ui.iconVersion++;
+            this.ui.buildHotbar();
+            this.ui.renderCursor();
+            if (this.ui.panelOpen) this.ui.buildPanel();
+            this.ui.toast(tp.enabled ? '已启用项目内原版贴图' : '已切回程序化纹理');
+          }
+        }
         if (k === 'h') this.ui.toggleHelp();
         if (k === 'enter' || k === '/') this.ui.openCmd(k === '/' ? '/' : '');
         if (k === 'shift' || k === 'control') this.input.down = 1;

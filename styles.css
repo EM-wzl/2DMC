@@ -82,6 +82,10 @@ html, body {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25);
   overflow: hidden; white-space: nowrap;
 }
+.slot .glyph .tex-img {
+  width: 100%; height: 100%; display: block;
+  image-rendering: pixelated;
+}
 .slot .num {
   position: absolute; right: 3px; bottom: 1px;
   font-size: 11px; font-weight: 700; color: #fff;
@@ -95,7 +99,9 @@ html, body {
   font-size: 12px; font-weight: 700; color: #10131a;
   box-shadow: 0 6px 18px rgba(0, 0, 0, .5);
 }
-.cursor.show { display: flex; }
+.cursor.show { display: flex; align-items: center; gap: 4px; }
+.cursor .tex-img { width: 30px; height: 30px; image-rendering: pixelated; }
+.cursor-num { font-size: 11px; font-weight: 700; padding-right: 6px; }
 
 /* ---------------- 提示 / 日志 / 命令 ---------------- */
 .toast {

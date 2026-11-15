@@ -32,7 +32,8 @@ node test/serve.cjs 8765
 | 左键按住 | 挖掘 / 攻击 | 右键 | 放置 / 交互 |
 | 1–9 / 滚轮 | 快捷栏 | E | 背包（2×2 合成） |
 | F | 生存 / 创造切换 | 空格 / Shift | 创造模式上升 / 下降 |
-| 回车 或 / | 命令 | H / Esc | 帮助 / 关闭面板 |
+| T | 原版贴图 / 程序化纹理切换 | 回车 或 / | 命令 |
+| H / Esc | 帮助 / 关闭面板 | 左键按住 | 持续挖掘 |
 
 按 `/help` 查看全部命令。常用的：`/end`（前往末地）、`/nether`、`/give 钻石 8`、`/tp 100 80`、`/gamemode creative`、`/time 13000`、`/lan host`、`/lan join`、`/say 消息`、`/selftest`、`/save`、`/load`。
 
@@ -70,12 +71,42 @@ node test/serve.cjs 8765
 - **渲染**：Canvas 画蛇形渐变身体、扇动翅膀、头角与发光眼、紫色龙息弹丸，顶部有 Boss 血条。
 - **存档/联机**：龙状态随存档保存；主机每 4 帧广播龙的状态给客户端。
 
+## 贴图（用项目文件夹里的资源）
+
+网页版默认使用**项目内已有的贴图**，不是程序化色块：
+
+| 来源 | 内容 | 数量 |
+|------|------|------|
+| `Default-Java-26.2/assets/minecraft/textures/block` | MC Java 26.2 原版方块贴图（16×16） | 103 |
+| `Default-Java-26.2/assets/minecraft/textures/item` | MC Java 26.2 原版物品/工具图标 | 74 |
+| `beta1.8/assets/tiles` | 2DMC 自有贴图补充 | 4 |
+
+`node test/build-textures.cjs` 会读取 `js/items.js` 的方块/物品表，按名字自动匹配贴图，
+复制到 `assets/tiles/<name>.png`，并生成 `js/textures.js`（id → 贴图名 + 异步加载器）。
+**181 / 183 项命中**，打包后只有约 55 KB。
+
+细节：
+
+- 动画图集（`water_still` 16×512、`lava_still`、`nether_portal` 等）在浏览器里只取最上面一帧 16×16，再最近邻放大到 32×32 缓存，与程序化 tile 尺寸一致。
+- 命名不一致的做了映射：草方块→`grass_block_side`、工作台→`crafting_table_front`、紫珀柱→`purpur_pillar_side`、附魔台→`enchanting_table_side`、指南针→`compass_00` 等；硫磺/朱砂等 26.2 自定义方块用最接近的原版方块贴图。
+- 箱子、末地传送门保留程序化绘制（原版箱子没有单张方块贴图，紫色漩涡传送门比静态图更好看）。
+- 方块、快捷栏、背包槽位、鼠标上拿着的物品、光标提示全部换成真实图标；按 **T** 可一键切回程序化纹理对比。
+
+重新生成贴图包：
+
+```bash
+cd web
+node test/build-textures.cjs
+```
+
 ## 文件结构
 
 ```
 web/
   index.html              页面骨架（HUD / 面板 / 帮助 / 启动页）
   styles.css              深色 UI
+  assets/tiles/*.png      项目内贴图精选（181 张，构建脚本生成）
+  js/textures.js          id → 贴图映射 + 异步加载器（构建脚本生成）
   js/core.js              常量、方块/物品 id、xorshift RNG、噪声、RLE
   js/items.js             方块属性表、配方表、合成匹配（纯函数）
   js/inventory.js         背包、原版光标拿取、合成网格、通用面板（纯函数）
@@ -87,6 +118,7 @@ web/
   js/selftest.js          浏览器 / Node 共用断言
   js/game.js              主循环、输入、交互、命令、存档
   test/selftest.cjs       Node 自检（vm 加载纯逻辑模块）
+  test/build-textures.cjs 从项目内贴图资源生成 assets/tiles + textures.js
   test/serve.cjs          本地静态服务器
   test/browser-check.html headless 浏览器加载自检
   test/playtest.html      自动试玩：真实键盘事件逐帧跑主循环

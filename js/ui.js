@@ -16,9 +16,28 @@
     const d = DEF[id];
     if (!d) return '??';
     if (id === B.AIR) return '';
-    // 用名称首字/两字作为图标，配合方块颜色
+    // 用名称首两字作为无贴图时的兜底
     const n = d.cn.replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '');
     return n.slice(0, 2) || '?';
+  }
+  // 槽位图标：优先项目内的原版贴图，没有才退回中文文字 + 颜色块
+  function paintGlyph(node, id) {
+    node.innerHTML = '';
+    if (!id) { node.style.background = 'transparent'; node.style.boxShadow = ''; return; }
+    const tp = DMC.texpack, tex = tp && tp.get(id);
+    if (tex) {
+      const cv = doc.createElement('canvas');
+      cv.width = 32; cv.height = 32;
+      cv.className = 'tex-img';
+      cv.getContext('2d').drawImage(tex, 0, 0);
+      node.appendChild(cv);
+      node.style.background = 'transparent';
+      node.style.boxShadow = 'none';
+    } else {
+      node.textContent = itemGlyph(id);
+      node.style.background = DEF[id].color || '#888';
+      node.style.boxShadow = '';
+    }
   }
 
   class UI {
@@ -27,6 +46,7 @@
       this.panelKind = null;
       this.hot = [];
       this.toastTimer = 0;
+      this.iconVersion = 0;
       this.buildHotbar();
       this.bind();
       this.renderCursor();
@@ -108,10 +128,9 @@
       for (let i = 0; i < 9; i++) {
         const s = inv.slots[i], h = this.hot[i];
         h.root.classList.toggle('sel', i === inv.selected);
-        if (h.root.dataset.cache !== s.id + ':' + s.count) {
-          h.root.dataset.cache = s.id + ':' + s.count;
-          h.glyph.textContent = s.id ? itemGlyph(s.id) : '';
-          h.glyph.style.background = s.id ? (DEF[s.id].color || '#888') : 'transparent';
+        if (h.root.dataset.cache !== s.id + ':' + s.count + ':' + (this.iconVersion || 0)) {
+          h.root.dataset.cache = s.id + ':' + s.count + ':' + (this.iconVersion || 0);
+          paintGlyph(h.glyph, s.id);
           h.num.textContent = s.count > 1 ? String(s.count) : '';
           h.root.title = s.id ? DEF[s.id].cn : '';
         }
@@ -188,8 +207,8 @@
     slotEl(kind, index, id, count, extraCls) {
       const s = el('div', 'slot ' + (extraCls || ''));
       s.dataset.kind = kind; s.dataset.index = String(index);
-      const gl = el('div', 'glyph', id ? itemGlyph(id) : '');
-      gl.style.background = id ? (DEF[id].color || '#888') : 'transparent';
+      const gl = el('div', 'glyph');
+      paintGlyph(gl, id);
       s.appendChild(gl);
       if (count > 1) s.appendChild(el('div', 'num', String(count)));
       s.title = id ? DEF[id].cn : '';
@@ -357,8 +376,21 @@
       const c = $('#cursor'), cur = this.g.inv.cursor;
       if (!cur || !cur.id) { c.classList.remove('show'); return; }
       c.classList.add('show');
-      c.textContent = itemGlyph(cur.id) + (cur.count > 1 ? ' ' + cur.count : '');
-      c.style.background = DEF[cur.id] ? DEF[cur.id].color : '#888';
+      c.innerHTML = '';
+      const tp = DMC.texpack, tex = tp && tp.get(cur.id);
+      if (tex) {
+        const cv = doc.createElement('canvas');
+        cv.width = 32; cv.height = 32; cv.className = 'tex-img';
+        cv.getContext('2d').drawImage(tex, 0, 0);
+        c.appendChild(cv);
+        c.style.background = 'rgba(20,24,34,.92)';
+        c.style.color = '#fff';
+      } else {
+        c.style.background = DEF[cur.id] ? DEF[cur.id].color : '#888';
+        c.style.color = '#10131a';
+        c.textContent = itemGlyph(cur.id);
+      }
+      if (cur.count > 1) c.appendChild(el('span', 'cursor-num', String(cur.count)));
       c.title = DEF[cur.id] ? DEF[cur.id].cn : '';
     }
   }

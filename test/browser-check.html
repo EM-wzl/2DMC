@@ -24,6 +24,21 @@
         out.push('canvas=' + (w.document.querySelector('#game').width > 0));
         out.push('world=' + (w.game ? w.game.world.dim + ':' + w.game.world.seed : 'none'));
         out.push('dragon=' + (w.game && w.game.dragon ? w.game.dragon.segs.length : 0));
+        if (w.game && w.game.textures) {
+          const tp = w.game.textures;
+          out.push('textures=' + (tp.total - tp.failed) + '/' + tp.total);
+          out.push('stone_tex=' + !!tp.get(1));
+          out.push('grass_tex=' + !!tp.get(2));
+          out.push('diamond_sword_tex=' + !!tp.get(w.DMC.I.DIAMOND_SWORD));
+          try {
+            const kd = k => w.document.dispatchEvent(
+              new w.KeyboardEvent('keydown', { key: k, bubbles: true }));
+            kd('t');
+            out.push('t_off=' + (tp.enabled === false));
+            kd('t');
+            out.push('t_on=' + (tp.enabled === true));
+          } catch (e) { out.push('t_toggle_err=' + e.message); }
+        }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');
     }, 2200);

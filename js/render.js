@@ -32,12 +32,17 @@
     /* ---------- 程序化方块纹理缓存 ---------- */
     tile(id) {
       if (this.tiles.has(id)) return this.tiles.get(id);
+      if (!id || id === B.AIR) { this.tiles.set(id, null); return null; }
+      // 优先用项目内的 MC 26.2 原版贴图（TexturePack 已把 16x16 首帧放大成 32x32）
+      const tp = DMC.texpack;
+      const tex = tp && tp.get(id);
+      if (tex) { this.tiles.set(id, tex); return tex; }
       const d = DEF[id];
       const s = 32;
       const c = document.createElement('canvas');
       c.width = s; c.height = s;
       const g = c.getContext('2d');
-      if (!d || d.tex === 'air' || id === B.AIR) { this.tiles.set(id, null); return null; }
+      if (!d || d.tex === 'air') { this.tiles.set(id, null); return null; }
       const rnd = (n) => (Math.sin(n * 12.9898 + id * 78.233) * 43758.5453) % 1;
       const grain = (base, alt, n, size) => {
         g.fillStyle = base; g.fillRect(0, 0, s, s);
@@ -288,7 +293,7 @@
           if (tile) ctx.drawImage(tile, px, py, T + 1, T + 1);
           else { ctx.fillStyle = '#000'; ctx.fillRect(px, py, T + 1, T + 1); }
           const lv = world.light(wx, wy);
-          const bright = clamp(lv / 15 * dayFactor, 0.20, 1);
+          const bright = clamp(lv / 15 * dayFactor, 0.26, 1);
           if (bright < 0.99) {
             ctx.fillStyle = 'rgba(6,8,22,' + (1 - bright).toFixed(3) + ')';
             ctx.fillRect(px, py, T + 1, T + 1);
