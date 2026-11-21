@@ -491,6 +491,37 @@
       ck(a.check(null).some(x => x.id === 'alchemist'), '喝药水解锁炼金术士成就');
     }
 
+    /* ---- 14. 怪物等级 / 玩家经验与天赋 ---- */
+    {
+      const P = DMC.Progression;
+      ck(!!P && !!DMC.mobLevel, '等级模块与怪物等级函数存在');
+      const p = new P();
+      ck(p.level === 1 && p.need === 20 && p.points === 0, '初始等级 1 / 需要 20 经验');
+      ck(p.gain(19) === 0 && p.xp === 19, '经验未满不升级');
+      ck(p.gain(1) === 1 && p.level === 2 && p.points === 1, '满经验升 1 级并给 1 点天赋');
+      ck(p.need === 34, '升级后所需经验递增');
+      ck(p.gain(100) > 1 && p.points > 1, '大量经验可连续升级');
+      const p2 = new P();
+      p2.points = 3;
+      ck(p2.spend('power') && p2.attackMul > 1, '力量天赋提高攻击');
+      ck(p2.spend('vigor') && p2.maxLife === 22, '耐力天赋提高最大生命');
+      ck(p2.spend('agility') && p2.speedMul > 1, '敏捷天赋提高移动速度');
+      ck(!p2.spend('power') && !p2.spend('bogus'), '点数耗尽或未知天赋被拒绝');
+      ck(p2.respec() === 3 && p2.points === 3 && p2.maxLife === 20, '洗点退回全部点数');
+      const p3 = P.restore(JSON.parse(JSON.stringify(p2.serialize())));
+      ck(p3.level === p2.level && p3.points === p2.points &&
+         p3.talents.vigor === 0, '等级 / 天赋存档往返无损');
+      ck(DMC.mobLevel(70, 0) === 1, '地表怪物为 1 级');
+      ck(DMC.mobLevel(200, 0) > DMC.mobLevel(90, 0), '越深怪物等级越高');
+      ck(DMC.mobLevel(120, 2) > DMC.mobLevel(120, 0), '末地怪物等级更高');
+      ck(DMC.mobLevel(9999, 2) <= 10, '怪物等级上限为 10');
+      const sc = DMC.mobScale(10);
+      ck(sc.hp > 2 && sc.dmg > 1.9, '10 级怪物血量与伤害显著放大');
+      ck(DMC.xpForKill(8, true) > DMC.xpForKill(8, false), '精英怪经验更高');
+      const m = new Entities.Mob('zombie', 100, 200, 0);
+      ck(m.lv > 1 && m.hp > Entities.MOB_DEFS.zombie.hp, '深处生成的怪物等级与血量提升');
+    }
+
     return { passed: pass, failed: fail, lines, ok: fail === 0 };
   }
 

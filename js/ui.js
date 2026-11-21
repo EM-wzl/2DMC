@@ -156,6 +156,19 @@
           }
         }
       }
+      // 等级 / 经验 / 天赋点
+      const lv = $('#lvl');
+      if (lv) {
+        const pr = g.prog;
+        const sig = pr.level + '/' + pr.xp + '/' + pr.need + '/' + pr.points;
+        if (lv.dataset.sig !== sig) {
+          lv.dataset.sig = sig;
+          lv.innerHTML = '<span>Lv' + pr.level + '</span>' +
+            '<span class="bar"><span class="fill" style="width:' +
+            Math.round(100 * pr.xp / pr.need) + '%"></span></span>' +
+            (pr.points ? '<span class="pts">+' + pr.points + '点</span>' : '');
+        }
+      }
       // 快捷栏
       for (let i = 0; i < 9; i++) {
         const s = inv.slots[i], h = this.hot[i];

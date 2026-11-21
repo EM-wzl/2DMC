@@ -45,6 +45,10 @@ html, body {
   text-shadow: 0 1px 2px #000;
 }
 .effect-chip.bad { border-style: dashed; }
+.lvl { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #c8e6ff; white-space: nowrap; }
+.lvl .bar { width: 68px; height: 6px; background: #2a3340; border-radius: 3px; overflow: hidden; }
+.lvl .fill { display: block; height: 100%; background: linear-gradient(90deg,#4aa8ff,#8ee6ff); }
+.lvl .pts { color: #ffe27a; }
 .info {
   font-size: 12px; color: #e6eaf5; letter-spacing: .3px;
   background: rgba(10, 14, 22, .55); padding: 5px 12px;

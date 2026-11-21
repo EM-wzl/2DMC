@@ -117,7 +117,8 @@
       const ox = this.x, oy = this.y;
       const inWater = world.get(Math.floor(this.x), Math.floor(this.y)) === B.WATER;
       if (this.creative && this.fly) {
-        const sp = C.FLY_SPEED * this.effects.speedMul;
+        const sp = C.FLY_SPEED * this.effects.speedMul *
+                   (this.prog ? this.prog.speedMul : 1);
         this.vx = (input.right - input.left) * sp;
         this.vy = (input.down - input.jump) * sp;
         this.facing = this.vx < 0 ? -1 : this.vx > 0 ? 1 : this.facing;
@@ -126,7 +127,8 @@
       } else {
         const accel = this.onGround ? 0.020 : 0.010;
         const target = (input.right - input.left) *
-                       (inWater ? C.WATER_SPEED : C.WALK_SPEED) * this.effects.speedMul;
+                       (inWater ? C.WATER_SPEED : C.WALK_SPEED) *
+                       this.effects.speedMul * (this.prog ? this.prog.speedMul : 1);
         this.vx += clamp(target - this.vx, -accel, accel);
         this.vx *= this.onGround ? 0.80 : 0.94;
         if (input.left) this.facing = -1;
@@ -207,7 +209,8 @@
     attackDamage(inv) {
       const h = inv.held();
       const d = h.id ? DEF[h.id] : null;
-      return (d && d.dmg ? d.dmg : 1) * this.effects.attackMul;
+      return (d && d.dmg ? d.dmg : 1) * this.effects.attackMul *
+             (this.prog ? this.prog.attackMul : 1);
     }
     toolTier(inv) {
       const h = inv.held();
@@ -236,11 +239,20 @@
     enderman:  { hp: 40, dmg: 6, speed: 0.10,  color: '#1d1424', name: '末影人', w: 0.7, h: 2.4 }
   };
   class Mob {
-    constructor(type, x, y) {
+    constructor(type, x, y, dim) {
       const d = MOB_DEFS[type] || MOB_DEFS.zombie;
+      // 怪物等级：越深 / 越危险的维度越高；8% 概率出精英
+      const baseLv = DMC.mobLevel ? DMC.mobLevel(y, dim | 0) : 1;
+      const elite = Math.random() < 0.08;
+      const lv = Math.min(12, baseLv + (elite ? 2 : 0));
+      const sc = DMC.mobScale ? DMC.mobScale(lv) : { hp: 1, dmg: 1 };
+      this.lv = lv; this.elite = elite;
+      this.hpScale = sc.hp * (elite ? 2 : 1);
+      this.dmgScale = sc.dmg * (elite ? 1.3 : 1);
       this.type = type; this.def = d;
       this.x = x; this.y = y; this.vx = 0; this.vy = 0;
-      this.hp = d.hp; this.maxHp = d.hp;
+      this.hp = Math.max(1, Math.round(d.hp * this.hpScale));
+      this.maxHp = this.hp;
       this.cd = 0; this.fuse = 0; this.wander = Math.random() * 200;
       this.facing = 1; this.held = 0; this.arche = Math.floor(Math.random() * 6);
       this.hurtFlash = 0; this.dead = false; this.onGround = false;
@@ -286,7 +298,7 @@
       } else if (this.type !== 'creeper') this.fuse = 0;
       // 接触伤害
       if (hostile && distP < 1.1 && this.cd <= 0) {
-        player.hurt(this.def.dmg, this.x);
+        player.hurt(this.def.dmg * this.dmgScale, this.x);
         this.cd = 55;
       }
       // 硫磺方块怪：吞方块（26.2）

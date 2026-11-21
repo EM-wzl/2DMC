@@ -115,6 +115,17 @@
           out.push('potion_left=' + g.inv.slots[0].count);
           g.save(); g.load();
           out.push('effect_save=' + g.player.effects.has('night'));
+          // 怪物等级 / 玩家经验与天赋
+          g.command('xp 60');
+          out.push('level=' + g.prog.level + ' points=' + g.prog.points);
+          g.command('talent vigor');
+          out.push('talent_maxlife=' + g.player.maxLife);
+          g.ui.render();
+          out.push('lvl_hud=' + (w.document.querySelectorAll('#lvl .fill').length > 0));
+          const mob = new w.DMC.Entities.Mob('zombie', g.player.x + 3, 200, 0);
+          out.push('mob_lv=' + mob.lv + ' mob_hp=' + mob.hp);
+          g.save(); g.load();
+          out.push('prog_save=' + (g.prog.level > 1 && g.prog.talents.vigor === 1));
         } catch (e) { out.push('newsys_err=' + e.message); }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');

@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const webRoot = path.join(__dirname, '..');
-const files = ['core', 'effects', 'audio', 'weather', 'achievements', 'items', 'inventory',
+const files = ['core', 'effects', 'progression', 'audio', 'weather', 'achievements', 'items', 'inventory',
                'world', 'entities', 'selftest'];
 
 const ctx = { console, Buffer, setTimeout, clearTimeout };

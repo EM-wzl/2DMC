@@ -36,7 +36,7 @@ node test/serve.cjs 8765
 | M | 音效开 / 关（记住设置） | V | 小地图开 / 关 |
 | H / Esc | 帮助 / 关闭面板 | 左键按住 | 持续挖掘 |
 
-按 `/help` 查看全部命令。常用的：`/end`（前往末地）、`/nether`、`/give 钻石 8`、`/tp 100 80`、`/gamemode creative`、`/time 13000`、`/weather rain|snow|thunder|clear`、`/hunger`、`/sound on|off`、`/achievements`、`/effect give|clear|list`、`/skin alex`、`/lan host`、`/lan join`、`/say 消息`、`/selftest`、`/save`、`/load`。
+按 `/help` 查看全部命令。常用的：`/end`（前往末地）、`/nether`、`/give 钻石 8`、`/tp 100 80`、`/gamemode creative`、`/time 13000`、`/weather rain|snow|thunder|clear`、`/hunger`、`/sound on|off`、`/achievements`、`/effect give|clear|list`、`/level`、`/xp`、`/talent`、`/skin alex`、`/lan host`、`/lan join`、`/say 消息`、`/selftest`、`/save`、`/load`。
 
 ## 内容
 
@@ -61,6 +61,8 @@ node test/serve.cjs 8765
 **小地图**：右上角 172×116 的地形切片（每像素 2 格），标出玩家（白色菱形 + 朝向）、生物（红）、末影水晶与龙（紫）、传送门与远程玩家（青），按 **V** 开关。
 
 **状态效果与药水**：`js/effects.js` 是纯逻辑模块，9 种效果（速度 / 跳跃 / 急迫 / 再生 / 夜视 / 抗火 / 中毒 / 缓慢 / 虚弱），支持 1–3 级、重复饮用取较高等级与较长时间。速度/跳跃/挖掘/攻击倍率、再生与中毒持续结算、夜视提高地下最低亮度、抗火免疫岩浆伤害都在 `Player` 与渲染里生效。新增 8 种可合成药水（治疗 / 强效治疗 / 迅捷 / 跳跃 / 夜视 / 抗火 / 再生 / 剧毒 / 迟缓），**右键饮用**；`/effect give <效果> [帧数] [等级]`、`/effect clear`、`/effect list` 可直接施加。HUD 心形旁有带倒计时的效果标签，效果随存档往返。
+
+**怪物等级与玩家成长**：`js/progression.js` 是纯逻辑模块。怪物按生成深度与维度自动分级（1–10 级，下界 +2 / 末地 +3），血量与伤害随等级放大，8% 概率生成**精英怪**（等级 +2、双倍血、金色光环、双倍经验），头顶显示 `Lv n`。击杀按等级给经验，玩家升级得天赋点，可分配给**力量**（+8% 攻击）、**耐力**（+2 最大生命）、**敏捷**（+5% 移动），`/level` 查看进度、`/xp` 加经验、`/talent power|vigor|agility|reset` 分配或洗点。HUD 有等级与经验条，进度随存档往返（联机时各端独立）。
 
 **成就与统计**：`js/achievements.js` 是纯逻辑模块，**14 项成就**（开局一镐、伐木工、铁器时代、钻石！、建筑师、怪物猎人、补充能量、炼金术士、下界/末地来客、屠龙者、风雨交加、老玩家…）。挖掘 / 放置 / 合成 / 进食 / 喝药水 / 击杀 / 维度切换 / 龙死亡 / 雷暴 / 游玩帧数都会记入统计，每 20 帧结算，解锁时有金色粒子、提示音、成就日志并自动存档。`/achievements` 查看进度，成就与统计随存档往返。
 
@@ -141,6 +143,7 @@ web/
   js/sprites.js           皮肤 UV 裁剪 → 2D 正面 sprite
   js/core.js              常量、方块/物品 id、xorshift RNG、噪声、RLE
   js/effects.js           状态效果 / 药水（纯函数）
+  js/progression.js       怪物等级 / 经验 / 天赋（纯函数）
   js/audio.js             Web Audio 程序化音效 + 环境声（无外部音频文件）
   js/weather.js           天气状态机（纯函数，雨/雪/雷暴 + 存档）
   js/achievements.js      成就与统计（纯函数）
@@ -165,16 +168,16 @@ web/
   test/skinscan.html      skin UV 区域扫描（定位裁剪坐标）
 ```
 
-`core / effects / audio / weather / achievements / items / inventory / world / entities / selftest` 是纯逻辑模块（audio 在无音频设备时自动降级），不依赖 DOM，因此可以同时被浏览器和 Node 加载。
+`core / effects / progression / audio / weather / achievements / items / inventory / world / entities / selftest` 是纯逻辑模块（audio 在无音频设备时自动降级），不依赖 DOM，因此可以同时被浏览器和 Node 加载。
 
 ## 自检
 
 ```bash
-node test/selftest.cjs              # 126 项
+node test/selftest.cjs              # 145 项
 node test/selftest.cjs --verbose    # 打印明细
 ```
 
-126 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、**玩家重力/落地/单次跳跃高度与滞空/行走速度**、**生物生成点校验、跑动 400 帧不卡方块、不掉出世界、会走动、被埋能自动脱困**、**龙息云持续伤害/范围判定/到期消散**、**配方书材料统计、尺寸过滤、一键摆料后网格可匹配**、**饥饿三段式（食用/消耗/回血/饿空下限/重生/创造模式不消耗）**、**天气状态机（雨雪判定、沙漠与雪原群系、雷暴闪电、下界停雨、光照削弱、存档往返、联机客户端不自行切换）**、**音效模块无设备降级与静音开关**、**成就解锁/去重/矿石与维度条件/存档往返/帧数成就**、**状态效果（施加/等级合并/到期/倍率/再生/中毒/存档往返）与药水配方、炼金术士成就**。
+145 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、**玩家重力/落地/单次跳跃高度与滞空/行走速度**、**生物生成点校验、跑动 400 帧不卡方块、不掉出世界、会走动、被埋能自动脱困**、**龙息云持续伤害/范围判定/到期消散**、**配方书材料统计、尺寸过滤、一键摆料后网格可匹配**、**饥饿三段式（食用/消耗/回血/饿空下限/重生/创造模式不消耗）**、**天气状态机（雨雪判定、沙漠与雪原群系、雷暴闪电、下界停雨、光照削弱、存档往返、联机客户端不自行切换）**、**音效模块无设备降级与静音开关**、**成就解锁/去重/矿石与维度条件/存档往返/帧数成就**、**状态效果（施加/等级合并/到期/倍率/再生/中毒/存档往返）与药水配方、炼金术士成就**、**怪物等级（深度/维度/上限/血量放大）与玩家经验升级、三系天赋加成、洗点、存档往返**。
 
 游戏内输入 `/selftest` 会跑同一套断言并把结果显示在聊天区。
 
@@ -196,7 +199,8 @@ chrome --headless=new --virtual-time-budget=15000 --dump-dom \
 jump_rise=1.60格 | tap_air_frames=24 | tap_rise=1.55格 | landed_back=true
 walk_dx=4.48格 | eat_hunger=15 left=2 | mute=true unmute=true
 minimap_toggle=true | weather=rain/1.00 | potion_night=true ach_alchemist=true
-ach_foodie=true ach_total=14 | mob_stuck=0/6344 | mob_oob=0 | mobs_moved=12
+ach_foodie=true ach_total=14 | level=3 talent_maxlife=22
+mob_stuck=0/6344 | mob_oob=0 | mobs_moved=12
 dragon_segs=14 | RESULT=PASS
 ```
 

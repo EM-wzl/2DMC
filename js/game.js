@@ -48,6 +48,9 @@
       this.weather = new DMC.Weather(this.seed);
       // 成就与统计（纯逻辑，存档可往返）
       this.ach = new DMC.Achievements();
+      // 玩家等级 / 经验 / 天赋（纯逻辑，存档可往返）
+      this.prog = new DMC.Progression();
+      this.player.prog = this.prog;
       // 项目内的玩家皮肤 / 生物 skin，拼成 2D 正面 sprite
       this.sprites = new DMC.SpritePack();
       DMC.spritepack = this.sprites;
@@ -136,6 +139,8 @@
       this.dragon = new Entities.EnderDragon(this.world);
       this.weather = new DMC.Weather(this.seed);
       this.ach = new DMC.Achievements();
+      this.prog = new DMC.Progression();
+      this.player.prog = this.prog;
       this.time = 6000; this.tick = 0;
       this._deathHandled = false;
       this.renderer.tiles.clear();
@@ -264,8 +269,29 @@
       }
     }
 
+    /* 天赋可能改变最大生命 / 速度，变动后同步到玩家 */
+    syncProgression() {
+      this.player.prog = this.prog;
+      this.player.maxLife = this.prog.maxLife;
+      if (this.player.life > this.player.maxLife) this.player.life = this.player.maxLife;
+    }
+    giveXp(n) {
+      const ups = this.prog.gain(n);
+      if (ups > 0) {
+        this.syncProgression();
+        this.player.life = Math.min(this.player.maxLife, this.player.life + 2 * ups);
+        this.sound.play('levelup');
+        this.ui.toast('升级！Lv' + this.prog.level + ' · 获得 ' + ups + ' 点天赋');
+        this.ui.log('[升级] Lv' + this.prog.level + '，可用 /talent power|vigor|agility 分配');
+        this.renderer.emit(this.player.x, this.player.y - 1, '#ffe27a', 16,
+          { speed: 0.16, life: 34, grav: -0.002 });
+        this.save();
+      }
+      return ups;
+    }
     killMob(m) {
       this.ach.note('mob');
+      this.giveXp(DMC.xpForKill(m.lv || 1, m.elite));
       const drops = {
         zombie: I.LEATHER, skeleton: I.BONE, creeper: I.GUNPOWDER,
         spider: I.STRING, piglin: I.GOLD_INGOT, cube: I.RAW_SULFUR,
@@ -491,7 +517,7 @@
       // 只生成在「头顶够高 + 脚下有支撑」的位置，避免一出生就嵌在方块里
       const y = Entities.Physics.findSpawn(w, x, clamp(p.y - 6, 10, C.H - 12), d.w, d.h);
       if (y === null || dist(x, y, p.x, p.y) > 46) return;
-      this.mobs.push(new Entities.Mob(type, x, y));
+      this.mobs.push(new Entities.Mob(type, x, y, w.dim));
     }
     updateDrops() {
       for (let i = this.drops.length - 1; i >= 0; i--) {
@@ -515,7 +541,7 @@
           g.ui.log('命令：/help /end /nether /overworld /lan host|join|stop|status /say <消息> ' +
                    '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /skin [名字] /save /load ' +
                    '/spawn <生物> /dragon /weather [类型] /hunger [数值] /sound [on|off] ' +
-                   '/achievements /effect give|clear|list /selftest /clear');
+                   '/achievements /effect give|clear|list /level /xp /talent /selftest /clear');
           break;
         case 'achievements':
         case 'ach': {
@@ -523,6 +549,34 @@
           for (const a of g.ach.progress())
             g.ui.log((a.done ? '[已达成] ' : '[未达成] ') + a.name + ' — ' + a.desc);
           g.ui.toast('成就 ' + g.ach.count + '/' + g.ach.total + '，详情见聊天区');
+          break;
+        }
+        case 'level':
+          g.ui.log(g.prog.summary() + ' · 力量 ' + g.prog.talents.power +
+                   ' / 耐力 ' + g.prog.talents.vigor + ' / 敏捷 ' + g.prog.talents.agility);
+          g.ui.toast('等级 ' + g.prog.level + ' · ' + g.prog.xp + '/' + g.prog.need + ' XP');
+          break;
+        case 'xp': {
+          const n = clamp(parseInt(args[0], 10) || 0, 0, 100000);
+          const ups = g.giveXp(n);
+          g.ui.toast('获得 ' + n + ' 经验' + (ups ? ' · 升 ' + ups + ' 级' : ''));
+          break;
+        }
+        case 'talent': {
+          const t = (args[0] || '').toLowerCase();
+          if (t === 'reset') {
+            const n = g.prog.respec();
+            g.syncProgression(); g.save();
+            g.ui.toast('已洗点，退回 ' + n + ' 点');
+          } else if (!t || t === 'list') {
+            g.ui.log('可用天赋点 ' + g.prog.points + '：power 力量(+8% 攻击) / ' +
+                     'vigor 耐力(+2 最大生命) / agility 敏捷(+5% 速度)');
+            g.ui.log('用法：/talent power|vigor|agility | /talent reset');
+          } else if (g.prog.spend(t)) {
+            g.syncProgression(); g.save();
+            g.ui.toast('天赋已分配：' + DMC.TALENTS[t].name +
+                       ' Lv' + g.prog.talents[t]);
+          } else g.ui.log('天赋点不足或名称错误（power / vigor / agility）');
           break;
         }
         case 'effect': {
@@ -642,7 +696,7 @@
           const sx = g.player.x + 3;
           const sy = Entities.Physics.findSpawn(g.world, sx, g.player.y, d.w, d.h);
           if (sy === null) { g.ui.log('附近没有足够空间生成生物'); break; }
-          g.mobs.push(new Entities.Mob(t, sx, sy));
+          g.mobs.push(new Entities.Mob(t, sx, sy, g.world.dim));
           g.ui.toast('生成 ' + d.name); break;
         }
         case 'dragon':
@@ -687,6 +741,7 @@
           panel: this.panel.toJSON(), dragon: this.dragon.serialize(),
           weather: this.weather.serialize(),
           ach: this.ach.serialize(),
+          prog: this.prog.serialize(),
           time: this.time, tick: this.tick, backPos: this.backPos,
           enchantBonus: this.enchantBonus
         };
@@ -718,6 +773,9 @@
         this.player.effects = DMC.Effects.restore(d.player.effects);
         this.weather = DMC.Weather.restore(d.weather, w.seed);
         this.ach = DMC.Achievements.restore(d.ach);
+        this.prog = DMC.Progression.restore(d.prog);
+        this.player.prog = this.prog;
+        this.syncProgression();
         this.time = d.time || 6000; this.tick = d.tick || 0;
         this.backPos = d.backPos || { x: this.player.x, y: this.player.y };
         this.enchantBonus = d.enchantBonus || 0;

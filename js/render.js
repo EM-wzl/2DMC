@@ -605,6 +605,17 @@
       const px = sx(m.x), py = sy(m.y);
       const w = m.w * T, h = m.h * T;
       ctx.save(); ctx.translate(px, py);
+      // 怪物等级标签与精英金色光环
+      if (m.lv) {
+        if (m.elite) {
+          ctx.strokeStyle = 'rgba(255,206,84,.8)'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.ellipse(0, 0, w * 0.72, h * 0.6, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.font = '9px monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = m.elite ? '#ffce54' : '#cbd8f0';
+        ctx.fillText('Lv' + m.lv, 0, -h / 2 - 20);
+      }
       // 生物 skin sprite（zombie / skeleton / creeper / sheep / piglin）
       const sp = DMC.spritepack;
       const s = sp && sp.getMob(m.type);
