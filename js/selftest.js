@@ -306,6 +306,41 @@
          '被方块埋住的生物能自动脱困');
     }
 
+    /* ---- 8. 龙息滞留云 / 配方书纯函数 ---- */
+    {
+      const p = new Entities.Player(C.W / 2, 60);
+      const cloud = new Entities.BreathCloud(p.x, p.y);
+      const life0 = p.life;
+      let hits = 0;
+      for (let i = 0; i < 60; i++) if (cloud.step(p)) hits++;
+      ck(hits > 0 && p.life < life0, '龙息云对范围内玩家持续造成伤害（' + hits + ' 次判定）');
+      const far = new Entities.Player(p.x + 20, p.y);
+      const c2 = new Entities.BreathCloud(p.x + 20, p.y + 20);
+      const lf = far.life;
+      for (let i = 0; i < 40; i++) c2.step(far);
+      eq(far.life, lf, '云范围外不扣血');
+      const c3 = new Entities.BreathCloud(0, 0);
+      for (let i = 0; i < 160; i++) c3.step(new Entities.Player(100, 100));
+      ck(c3.dead, '龙息云到期消散');
+
+      const inv = new Inv.Inventory();
+      inv.add(B.LOG, 2);
+      const rPlank = Items.RECIPES.find(r => r.out === B.PLANK);
+      ck(Items.canCraft(rPlank, inv, 2), '配方书：有原木 → 可做木板');
+      const grid = Items.applyRecipe(rPlank, 2);
+      const m = Items.craftMatch2(grid);
+      ck(m && m.out === B.PLANK, '一键摆料后 2x2 网格能匹配出木板');
+      const rFurnace = Items.RECIPES.find(r => r.out === B.FURNACE);
+      ck(!Items.fitsSize(rFurnace, 2), '2x2 界面过滤掉 3x3 熔炉配方');
+      inv.add(B.COBBLE, 8);
+      ck(Items.canCraft(rFurnace, inv, 3), '配方书：圆石够了 → 可做熔炉');
+      const grid3 = Items.applyRecipe(rFurnace, 3);
+      const m3 = Items.craftMatch3(grid3);
+      ck(m3 && m3.out === B.FURNACE, '熔炉一键摆料后 3x3 网格能匹配');
+      const needs = Items.recipeNeeds(rFurnace);
+      eq(needs[B.COBBLE], 8, '熔炉材料统计正确（8 圆石）');
+    }
+
     return { passed: pass, failed: fail, lines, ok: fail === 0 };
   }
 

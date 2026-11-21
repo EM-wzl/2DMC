@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>skin 区域扫描</title></head>
+<body><pre id="out">loading…</pre>
+<script>
+const files = ['sheep','creeper','zombie','pig_zombie','skeleton','spider'];
+(async () => {
+  const lines = [];
+  for (const n of files) {
+    const img = new Image();
+    await new Promise(r => { img.onload = r; img.onerror = r; img.src = '../assets/mobs/' + n + '.png'; });
+    const cv = document.createElement('canvas');
+    cv.width = img.width; cv.height = img.height;
+    const g = cv.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, cv.width, cv.height).data;
+    lines.push('=== ' + n + ' ' + img.width + 'x' + img.height + ' ===');
+    lines.push('每格 8x8：数字=不透明像素占比(0-9)，.=全透明');
+    let header = '     ';
+    for (let x = 0; x < img.width; x += 8) header += (x % 16 === 0 ? String(x).padEnd(2,' ').slice(0,2) : '  ');
+    lines.push(header);
+    for (let y = 0; y < img.height; y += 8) {
+      let row = String(y).padStart(3) + ' | ';
+      for (let x = 0; x < img.width; x += 8) {
+        let n0 = 0;
+        for (let dy = 0; dy < 8; dy++) for (let dx = 0; dx < 8; dx++) {
+          const px = x + dx, py = y + dy;
+          if (px < img.width && py < img.height && d[(py * img.width + px) * 4 + 3] > 8) n0++;
+        }
+        row += n0 === 0 ? '. ' : String(Math.min(9, Math.round(n0 / 7)));
+      }
+      lines.push(row);
+    }
+  }
+  document.getElementById('out').textContent = lines.join('\n');
+})();
+</script></body></html>

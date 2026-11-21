@@ -317,13 +317,18 @@
           }
         }
       }
-      // 掉落物
+      // 掉落物：用真实物品/方块贴图，带轻微旋转
       for (const d of g.drops) {
         const px = sx(d.x), py = sy(d.y);
-        const dd = DEF[d.id];
-        ctx.fillStyle = dd ? dd.color : '#fff';
-        ctx.save(); ctx.translate(px, py); ctx.rotate(g.tick * 0.03);
-        ctx.fillRect(-5, -5, 10, 10); ctx.restore();
+        ctx.save(); ctx.translate(px, py);
+        ctx.rotate(g.tick * 0.03);
+        const tile = this.tile(d.id);
+        if (tile) ctx.drawImage(tile, -6, -6, 12, 12);
+        else {
+          ctx.fillStyle = DEF[d.id] ? DEF[d.id].color : '#fff';
+          ctx.fillRect(-5, -5, 10, 10);
+        }
+        ctx.restore();
       }
       // 生物
       for (const m of g.mobs) this.drawMob(ctx, m, sx, sy, g);
@@ -335,6 +340,23 @@
         if (pr.type === 'breath') {
           ctx.fillStyle = 'rgba(196,107,255,.28)';
           ctx.beginPath(); ctx.arc(px, py, 13, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      // 龙息滞留云
+      for (const c of (g.clouds || [])) {
+        const px = sx(c.x), py = sy(c.y);
+        const r = c.radius * T;
+        const a = clamp(c.life / c.maxLife, 0, 1);
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, r);
+        grd.addColorStop(0, 'rgba(190,90,240,' + (0.34 * a).toFixed(3) + ')');
+        grd.addColorStop(1, 'rgba(150,60,220,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.ellipse(px, py, r, r * 0.72, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(220,160,255,' + (0.55 * a).toFixed(3) + ')';
+        for (let k = 0; k < 6; k++) {
+          const ang = g.tick * 0.02 + k * 1.047;
+          ctx.fillRect(px + Math.cos(ang) * r * 0.55,
+                       py + Math.sin(ang) * r * 0.38, 3, 3);
         }
       }
       // 末影龙（只在末地维度出现；Boss 血条同样受维度门控）
@@ -379,6 +401,29 @@
     drawPlayer(ctx, p, sx, sy, g) {
       const px = sx(p.x), py = sy(p.y);
       const bob = p.onGround ? Math.sin(g.tick * 0.18) * Math.min(1.5, Math.abs(p.vx) * 8) : 0;
+      // 项目内 MC 皮肤拼成的正面 sprite（/skin 切换）
+      const sp = DMC.spritepack;
+      const s = sp && sp.getPlayer();
+      if (s) {
+        const drawH = p.h * T;
+        const drawW = drawH * (20 / 32);
+        ctx.save();
+        ctx.translate(px, py + bob);
+        ctx.scale(p.facing, 1);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(s.cv, 0, 0, 20, 32, -drawW / 2, -drawH / 2, drawW, drawH);
+        const held2 = g.inv.held();
+        if (held2.id) {
+          ctx.fillStyle = DEF[held2.id] ? DEF[held2.id].color : '#fff';
+          ctx.fillRect(drawW / 2 - 3, -2, 9, 9);
+        }
+        ctx.restore();
+        if (p.invuln > 0 && Math.floor(g.tick / 3) % 2 === 0) {
+          ctx.fillStyle = 'rgba(255,60,60,.28)';
+          ctx.fillRect(px - 12, py - p.h * T / 2 - 3, 24, p.h * T + 4);
+        }
+        return;
+      }
       ctx.save(); ctx.translate(px, py + bob);
       ctx.scale(p.facing, 1);
       const hh = p.h * T / 2, hw = p.w * T / 2;
@@ -412,6 +457,30 @@
       const px = sx(m.x), py = sy(m.y);
       const w = m.w * T, h = m.h * T;
       ctx.save(); ctx.translate(px, py);
+      // 生物 skin sprite（zombie / skeleton / creeper / sheep / piglin）
+      const sp = DMC.spritepack;
+      const s = sp && sp.getMob(m.type);
+      if (s) {
+        const scale = h / s.contentH;
+        const drawW = 20 * scale, drawH = 32 * scale;
+        ctx.scale(m.facing, 1);
+        ctx.imageSmoothingEnabled = false;
+        if (m.hurtFlash > 0 && Math.floor(g.tick / 2) % 2 === 0) ctx.globalAlpha = 0.55;
+        ctx.drawImage(s.cv, 0, 0, 20, 32, -drawW / 2, -h / 2, drawW, drawH);
+        if (m.type === 'creeper' && m.fuse > 20) {
+          ctx.globalAlpha = 0.22 + 0.3 * Math.sin(g.tick * 0.5);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(-drawW / 2, -h / 2, drawW, h);
+        }
+        ctx.globalAlpha = 1;
+        if (m.hp < m.maxHp) {
+          ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(-10, -h / 2 - 9, 20, 3);
+          ctx.fillStyle = '#e05555';
+          ctx.fillRect(-10, -h / 2 - 9, 20 * clamp(m.hp / m.maxHp, 0, 1), 3);
+        }
+        ctx.restore();
+        return;
+      }
       const col = m.hurtFlash > 0 && Math.floor(g.tick / 2) % 2 === 0 ? '#ffffff' : m.def.color;
       if (m.type === 'spider' || m.type === 'cube') {
         ctx.fillStyle = col; ctx.fillRect(-w / 2, -h / 2, w, h);

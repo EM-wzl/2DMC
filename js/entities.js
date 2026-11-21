@@ -253,12 +253,39 @@
       this.x += this.vx; this.y += this.vy;
       if (this.type === 'arrow') this.vy += 0.002;
       if (this.life <= 0 || !Core.inWorld(this.x, this.y)) { this.dead = true; return; }
-      if (world.solid(Math.floor(this.x), Math.floor(this.y)) &&
-          this.type !== 'breath') { this.dead = true; return; }
+      if (world.solid(Math.floor(this.x), Math.floor(this.y))) {
+        this.dead = true; return;   // 龙息撞到方块就落地形成滞留云
+      }
       if (dist(this.x, this.y, player.x, player.y) < 0.85) {
         player.hurt(this.dmg, this.x);
         this.dead = true;
       }
+    }
+  }
+
+  /* ============ 龙息滞留云（原版 area effect cloud） ============ */
+  class BreathCloud {
+    constructor(x, y) {
+      this.x = x; this.y = y;
+      this.life = 150; this.maxLife = 150;
+      this.radius = 1.2;
+      this.tick = 0; this.hitCd = 0; this.dead = false;
+    }
+    step(player) {
+      this.tick++;
+      this.life--;
+      if (this.hitCd > 0) this.hitCd--;
+      if (this.life <= 0) { this.dead = true; return false; }
+      const t = 1 - this.life / this.maxLife;
+      this.radius = (1.2 + Math.min(1, t * 4) * 1.1) *
+                    (this.life < 40 ? Math.max(0.2, this.life / 40) : 1);
+      if (this.hitCd === 0 &&
+          dist(this.x, this.y, player.x, player.y) < this.radius) {
+        this.hitCd = 20;
+        player.hurt(2, this.x);
+        return true;
+      }
+      return false;
     }
   }
 
@@ -426,7 +453,7 @@
   }
 
   DMC.Entities = {
-    Player, Mob, MOB_DEFS, Projectile, EnderDragon, Physics,
+    Player, Mob, MOB_DEFS, Projectile, BreathCloud, EnderDragon, Physics,
     followChain, constrainChain, flyTo, DRAGON_HP, SEGMENT_COUNT
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

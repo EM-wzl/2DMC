@@ -22,11 +22,21 @@
       this.panel = new Inv.PanelState('furnace');
       this.mobs = [];
       this.projectiles = [];
+      this.clouds = [];
       this.drops = [];
       this.remotePlayers = [];
       this.dragon = new Entities.EnderDragon(this.world);
       this.lan = new LAN(this);
       this.ui = new UI(this);
+      // 项目内的玩家皮肤 / 生物 skin，拼成 2D 正面 sprite
+      this.sprites = new DMC.SpritePack();
+      DMC.spritepack = this.sprites;
+      this.sprites.restoreSkin();
+      this.sprites.load(() => {
+        this.ui.toast('皮肤已加载 ' +
+          (this.sprites.total - this.sprites.failed) + '/' + this.sprites.total +
+          ' 套 · /skin 可切换');
+      });
       // 项目内的原版贴图包（Default-Java-26.2 资源包 + 2DMC 自有 tiles）
       this.textures = new DMC.TexturePack();
       DMC.texpack = this.textures;
@@ -77,6 +87,14 @@
       inv.add(B.END_CRYSTAL, 4);
       inv.add(I.RAW_IRON, 16);
       inv.add(I.COAL, 16);
+      // 基础材料：配方书与合成从这些起步
+      inv.add(B.LOG, 16);
+      inv.add(B.COBBLE, 16);
+      inv.add(I.STICK, 8);
+      inv.add(B.GLASS, 8);
+      inv.add(I.DIAMOND, 4);
+      inv.add(I.GHAST_TEAR, 2);
+      inv.add(I.BLAZE_ROD, 2);
       inv.selected = 0;
     }
 
@@ -88,7 +106,7 @@
       this.inv = new Inv.Inventory();
       this.starterKit();
       this.craft = new Inv.CraftGrid(2);
-      this.mobs = []; this.projectiles = []; this.drops = [];
+      this.mobs = []; this.projectiles = []; this.clouds = []; this.drops = [];
       this.dragon = new Entities.EnderDragon(this.world);
       this.time = 6000; this.tick = 0;
       this._deathHandled = false;
@@ -408,7 +426,7 @@
       switch (cmd.toLowerCase()) {
         case 'help':
           g.ui.log('命令：/help /end /nether /overworld /lan host|join|stop|status /say <消息> ' +
-                   '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /save /load ' +
+                   '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /skin [名字] /save /load ' +
                    '/spawn <生物> /dragon /selftest /clear');
           break;
         case 'end':
@@ -459,6 +477,17 @@
         }
         case 'time': { const t = parseInt(args[0], 10); if (!isNaN(t)) g.time = ((t % 24000) + 24000) % 24000; break; }
         case 'seed': g.ui.log('种子：' + g.world.seed); break;
+        case 'skin': {
+          const n = (args[0] || '').toLowerCase();
+          if (!n) {
+            g.ui.log('当前皮肤：' + g.sprites.playerSkin +
+                     ' · 可选：' + DMC.PLAYER_SKINS.join(', '));
+            break;
+          }
+          if (g.sprites.setSkin(n)) g.ui.toast('已切换皮肤：' + n);
+          else g.ui.log('没有这个皮肤：' + n);
+          break;
+        }
         case 'save': g.save(); g.ui.toast('世界已保存'); break;
         case 'load': g.ui.toast(g.load() ? '存档已读取' : '没有找到存档'); break;
         case 'spawn': {
@@ -484,7 +513,8 @@
           g.ui.toast('自检完成：' + r.passed + '/' + (r.passed + r.failed));
           break;
         }
-        case 'clear': g.mobs = []; g.projectiles = []; g.drops = []; g.ui.toast('已清空实体'); break;
+        case 'clear': g.mobs = []; g.projectiles = []; g.clouds = []; g.drops = [];
+          g.ui.toast('已清空实体'); break;
         default: g.ui.log('未知命令: ' + cmd + '（输入 /help 查看）');
       }
     }
@@ -526,7 +556,7 @@
         this.enchantBonus = d.enchantBonus || 0;
         this.dragon = Entities.EnderDragon.restore(d.dragon, this.world);
         this._deathHandled = !!(d.dragon && d.dragon.alive === false);
-        this.mobs = []; this.projectiles = []; this.drops = [];
+        this.mobs = []; this.projectiles = []; this.clouds = []; this.drops = [];
         this.renderer.tiles.clear();
         this.ui.buildHotbar();
         this.ui.toast('存档已读取（种子 ' + w.seed + '）');
@@ -576,7 +606,25 @@
         pr.update(this.world, p);
         if (pr.type === 'breath' && this.tick % 3 === 0)
           this.renderer.emit(pr.x, pr.y, '#b06be0', 1, { speed: 0.03, grav: 0, life: 20, size: 3 });
-        if (pr.dead) this.projectiles.splice(i, 1);
+        if (pr.dead) {
+          // 原版：龙息落地/消散后留下持续伤害的滞留云
+          if (pr.type === 'breath') {
+            this.clouds.push(new Entities.BreathCloud(pr.x, pr.y));
+            this.renderer.emit(pr.x, pr.y, '#b06be0', 12,
+              { speed: 0.18, grav: 0, life: 34, size: 3 });
+          }
+          this.projectiles.splice(i, 1);
+        }
+      }
+      // 龙息滞留云
+      for (let i = this.clouds.length - 1; i >= 0; i--) {
+        const c = this.clouds[i];
+        c.step(p);
+        if (this.tick % 3 === 0)
+          this.renderer.emit(c.x + (Math.random() - 0.5) * c.radius * 1.6,
+            c.y + (Math.random() - 0.5) * c.radius,
+            '#a05ad0', 1, { speed: 0.02, grav: -0.002, life: 22, size: 3 });
+        if (c.dead) this.clouds.splice(i, 1);
       }
       this.updateDrops();
       // 龙

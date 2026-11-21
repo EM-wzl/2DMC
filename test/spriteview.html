@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>sprite 拼装预览</title>
+<style>body{background:#181b22;color:#e6e9f2;font:13px monospace;margin:12px}
+canvas{background:#3a3f4b;image-rendering:pixelated;border:1px solid #666;margin-right:6px;vertical-align:top}
+div{display:inline-block;text-align:center;margin:4px}</style>
+</head><body>
+<p id="status">loading…</p>
+<div id="out"></div>
+<script src="../js/core.js"></script>
+<script src="../js/sprites.js"></script>
+<script>
+const sp = new DMC.SpritePack();
+sp.restoreSkin();
+sp.load(() => {
+  const out = document.getElementById('out');
+  document.getElementById('status').textContent =
+    'loaded ' + (sp.total - sp.failed) + '/' + sp.total + ' · player skin = ' + sp.playerSkin;
+  const keys = Object.keys(sp.sprites);
+  for (const k of keys) {
+    const s = sp.sprites[k];
+    const S = 5;
+    const cv = document.createElement('canvas');
+    cv.width = 20 * S; cv.height = 32 * S;
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.drawImage(s.cv, 0, 0, 20, 32, 0, 0, cv.width, cv.height);
+    const box = document.createElement('div');
+    box.appendChild(cv);
+    box.appendChild(document.createElement('br'));
+    box.appendChild(document.createTextNode(k + ' h=' + s.contentH));
+    out.appendChild(box);
+  }
+}, '../');
+</script></body></html>

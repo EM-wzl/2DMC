@@ -237,19 +237,20 @@
                              : this.slotEl('out', 0, 0, 0, 'out-slot'));
         wrap.appendChild(left);
         const right = el('div', 'craft-right');
-        right.appendChild(el('div', 'sub', '配方提示'));
+        right.appendChild(el('div', 'sub', '配方书 · 点击可自动摆料'));
+        const search = el('input', 'recipe-search');
+        search.type = 'text';
+        search.placeholder = '搜索配方（中文名 / 英文名）…';
+        right.appendChild(search);
+        const list = el('div', 'recipe-list');
+        right.appendChild(list);
+        search.addEventListener('input', () =>
+          this.renderRecipeList(list, size, search.value));
+        this.renderRecipeList(list, size, '');
         const hint = el('div', 'recipe-hint');
         hint.innerHTML = '左键：拿起整堆 / 放下整堆 · 右键：拿一半 / 放一个<br>' +
-          '有序配方按 3×3 图案匹配，无序配方按材料集合匹配。<br>' +
-          '点击输出格取出产物，材料会消耗各 1 个。';
+          '点击右侧「可做」的配方会把材料从背包自动摆进合成格，再点输出格取出产物。';
         right.appendChild(hint);
-        const list = el('div', 'recipe-list');
-        Items.RECIPES.slice(-10).forEach(r => {
-          const d = el('div', 'recipe-row');
-          d.textContent = '• ' + DEF[r.out].cn + ' ×' + r.count;
-          list.appendChild(d);
-        });
-        right.appendChild(list);
         wrap.appendChild(right);
         body.appendChild(wrap);
       } else if (kind === 'furnace' || kind === 'brew' || kind === 'enchant') {
@@ -326,6 +327,41 @@
       }
       body.appendChild(hot);
       this.renderCursor();
+    }
+
+    // 配方书：按当前背包材料列出可合成配方，点击一键摆料
+    renderRecipeList(list, size, query) {
+      list.innerHTML = '';
+      const q = (query || '').trim().toLowerCase();
+      const all = Items.RECIPES.filter(r => Items.fitsSize(r, size) &&
+        (!q || DEF[r.out].cn.includes(q) || DEF[r.out].name.includes(q)));
+      const can = all.filter(r => Items.canCraft(r, this.g.inv, size));
+      const rest = all.filter(r => !Items.canCraft(r, this.g.inv, size));
+      list.appendChild(el('div', 'recipe-count',
+        '可合成 ' + can.length + ' / ' + all.length + ' 条配方'));
+      const addRow = (r, ok) => {
+        const row = el('div', 'recipe-row ' + (ok ? 'ok' : 'locked'));
+        const icon = el('div', 'recipe-icon');
+        paintGlyph(icon, r.out);
+        row.appendChild(icon);
+        row.appendChild(el('span', 'recipe-name', DEF[r.out].cn + ' ×' + r.count));
+        row.appendChild(el('span', 'recipe-tag', ok ? '可做' : '缺材料'));
+        row.title = ok ? '点击自动摆放材料' : '材料不足';
+        if (ok) row.addEventListener('click', () => this.quickCraft(r));
+        list.appendChild(row);
+      };
+      can.forEach(r => addRow(r, true));
+      rest.forEach(r => addRow(r, false));
+    }
+    quickCraft(r) {
+      const g = this.g, inv = g.inv, size = g.craft.size;
+      if (!Items.canCraft(r, inv, size)) { this.toast('材料不足'); return; }
+      g.craft.clearInto(inv);                    // 网格里原有物品退回背包
+      const need = Items.recipeNeeds(r);
+      for (const k in need) inv.remove(Number(k), need[k]);
+      g.craft.cells = Items.applyRecipe(r, size);
+      this.buildPanel();
+      this.toast('已摆放 ' + DEF[r.out].cn + ' 的材料，点输出格取出产物');
     }
 
     clickSlot(kind, i, right) {

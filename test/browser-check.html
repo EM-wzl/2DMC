@@ -39,6 +39,26 @@
             out.push('t_on=' + (tp.enabled === true));
           } catch (e) { out.push('t_toggle_err=' + e.message); }
         }
+        if (w.game && w.game.sprites) {
+          const sp = w.game.sprites;
+          out.push('sprites=' + (sp.total - sp.failed) + '/' + sp.total);
+          out.push('player_sprite=' + !!sp.getPlayer());
+          out.push('zombie_sprite=' + !!sp.getMob('zombie'));
+          out.push('creeper_sprite=' + !!sp.getMob('creeper'));
+        }
+        // 配方书：真实点击「可做」一行，检查是否自动摆料并得到产物
+        try {
+          w.game.ui.openPanel('inv');
+          const rows = w.document.querySelectorAll('.recipe-row.ok');
+          out.push('recipe_ok_rows=' + rows.length);
+          if (rows.length) {
+            rows[0].click();
+            const res = w.game.craft.result();
+            out.push('quick_craft_filled=' + w.game.craft.cells.some(v => v > 0));
+            out.push('quick_craft_result=' + (res ? w.DMC.DEF[res.out].cn : 'none'));
+          }
+          w.game.ui.closePanel();
+        } catch (e) { out.push('recipe_err=' + e.message); }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');
     }, 2200);

@@ -373,6 +373,70 @@
   function craftMatch2(grid) { return craftMatch(grid, 2); }
   function craftMatch3(grid) { return craftMatch(grid, 3); }
 
+  /* ---------------- 配方书支持（纯函数） ---------------- */
+  // 有序配方包围盒；无序配方返回需要占用的格子数
+  function recipeShape(r) {
+    if (r.type === 'shapeless') {
+      let n = 0;
+      for (const [, c] of r.need) n += c;
+      return { cells: n, w: Math.min(3, Math.ceil(Math.sqrt(n))), h: 1 };
+    }
+    const pat = r.pattern.join('');
+    let minX = 3, maxX = -1, minY = 3, maxY = -1;
+    for (let p = 0; p < 9; p++) {
+      if (pat[p] === ' ') continue;
+      const px = p % 3, py = (p / 3) | 0;
+      if (px < minX) minX = px; if (px > maxX) maxX = px;
+      if (py < minY) minY = py; if (py > maxY) maxY = py;
+    }
+    return { w: maxX - minX + 1, h: maxY - minY + 1,
+             minX, minY, pat, cells: 0 };
+  }
+  function fitsSize(r, size) {
+    const s = recipeShape(r);
+    if (r.type === 'shapeless') return s.cells <= size * size;
+    return s.w <= size && s.h <= size;
+  }
+  // 配方需要的材料多重集合
+  function recipeNeeds(r) {
+    const need = {};
+    if (r.type === 'shapeless') {
+      for (const [id, c] of r.need) need[id] = (need[id] || 0) + c;
+    } else {
+      const pat = r.pattern.join('');
+      for (let p = 0; p < 9; p++) {
+        const ch = pat[p];
+        if (ch === ' ') continue;
+        const id = r.key[ch] | 0;
+        if (id) need[id] = (need[id] || 0) + 1;
+      }
+    }
+    return need;
+  }
+  function canCraft(r, inv, size) {
+    if (!fitsSize(r, size)) return false;
+    const need = recipeNeeds(r);
+    for (const k in need) if (inv.countOf(Number(k)) < need[k]) return false;
+    return true;
+  }
+  // 把配方图案摆进网格（左上对齐，其余留空）
+  function applyRecipe(r, size) {
+    const cells = new Array(size * size).fill(0);
+    if (r.type === 'shapeless') {
+      let i = 0;
+      for (const [id, c] of r.need)
+        for (let k = 0; k < c && i < cells.length; k++, i++) cells[i] = id;
+    } else {
+      const s = recipeShape(r);
+      for (let y = 0; y < s.h && y < size; y++)
+        for (let x = 0; x < s.w && x < size; x++) {
+          const ch = s.pat[(y + s.minY) * 3 + (x + s.minX)];
+          if (ch && ch !== ' ') cells[y * size + x] = r.key[ch] | 0;
+        }
+    }
+    return cells;
+  }
+
   const isBlock = id => id > 0 && id < 200;
   const defOf = id => D[id] || D[B.AIR];
   const nameOf = id => (D[id] ? D[id].cn : '未知');
@@ -380,5 +444,6 @@
 
   DMC.DEF = D;
   DMC.Items = { RECIPES, SMELT, craftMatch, craftMatch2, craftMatch3,
+                recipeShape, fitsSize, recipeNeeds, canCraft, applyRecipe,
                 defOf, nameOf, isBlock, stackable, shaped, shapeless };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -64,14 +64,16 @@
           <tr><td>H / Esc</td><td>帮助 / 关闭面板</td><td>左键按住</td><td>持续挖掘</td></tr>
         </table>
         <h3>原版合成</h3>
-        <p>右键工作台打开 <b>3×3</b> 合成，随身背包是 <b>2×2</b>。有序配方按 3×3 图案匹配（支持网格内平移），无序配方按材料集合匹配。光标拿取完全按原版：左键拿整堆 / 放整堆 / 同类合并 / 异类交换，右键拿一半 / 放一个。</p>
+        <p>右键工作台打开 <b>3×3</b> 合成，随身背包是 <b>2×2</b>。有序配方按 3×3 图案匹配（支持网格内平移），无序配方按材料集合匹配。光标拿取完全按原版：左键拿整堆 / 放整堆 / 同类合并 / 异类交换，右键拿一半 / 放一个。右侧是<b>配方书</b>：按背包材料列出可做 / 缺材料，可搜索，点「可做」一键把材料摆进合成格。</p>
         <h3>维度与末影龙</h3>
         <p><b>主世界 → 下界</b>：黑曜石门框 + 打火石（或直接 <code>/nether</code>）。<b>末地</b>：主世界地下要塞有末地传送门框架，手持龙蛋右键激活；也可以 <code>/end</code> 直接前往。</p>
-        <p>末影龙是一条<b>链式 Boss</b>（头部 + 12 节体节 + 尾部，体节沿链跟随），和「世界吞噬者」同一套骨架。行为循环：巡航盘旋 → 俯冲掠过玩家并喷龙息 → 降落到地面栖息（玩家主要输出窗口）。用剑或镐点击龙首近战命中会立刻把它打落。柱顶四枚<b>末影水晶</b>只要还活着，龙栖息时就会持续回血——把它们挖掉才能速战速决。击败后掉落<b>龙蛋</b>并激活退出传送门。</p>
+        <p>末影龙是一条<b>链式 Boss</b>（头部 + 12 节体节 + 尾部，体节沿链跟随），和「世界吞噬者」同一套骨架。行为循环：巡航盘旋 → 俯冲掠过玩家并喷龙息 → 降落到地面栖息（玩家主要输出窗口）。龙息落地后会留下<b>持续伤害的紫色滞留云</b>，别站在里面。用剑或镐点击龙首近战命中会立刻把它打落。柱顶四枚<b>末影水晶</b>只要还活着，龙栖息时就会持续回血——把它们挖掉才能速战速决。击败后掉落<b>龙蛋</b>并激活退出传送门。</p>
         <h3>局域网联机（同一浏览器多标签）</h3>
         <p>标签 A 输入 <code>/lan host</code>，标签 B 输入 <code>/lan join</code>。主机权威，通过 BroadcastChannel 同步完整世界快照、方块变更、玩家位置、维度、末影龙状态与聊天。需要以 http(s) 打开（GitHub Pages 或本地静态服务器），<code>file://</code> 下浏览器限制跨标签通信。</p>
         <h3>常用命令</h3>
-        <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
+        <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/skin alex</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
+        <h3>皮肤与生物</h3>
+        <p>玩家小人和僵尸 / 骷髅 / 苦力怕 / 羊 / 僵尸猪灵使用项目内的 MC 皮肤拼成的 2D 正面贴图（<code>beta1.8/assets/skins</code> 与 <code>tools/mob_textures_src</code>）。输入 <code>/skin</code> 查看可用皮肤，<code>/skin alex</code> 切换，选择会记住。蜘蛛、末影人、硫磺方块怪仍是程序化绘制；掉落物也换成真实物品贴图。</p>
         <h3>贴图资源</h3>
         <p>方块与物品图标直接使用项目文件夹里的贴图：<code>Default-Java-26.2/assets/minecraft/textures/{block,item}</code>（Minecraft Java 26.2 原版资源包，16×16）为主，<code>beta1.8/assets/tiles</code>（2DMC 自有贴图）补充，共 181 项。动画图集（水/岩浆/下界传送门等）只取第一帧；箱子、末地传送门保留程序化绘制。按 <b>T</b> 可在原版贴图与程序化纹理间切换。</p>
         <h3>内容对标</h3>
@@ -101,6 +103,7 @@
 
 <script src="js/core.js"></script>
 <script src="js/textures.js"></script>
+<script src="js/sprites.js"></script>
 <script src="js/items.js"></script>
 <script src="js/inventory.js"></script>
 <script src="js/world.js"></script>

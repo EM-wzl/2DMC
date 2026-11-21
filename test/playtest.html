@@ -113,6 +113,10 @@ document.getElementById('fr').addEventListener('load', async () => {
     out.push('end_dim=' + g.world.dim);
     out.push('dragon_segs=' + (g.dragon ? g.dragon.segs.length : 0));
     out.push('dragon_state=' + (g.dragon ? g.dragon.state : '-'));
+    // 龙息滞留云：生成后能正常结算并消散
+    g.clouds.push(new E.BreathCloud(p.x, p.y));
+    step(170);
+    out.push('clouds_left=' + g.clouds.length);
     g.renderer.render = realRender;
     step(1);                              // 恢复绘制并画一帧，验证渲染链路没坏
     const rise = baseY - top;
