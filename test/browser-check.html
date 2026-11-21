@@ -27,6 +27,8 @@
         if (w.game && w.game.textures) {
           const tp = w.game.textures;
           out.push('textures=' + (tp.total - tp.failed) + '/' + tp.total);
+          out.push('tex_failed=' + (tp.failedNames && tp.failedNames.length
+                                   ? tp.failedNames.join(',') : 'none'));
           out.push('stone_tex=' + !!tp.get(1));
           out.push('grass_tex=' + !!tp.get(2));
           out.push('diamond_sword_tex=' + !!tp.get(w.DMC.I.DIAMOND_SWORD));

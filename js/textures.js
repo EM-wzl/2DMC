@@ -377,33 +377,41 @@
       this.tiles = {};      // name -> 32x32 canvas（已裁剪第一帧）
       this.images = {};
       this.loaded = 0; this.failed = 0; this.total = 0;
+      this.failedNames = [];
       this.enabled = true;
     }
     get totalCount() { return Object.keys(DMC.TextureMap).length; }
     load(cb) {
       const names = Array.from(new Set(Object.values(DMC.TextureMap)));
       this.total = names.length;
+      this.failedNames = [];
       if (!this.total) { cb && cb(this); return; }
       let done = 0;
+      const finish = () => { if (++done === this.total) cb && cb(this); };
       names.forEach(name => {
-        const img = new Image();
-        img.onload = () => {
-          const cv = document.createElement('canvas');
-          cv.width = 32; cv.height = 32;
-          const g = cv.getContext('2d');
-          g.imageSmoothingEnabled = false;
-          // 绝大多数是 16x16；动画图集(16xN)只取最上面一帧
-          const sw = Math.min(16, img.width), sh = Math.min(16, img.height);
-          g.drawImage(img, 0, 0, sw, sh, 0, 0, 32, 32);
-          this.tiles[name] = cv;
-          this.images[name] = img;
-          if (++done === this.total) cb && cb(this);
+        // GitHub Pages / 弱网下偶发单张请求失败：重试两次再判定失败
+        const attempt = (n) => {
+          const img = new Image();
+          img.onload = () => {
+            const cv = document.createElement('canvas');
+            cv.width = 32; cv.height = 32;
+            const g = cv.getContext('2d');
+            g.imageSmoothingEnabled = false;
+            // 绝大多数是 16x16；动画图集(16xN)只取最上面一帧
+            const sw = Math.min(16, img.width), sh = Math.min(16, img.height);
+            g.drawImage(img, 0, 0, sw, sh, 0, 0, 32, 32);
+            this.tiles[name] = cv;
+            this.images[name] = img;
+            finish();
+          };
+          img.onerror = () => {
+            if (n < 2) { setTimeout(() => attempt(n + 1), 150 * (n + 1)); return; }
+            this.failed++; this.failedNames.push(name);
+            finish();
+          };
+          img.src = 'assets/tiles/' + name + '.png' + (n ? '?retry=' + n : '');
         };
-        img.onerror = () => {
-          this.failed++;
-          if (++done === this.total) cb && cb(this);
-        };
-        img.src = 'assets/tiles/' + name + '.png';
+        attempt(0);
       });
     }
     get(id) { return this.enabled ? (this.tiles[DMC.TextureMap[id]] || null) : null; }
