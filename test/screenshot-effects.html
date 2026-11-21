@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC 状态效果截图</title>
+<style>html,body{margin:0;padding:0;overflow:hidden;background:#000}iframe{border:0;display:block;width:100vw;height:100vh}</style>
+</head>
+<body>
+<iframe id="fr" src="../index.html"></iframe>
+<script>
+document.getElementById('fr').addEventListener('load', function () {
+  var w = this.contentWindow;
+  setTimeout(function () {
+    try {
+      var b = w.document.getElementById('btn-new');
+      if (b) b.click();
+      var g = w.game;
+      g.command('weather rain');
+      g.command('effect give speed 1200 2');
+      g.command('effect give night 900 1');
+      g.command('effect give regen 600 1');
+      g.player.hunger = 11;
+      g.renderer.minimapOn = true;
+      g.ui.render();
+      g.renderer.render(g);
+      document.title = 'OK ' + g.player.effects.list().length;
+    } catch (e) { document.title = 'ERR ' + e.message; }
+  }, 1400);
+});
+</script>
+</body>
+</html>

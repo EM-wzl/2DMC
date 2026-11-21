@@ -450,6 +450,47 @@
       ck(a.progress().length === a.total, '进度列表长度与成就总数一致');
     }
 
+    /* ---- 13. 状态效果 / 药水 ---- */
+    {
+      const E = DMC.Effects;
+      ck(!!E && DMC.EFFECT_IDS.length >= 8, '状态效果模块与效果表存在');
+      const e = new E();
+      ck(!e.has('speed') && e.speedMul === 1, '无效果时速度倍率为 1');
+      ck(e.apply('speed', 1200, 2) && e.level('speed') === 2, '施加二级速度');
+      ck(e.speedMul > 1.4, '速度倍率生效');
+      e.apply('speed', 600, 1);
+      ck(e.level('speed') === 2 && e.active.speed.ticks === 1200,
+         '重复饮用取较高等级与较长时间');
+      e.apply('slow', 600, 1);
+      ck(e.speedMul < 1 + 0.28 * 2, '缓慢抵消部分速度');
+      ck(e.apply('night', 100, 1) && e.nightVision, '夜视标记生效');
+      ck(!e.apply('bogus', 10, 1), '拒绝未知效果');
+      for (let i = 0; i < 101; i++) e.tick();
+      ck(!e.has('night'), '效果到期消失');
+      ck(e.jumpMul === 1 && e.mineMul >= 0.4, '未施加时跳跃/挖掘倍率正常');
+      const r = new E(); r.apply('regen', 500, 1);
+      const pl = { life: 5, heal(n) { this.life = Math.min(20, this.life + n); } };
+      for (let i = 0; i < 80; i++) r.potionTick(pl);
+      ck(pl.life > 5, '再生效果持续回血');
+      const ps = new E(); ps.apply('poison', 1000, 1);
+      const pl2 = { life: 8 };
+      for (let i = 0; i < 60; i++) ps.potionTick(pl2);
+      eq(pl2.life, 7, '中毒每 60 帧掉 1 血');
+      for (let i = 0; i < 700; i++) ps.potionTick(pl2);
+      eq(pl2.life, 1, '中毒不会直接毒死');
+      const e2 = E.restore(JSON.parse(JSON.stringify(r.serialize())));
+      ck(e2.has('regen') && e2.active.regen.ticks === 500, '状态效果存档往返无损');
+      ck(DEF[I.POTION_SPEED].potion === 'speed' &&
+         DEF[I.POTION_NIGHT].potion === 'night', '药水物品带效果标记');
+      const inv = new Inv.Inventory();
+      inv.add(I.GLOW_BERRIES, 1); inv.add(B.SUGAR_CANE, 1);
+      const rp = Items.RECIPES.find(x => x.out === I.POTION_SPEED);
+      ck(Items.canCraft(rp, inv, 2), '发光浆果 + 甘蔗可合成迅捷药水');
+      const a = new DMC.Achievements();
+      a.note('potion');
+      ck(a.check(null).some(x => x.id === 'alchemist'), '喝药水解锁炼金术士成就');
+    }
+
     return { passed: pass, failed: fail, lines, ok: fail === 0 };
   }
 

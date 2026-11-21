@@ -301,7 +301,8 @@
           if (tile) ctx.drawImage(tile, px, py, T + 1, T + 1);
           else { ctx.fillStyle = '#000'; ctx.fillRect(px, py, T + 1, T + 1); }
           const lv = world.light(wx, wy);
-          const bright = clamp(lv / 15 * dayFactor, 0.26, 1);
+          const minBright = (p.effects && p.effects.nightVision) ? 0.72 : 0.26;
+          const bright = clamp(lv / 15 * dayFactor, minBright, 1);
           if (bright < 0.99) {
             ctx.fillStyle = 'rgba(6,8,22,' + (1 - bright).toFixed(3) + ')';
             ctx.fillRect(px, py, T + 1, T + 1);

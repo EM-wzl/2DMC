@@ -101,6 +101,20 @@
           const achBefore = g.ach.count;
           g.load();
           out.push('ach_save=' + (g.ach.count === achBefore && g.ach.has('first_mine')));
+          // 状态效果 / 药水
+          g.command('effect give speed 600 2');
+          out.push('effect_speed=' + g.player.effects.has('speed'));
+          g.ui.render();
+          out.push('effect_chips=' + w.document.querySelectorAll('#effects .effect-chip').length);
+          g.player.effects.clear();
+          g.inv.slots[0] = { id: I.POTION_NIGHT, count: 2 };
+          g.inv.selected = 0;
+          w.document.querySelector('#game').dispatchEvent(
+            new w.MouseEvent('mousedown', { button: 2, bubbles: true }));
+          out.push('potion_night=' + g.player.effects.has('night'));
+          out.push('potion_left=' + g.inv.slots[0].count);
+          g.save(); g.load();
+          out.push('effect_save=' + g.player.effects.has('night'));
         } catch (e) { out.push('newsys_err=' + e.message); }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');

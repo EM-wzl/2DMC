@@ -137,6 +137,25 @@
         }
         hungerBar.title = '饱食度 ' + hg + ' / 20 · 手持食物右键食用';
       }
+      // 状态效果（药水）
+      const fx = $('#effects');
+      if (fx) {
+        const list = (p.effects && p.effects.list()) || [];
+        const sig = list.map(a => a.id + a.level + Math.ceil(a.ticks / 60)).join(',');
+        if (fx.dataset.sig !== sig) {
+          fx.dataset.sig = sig;
+          fx.innerHTML = '';
+          for (const a of list) {
+            const b = el('div', 'effect-chip' + (a.good ? '' : ' bad'));
+            b.style.borderColor = a.color;
+            b.style.color = a.color;
+            b.textContent = a.short + (a.level > 1 ? a.level : '') +
+                            ' ' + Math.ceil(a.ticks / 60) + 's';
+            b.title = a.name + ' Lv' + a.level + ' · ' + Math.ceil(a.ticks / 60) + ' 秒';
+            fx.appendChild(b);
+          }
+        }
+      }
       // 快捷栏
       for (let i = 0; i < 9; i++) {
         const s = inv.slots[i], h = this.hot[i];

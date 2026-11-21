@@ -16,6 +16,7 @@
     <div class="hud-row">
       <div id="hearts" class="hearts"></div>
       <div id="hunger" class="hunger"></div>
+      <div id="effects" class="effects"></div>
       <div id="info" class="info"></div>
       <div class="tools">
         <button id="btn-save" class="icon-btn" title="保存世界">保存</button>
@@ -69,7 +70,9 @@
         <p>HUD 左边是<b>生命</b>，紧挨着的橙色菱形是<b>饱食度</b>。走动、跳跃、挖掘、受伤都会慢慢消耗；饱食度 ≥18 会自然回血，饿空会持续掉血（最低留 1 点）。快捷栏里选中食物后<b>右键吃掉</b>（面包 / 苹果 / 金苹果 / 浆果 / 紫颂果），初始背包带了面包和苹果。</p>
         <p>主世界会随机切换<b>晴 / 雨 / 雪 / 雷暴</b>：雪原下雨自动变降雪，沙漠不下雨，下界和末地永远晴朗。雨天天空变暗、光照降低，雷暴有闪电和白闪；地下看不到雨雪。右上角<b>小地图</b>显示周围地形切片、生物（红）、末影水晶（紫）、末影龙、传送门（青）和你自己（白色菱形）。</p>
         <p>音效全部由 Web Audio 实时合成，不需要音频文件：脚步、挖掘、破坏、放置、跳跃、受伤、吃食物、拾取、爆炸、龙息、龙吼、传送、雷声和雨/洞穴/下界/末地环境音。浏览器要求首次点击或按键后才出声，按 <b>M</b> 可随时静音。</p>
-        <p>还有 <b>13 项成就</b>（开局一镐、伐木工、钻石！、建筑师、怪物猎人、下界/末地来客、屠龙者、风雨交加、老玩家等）。挖掘、放置、合成、进食、击杀、维度切换、雷暴与游玩时长会记入统计，解锁时有金色粒子、提示音与成就日志，并自动存档。输入 <code>/achievements</code> 查看进度。</p>
+        <p>还有 <b>14 项成就</b>（开局一镐、伐木工、钻石！、建筑师、怪物猎人、补充能量、炼金术士、下界/末地来客、屠龙者、风雨交加、老玩家等）。挖掘、放置、合成、进食、喝药水、击杀、维度切换、雷暴与游玩时长会记入统计，解锁时有金色粒子、提示音与成就日志，并自动存档。输入 <code>/achievements</code> 查看进度。</p>
+        <h3>药水与状态效果</h3>
+        <p>背包里有治疗 / 强效治疗 / 迅捷 / 跳跃 / 夜视 / 抗火 / 再生 / 剧毒 / 迟缓药水，<b>右键饮用</b>；也可以用发光浆果加对应材料在 2×2 里合成（配方书里可直接点）。共 9 种状态效果：速度、跳跃、急迫、再生、夜视、抗火、中毒、缓慢、虚弱，支持 1–3 级，重复喝取更高等级与更长时长。速度/跳跃/挖掘/攻击会跟着变，再生持续回血、中毒持续掉血（不会毒死）、夜视让地下变亮、抗火免疫岩浆伤害。HUD 心形旁显示带倒计时的效果标签，<code>/effect give speed 1200 2</code> 可直接施加，<code>/effect clear</code> 清除。</p>
         <h3>原版合成</h3>
         <p>右键工作台打开 <b>3×3</b> 合成，随身背包是 <b>2×2</b>。有序配方按 3×3 图案匹配（支持网格内平移），无序配方按材料集合匹配。光标拿取完全按原版：左键拿整堆 / 放整堆 / 同类合并 / 异类交换，右键拿一半 / 放一个。右侧是<b>配方书</b>：按背包材料列出可做 / 缺材料，可搜索，点「可做」一键把材料摆进合成格。</p>
         <h3>维度与末影龙</h3>
@@ -78,11 +81,11 @@
         <h3>局域网联机（同一浏览器多标签）</h3>
         <p>标签 A 输入 <code>/lan host</code>，标签 B 输入 <code>/lan join</code>。主机权威，通过 BroadcastChannel 同步完整世界快照、方块变更、玩家位置、维度、末影龙状态、<b>天气与昼夜时间</b>、聊天。主机每 30 帧广播一次状态，天气切换时立即广播；客户端不会自己随机变天。需要以 http(s) 打开（GitHub Pages 或本地静态服务器），<code>file://</code> 下浏览器限制跨标签通信。</p>
         <h3>常用命令</h3>
-        <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/skin alex</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/weather rain|snow|thunder|clear</code> <code>/hunger</code> <code>/sound on|off</code> <code>/achievements</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
+        <p><code>/help</code> <code>/end</code> <code>/nether</code> <code>/overworld</code> <code>/lan host|join|stop|status</code> <code>/say 消息</code> <code>/give 钻石 8</code> <code>/tp 100 80</code> <code>/gamemode creative</code> <code>/time 13000</code> <code>/skin alex</code> <code>/spawn creeper</code> <code>/dragon</code> <code>/weather rain|snow|thunder|clear</code> <code>/hunger</code> <code>/sound on|off</code> <code>/achievements</code> <code>/effect give|clear|list</code> <code>/selftest</code> <code>/save</code> <code>/load</code></p>
         <h3>皮肤与生物</h3>
         <p>玩家小人和僵尸 / 骷髅 / 苦力怕 / 羊 / 僵尸猪灵使用项目内的 MC 皮肤拼成的 2D 正面贴图（<code>beta1.8/assets/skins</code> 与 <code>tools/mob_textures_src</code>）。输入 <code>/skin</code> 查看可用皮肤，<code>/skin alex</code> 切换，选择会记住。蜘蛛、末影人、硫磺方块怪仍是程序化绘制；掉落物也换成真实物品贴图。</p>
         <h3>贴图资源</h3>
-        <p>方块与物品图标直接使用项目文件夹里的贴图：<code>Default-Java-26.2/assets/minecraft/textures/{block,item}</code>（Minecraft Java 26.2 原版资源包，16×16）为主，<code>beta1.8/assets/tiles</code>（2DMC 自有贴图）补充，共 181 项。动画图集（水/岩浆/下界传送门等）只取第一帧；箱子、末地传送门保留程序化绘制。按 <b>T</b> 可在原版贴图与程序化纹理间切换。</p>
+        <p>方块与物品图标直接使用项目文件夹里的贴图：<code>Default-Java-26.2/assets/minecraft/textures/{block,item}</code>（Minecraft Java 26.2 原版资源包，16×16）为主，<code>beta1.8/assets/tiles</code>（2DMC 自有贴图）补充，共 189 项（含 8 种药水玻璃瓶）。动画图集（水/岩浆/下界传送门等）只取第一帧；箱子、末地传送门保留程序化绘制。按 <b>T</b> 可在原版贴图与程序化纹理间切换。</p>
         <h3>内容对标</h3>
         <p>Minecraft Java 1.0 – 26.3 的 2D 化：矿脉 / 深板岩 / 紫水晶晶洞 / 幽匿块、八种群系（含樱花、红树、苍白之园）、下界与末地维度、原版合成与工具等级、熔炉 / 附魔台 / 酿造台、26.1 金蒲公英 / 命名牌 / 收纳袋、26.2 硫磺洞穴与硫磺方块怪 / 剪刀、26.3 荒野内容。</p>
       </div>
@@ -109,6 +112,7 @@
 </div>
 
 <script src="js/core.js"></script>
+<script src="js/effects.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/items.js"></script>

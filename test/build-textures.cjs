@@ -57,7 +57,12 @@ const OVERRIDE = {
   geyser: ['b:bubble_column', 'b:water_still'],
   sulfur_pool: ['b:water_still'],
   end_rod: ['b:end_rod'],
-  torch: ['b:torch', 'o:torch']
+  torch: ['b:torch', 'o:torch'],
+  // 各种药水共用原版玻璃瓶贴图（颜色由 DEF.color 在 UI 上区分）
+  potion_heal: ['i:potion'], potion_speed: ['i:potion'],
+  potion_jump: ['i:potion'], potion_night: ['i:potion'],
+  potion_fire: ['i:potion'], potion_regen: ['i:potion'],
+  potion_poison: ['i:potion'], potion_slow: ['i:potion']
 };
 
 function srcPath(token) {

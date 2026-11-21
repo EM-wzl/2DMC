@@ -96,6 +96,7 @@
       this.fly = false;
       this.dead = false;
       this.attackCd = 0;
+      this.effects = new DMC.Effects();   // 状态效果（药水 / 环境）
     }
     get cx() { return this.x; }
     get cy() { return this.y; }
@@ -116,7 +117,7 @@
       const ox = this.x, oy = this.y;
       const inWater = world.get(Math.floor(this.x), Math.floor(this.y)) === B.WATER;
       if (this.creative && this.fly) {
-        const sp = C.FLY_SPEED;
+        const sp = C.FLY_SPEED * this.effects.speedMul;
         this.vx = (input.right - input.left) * sp;
         this.vy = (input.down - input.jump) * sp;
         this.facing = this.vx < 0 ? -1 : this.vx > 0 ? 1 : this.facing;
@@ -125,7 +126,7 @@
       } else {
         const accel = this.onGround ? 0.020 : 0.010;
         const target = (input.right - input.left) *
-                       (inWater ? C.WATER_SPEED : C.WALK_SPEED);
+                       (inWater ? C.WATER_SPEED : C.WALK_SPEED) * this.effects.speedMul;
         this.vx += clamp(target - this.vx, -accel, accel);
         this.vx *= this.onGround ? 0.80 : 0.94;
         if (input.left) this.facing = -1;
@@ -134,7 +135,7 @@
                            this.vy + (inWater ? C.GRAVITY * 0.35 : C.GRAVITY));
         if (inWater) this.vy *= 0.86;
         if (input.jump && this.onGround) {
-          this.vy = C.JUMP_V; this.onGround = false;
+          this.vy = C.JUMP_V * this.effects.jumpMul; this.onGround = false;
           this.exhaust(0.15);
         }
         if (input.jump && inWater) this.vy = C.WATER_JUMP;
@@ -149,6 +150,12 @@
       if (this.y < 1) { this.y = 1; this.vy = Math.max(0, this.vy); }
       if (this.x < 1) { this.x = 1; this.vx = 0; }
       if (this.x > C.W - 2) { this.x = C.W - 2; this.vx = 0; }
+      // 岩浆伤害：抗火效果期间完全免疫
+      if (world.get(Math.floor(this.x), Math.floor(this.y)) === B.LAVA &&
+          !this.effects.fireResist && this.invuln <= 0 && !this.creative)
+        this.hurt(2, this.x);
+      this.effects.tick();
+      this.effects.potionTick(this);
       this.metabolism(Math.abs(this.x - ox) + Math.abs(this.y - oy));
     }
 
@@ -200,7 +207,7 @@
     attackDamage(inv) {
       const h = inv.held();
       const d = h.id ? DEF[h.id] : null;
-      return d && d.dmg ? d.dmg : 1;
+      return (d && d.dmg ? d.dmg : 1) * this.effects.attackMul;
     }
     toolTier(inv) {
       const h = inv.held();

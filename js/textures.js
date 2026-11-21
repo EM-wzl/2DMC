@@ -1,6 +1,6 @@
 /* 自动生成，请勿手改：node test/build-textures.cjs
  * 贴图来源：项目内 Default-Java-26.2（MC Java 26.2 原版资源包）与 beta1.8/assets/tiles
- * 共 181 项，动画图集在运行时只取第一帧 16x16
+ * 共 189 项，动画图集在运行时只取第一帧 16x16
  */
 (function (root) {
   'use strict';
@@ -186,7 +186,15 @@
   "267": "nether_wart_item",
   "268": "candle_item",
   "270": "raw_sulfur",
-  "271": "cinnabar_dust"
+  "271": "cinnabar_dust",
+  "272": "potion_heal",
+  "273": "potion_speed",
+  "274": "potion_jump",
+  "275": "potion_night",
+  "276": "potion_fire",
+  "277": "potion_regen",
+  "278": "potion_poison",
+  "279": "potion_slow"
 };
   DMC.TextureCredits = {
   "stone": "b:stone.png",
@@ -369,7 +377,15 @@
   "nether_wart_item": "i:nether_wart.png",
   "candle_item": "i:candle.png",
   "raw_sulfur": "i:glowstone_dust.png",
-  "cinnabar_dust": "i:redstone.png"
+  "cinnabar_dust": "i:redstone.png",
+  "potion_heal": "i:potion.png",
+  "potion_speed": "i:potion.png",
+  "potion_jump": "i:potion.png",
+  "potion_night": "i:potion.png",
+  "potion_fire": "i:potion.png",
+  "potion_regen": "i:potion.png",
+  "potion_poison": "i:potion.png",
+  "potion_slow": "i:potion.png"
 };
 
   class TexturePack {

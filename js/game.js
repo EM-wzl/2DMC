@@ -7,6 +7,19 @@
   const T = C.TILE;
   const $ = s => document.querySelector(s);
 
+  /* 药水 id → 效果 */
+  const POTIONS = {
+    heal:    { heal: 5,  msg: '生命 +5' },
+    heal2:   { heal: 10, msg: '生命 +10' },
+    speed:   { effect: 'speed',  ticks: 1800, msg: '速度提升 30 秒' },
+    jump:    { effect: 'jump',   ticks: 1800, msg: '跳跃提升 30 秒' },
+    night:   { effect: 'night',  ticks: 2400, msg: '夜视 40 秒' },
+    fire:    { effect: 'fire',   ticks: 1800, msg: '抗火 30 秒' },
+    regen:   { effect: 'regen',  ticks: 1200, msg: '持续回血 20 秒' },
+    poison:  { effect: 'poison', ticks: 900,  msg: '中毒 15 秒' },
+    slow:    { effect: 'slow',   ticks: 900,  msg: '缓慢 15 秒' }
+  };
+
   class Game {
     constructor() {
       this.canvas = $('#game');
@@ -105,6 +118,9 @@
       inv.add(I.BREAD, 8);
       inv.add(I.APPLE, 4);
       inv.add(I.GOLDEN_APPLE, 1);
+      inv.add(I.POTION_SPEED, 2);
+      inv.add(I.POTION_NIGHT, 1);
+      inv.add(I.POTION_HEAL, 1);
       inv.selected = 0;
     }
 
@@ -273,7 +289,8 @@
       else {
         const tier = this.player.toolTier(this.inv) + (this.enchantBonus || 0);
         const speed = 1 + tier * 0.85;
-        this.breakProgress += (speed * 0.016) / Math.max(1, d.hardness / 12);
+        this.breakProgress += (speed * this.player.effects.mineMul * 0.016) /
+                              Math.max(1, d.hardness / 12);
       }
       if (Math.random() < 0.12)
         this.renderer.emit(x + 0.5, y + 0.5, d.color, 1, { speed: 0.08, life: 18, size: 2 });
@@ -308,6 +325,20 @@
     rightClick() {
       if (this.ui.panelOpen) return;
       const held0 = this.inv.held();
+      // 手持药水：右键饮用（治疗 / 增益 / 减益）
+      const pd = held0.id && DEF[held0.id] ? DEF[held0.id].potion : null;
+      if (pd && POTIONS[pd]) {
+        const q = POTIONS[pd];
+        if (q.heal) this.player.heal(q.heal);
+        if (q.effect) this.player.effects.apply(q.effect, q.ticks, 1);
+        this.inv.consumeHeld(1);
+        this.sound.play('levelup');
+        this.ach.note('potion');
+        this.renderer.emit(this.player.x, this.player.y - 0.5, '#c8a8ff', 8,
+          { speed: 0.1, life: 26, grav: -0.004 });
+        this.ui.toast('喝下' + DEF[held0.id].cn + ' · ' + q.msg);
+        return;
+      }
       // 手持食物：右键食用（不需要对准方块）
       if (held0.id && DEF[held0.id] && DEF[held0.id].food) {
         const food = DEF[held0.id].food;
@@ -484,7 +515,7 @@
           g.ui.log('命令：/help /end /nether /overworld /lan host|join|stop|status /say <消息> ' +
                    '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /skin [名字] /save /load ' +
                    '/spawn <生物> /dragon /weather [类型] /hunger [数值] /sound [on|off] ' +
-                   '/achievements /selftest /clear');
+                   '/achievements /effect give|clear|list /selftest /clear');
           break;
         case 'achievements':
         case 'ach': {
@@ -492,6 +523,27 @@
           for (const a of g.ach.progress())
             g.ui.log((a.done ? '[已达成] ' : '[未达成] ') + a.name + ' — ' + a.desc);
           g.ui.toast('成就 ' + g.ach.count + '/' + g.ach.total + '，详情见聊天区');
+          break;
+        }
+        case 'effect': {
+          const sub = (args[0] || '').toLowerCase();
+          const eid = (args[1] || '').toLowerCase();
+          if (sub === 'clear') {
+            g.player.effects.clear();
+            g.ui.toast('已清除全部状态效果');
+          } else if (sub === 'list') {
+            g.ui.log('效果列表：' + DMC.EFFECT_IDS.join(' / '));
+            const act = g.player.effects.list();
+            g.ui.log(act.length ? '当前：' + act.map(a => a.name + ' Lv' + a.level +
+                       ' ' + Math.ceil(a.ticks / 60) + 's').join('，')
+                     : '当前没有状态效果');
+          } else if (sub === 'give' && DMC.EFFECT_IDS.indexOf(eid) >= 0) {
+            const t = clamp(parseInt(args[2], 10) || 1200, 1, 200000);
+            const lv = clamp(parseInt(args[3], 10) || 1, 1, 3);
+            g.player.effects.apply(eid, t, lv);
+            g.ui.toast('获得 ' + DMC.EFFECT_DEFS[eid].name + ' Lv' + lv +
+                       ' · ' + Math.ceil(t / 60) + ' 秒');
+          } else g.ui.log('用法：/effect give <效果> [帧数] [等级] | /effect clear | /effect list');
           break;
         }
         case 'weather': {
@@ -629,7 +681,8 @@
           world: this.world.serialize(),
           player: { x: this.player.x, y: this.player.y, life: this.player.life,
                     creative: this.player.creative, hunger: this.player.hunger,
-                    saturation: this.player.saturation, exhaustion: this.player.exhaustion },
+                    saturation: this.player.saturation, exhaustion: this.player.exhaustion,
+                    effects: this.player.effects.serialize() },
           inv: this.inv.toJSON(), craft: this.craft.toJSON(),
           panel: this.panel.toJSON(), dragon: this.dragon.serialize(),
           weather: this.weather.serialize(),
@@ -662,6 +715,7 @@
           this.player.saturation = d.player.saturation || 0;
           this.player.exhaustion = d.player.exhaustion || 0;
         }
+        this.player.effects = DMC.Effects.restore(d.player.effects);
         this.weather = DMC.Weather.restore(d.weather, w.seed);
         this.ach = DMC.Achievements.restore(d.ach);
         this.time = d.time || 6000; this.tick = d.tick || 0;

@@ -102,6 +102,16 @@ document.getElementById('fr').addEventListener('load', async () => {
     out.push('weather=' + g.weather.type + '/' + g.weather.intensity.toFixed(2));
     g.command('weather clear');
     step(5);
+    // 真实右键喝药水：夜视效果 + 炼金术士成就
+    g.inv.slots[0] = { id: w.DMC.I.POTION_NIGHT, count: 2 };
+    g.inv.selected = 0;
+    d.getElementById('game').dispatchEvent(
+      new MouseEvent('mousedown', { button: 2, bubbles: true }));
+    const potionOk = g.player.effects.has('night') && g.inv.slots[0].count === 1;
+    out.push('potion_night=' + potionOk);
+    step(25);
+    const alchOk = g.ach.has('alchemist');
+    out.push('ach_alchemist=' + alchOk);
     const achOk = g.ach.has('foodie');
     out.push('ach_foodie=' + achOk + ' ach_total=' + g.ach.total);
 
@@ -148,6 +158,7 @@ document.getElementById('fr').addEventListener('load', async () => {
     out.push('RESULT=' + (stuck === 0 && oob === 0 && rise > 0.4 && rise < 2.6 &&
                           tapAir >= 12 && tapAir <= 45 && ate && muted && g.sound.enabled &&
                           mapOff && g.renderer.minimapOn && weatherOk && achOk &&
+                          potionOk && alchOk &&
                           Math.abs(walkDx) > 0.5 && g.input.right === 0 ? 'PASS' : 'FAIL'));
   } catch (e) { out.push('EXCEPTION=' + e.message); out.push('RESULT=FAIL'); }
   document.getElementById('result').textContent = out.join(' | ');

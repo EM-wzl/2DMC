@@ -36,7 +36,7 @@ node test/serve.cjs 8765
 | M | 音效开 / 关（记住设置） | V | 小地图开 / 关 |
 | H / Esc | 帮助 / 关闭面板 | 左键按住 | 持续挖掘 |
 
-按 `/help` 查看全部命令。常用的：`/end`（前往末地）、`/nether`、`/give 钻石 8`、`/tp 100 80`、`/gamemode creative`、`/time 13000`、`/weather rain|snow|thunder|clear`、`/hunger`、`/sound on|off`、`/achievements`、`/skin alex`、`/lan host`、`/lan join`、`/say 消息`、`/selftest`、`/save`、`/load`。
+按 `/help` 查看全部命令。常用的：`/end`（前往末地）、`/nether`、`/give 钻石 8`、`/tp 100 80`、`/gamemode creative`、`/time 13000`、`/weather rain|snow|thunder|clear`、`/hunger`、`/sound on|off`、`/achievements`、`/effect give|clear|list`、`/skin alex`、`/lan host`、`/lan join`、`/say 消息`、`/selftest`、`/save`、`/load`。
 
 ## 内容
 
@@ -60,9 +60,11 @@ node test/serve.cjs 8765
 
 **小地图**：右上角 172×116 的地形切片（每像素 2 格），标出玩家（白色菱形 + 朝向）、生物（红）、末影水晶与龙（紫）、传送门与远程玩家（青），按 **V** 开关。
 
-**成就与统计**：`js/achievements.js` 是纯逻辑模块，13 项成就（开局一镐、伐木工、铁器时代、钻石！、建筑师、怪物猎人、下界/末地来客、屠龙者、风雨交加、老玩家…）。挖掘 / 放置 / 合成 / 进食 / 击杀 / 维度切换 / 龙死亡 / 雷暴 / 游玩帧数都会记入统计，每 20 帧结算，解锁时有金色粒子、提示音、成就日志并自动存档。`/achievements` 查看进度，成就与统计随存档往返。
+**状态效果与药水**：`js/effects.js` 是纯逻辑模块，9 种效果（速度 / 跳跃 / 急迫 / 再生 / 夜视 / 抗火 / 中毒 / 缓慢 / 虚弱），支持 1–3 级、重复饮用取较高等级与较长时间。速度/跳跃/挖掘/攻击倍率、再生与中毒持续结算、夜视提高地下最低亮度、抗火免疫岩浆伤害都在 `Player` 与渲染里生效。新增 8 种可合成药水（治疗 / 强效治疗 / 迅捷 / 跳跃 / 夜视 / 抗火 / 再生 / 剧毒 / 迟缓），**右键饮用**；`/effect give <效果> [帧数] [等级]`、`/effect clear`、`/effect list` 可直接施加。HUD 心形旁有带倒计时的效果标签，效果随存档往返。
 
-**存档**：三个维度各自 RLE 压缩后存进 `localStorage`（`2dmc-web-save-v1`），含玩家（位置 / 生命 / 创造 / 饱食度 / 饱和度 / 消耗度）、背包、合成网格、通用面板、末影龙状态、**天气状态**、**成就与统计**、时间。自动保存 + `/save` 手动保存。
+**成就与统计**：`js/achievements.js` 是纯逻辑模块，**14 项成就**（开局一镐、伐木工、铁器时代、钻石！、建筑师、怪物猎人、补充能量、炼金术士、下界/末地来客、屠龙者、风雨交加、老玩家…）。挖掘 / 放置 / 合成 / 进食 / 喝药水 / 击杀 / 维度切换 / 龙死亡 / 雷暴 / 游玩帧数都会记入统计，每 20 帧结算，解锁时有金色粒子、提示音、成就日志并自动存档。`/achievements` 查看进度，成就与统计随存档往返。
+
+**存档**：三个维度各自 RLE 压缩后存进 `localStorage`（`2dmc-web-save-v1`），含玩家（位置 / 生命 / 创造 / 饱食度 / 饱和度 / 消耗度 / **状态效果**）、背包、合成网格、通用面板、末影龙状态、**天气状态**、**成就与统计**、时间。自动保存 + `/save` 手动保存。
 
 ## 末影龙：链式 Boss
 
@@ -90,12 +92,12 @@ node test/serve.cjs 8765
 | 来源 | 内容 | 数量 |
 |------|------|------|
 | `Default-Java-26.2/assets/minecraft/textures/block` | MC Java 26.2 原版方块贴图（16×16） | 103 |
-| `Default-Java-26.2/assets/minecraft/textures/item` | MC Java 26.2 原版物品/工具图标 | 74 |
+| `Default-Java-26.2/assets/minecraft/textures/item` | MC Java 26.2 原版物品/工具图标（含药水玻璃瓶） | 82 |
 | `beta1.8/assets/tiles` | 2DMC 自有贴图补充 | 4 |
 
 `node test/build-textures.cjs` 会读取 `js/items.js` 的方块/物品表，按名字自动匹配贴图，
 复制到 `assets/tiles/<name>.png`，并生成 `js/textures.js`（id → 贴图名 + 异步加载器）。
-**181 / 183 项命中**，打包后只有约 55 KB。
+**189 / 191 项命中**，打包后只有约 57 KB。
 
 细节：
 
@@ -132,12 +134,13 @@ node test/build-textures.cjs
 web/
   index.html              页面骨架（HUD / 面板 / 帮助 / 启动页）
   styles.css              深色 UI
-  assets/tiles/*.png      项目内贴图精选（181 张，构建脚本生成）
+  assets/tiles/*.png      项目内贴图精选（189 张，构建脚本生成）
   assets/skins/*.png      玩家皮肤（6 套）
   assets/mobs/*.png       生物 skin（8 张）
   js/textures.js          id → 贴图映射 + 异步加载器（构建脚本生成）
   js/sprites.js           皮肤 UV 裁剪 → 2D 正面 sprite
   js/core.js              常量、方块/物品 id、xorshift RNG、噪声、RLE
+  js/effects.js           状态效果 / 药水（纯函数）
   js/audio.js             Web Audio 程序化音效 + 环境声（无外部音频文件）
   js/weather.js           天气状态机（纯函数，雨/雪/雷暴 + 存档）
   js/achievements.js      成就与统计（纯函数）
@@ -162,16 +165,16 @@ web/
   test/skinscan.html      skin UV 区域扫描（定位裁剪坐标）
 ```
 
-`core / audio / weather / achievements / items / inventory / world / entities / selftest` 是纯逻辑模块（audio 在无音频设备时自动降级），不依赖 DOM，因此可以同时被浏览器和 Node 加载。
+`core / effects / audio / weather / achievements / items / inventory / world / entities / selftest` 是纯逻辑模块（audio 在无音频设备时自动降级），不依赖 DOM，因此可以同时被浏览器和 Node 加载。
 
 ## 自检
 
 ```bash
-node test/selftest.cjs              # 109 项
+node test/selftest.cjs              # 126 项
 node test/selftest.cjs --verbose    # 打印明细
 ```
 
-109 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、**玩家重力/落地/单次跳跃高度与滞空/行走速度**、**生物生成点校验、跑动 400 帧不卡方块、不掉出世界、会走动、被埋能自动脱困**、**龙息云持续伤害/范围判定/到期消散**、**配方书材料统计、尺寸过滤、一键摆料后网格可匹配**、**饥饿三段式（食用/消耗/回血/饿空下限/重生/创造模式不消耗）**、**天气状态机（雨雪判定、沙漠与雪原群系、雷暴闪电、下界停雨、光照削弱、存档往返、联机客户端不自行切换）**、**音效模块无设备降级与静音开关**、**成就解锁/去重/矿石与维度条件/存档往返/帧数成就**。
+126 项覆盖：RLE 往返、有序/无序配方与 2×2 限制、配方平移、末影水晶/末地传送门框架/紫珀柱配方、原版光标拿取六种情况、背包堆叠、三维度世界生成（地表/矿脉/基岩/末地柱/水晶/传送门/龙蛋/虚空）、三维度 RLE 存档逐格往返、龙链长度与跟随收敛、体节间距、飞行限速、三态循环、龙息、被打降落、水晶回血与打掉后停止回血、死亡回调、**玩家重力/落地/单次跳跃高度与滞空/行走速度**、**生物生成点校验、跑动 400 帧不卡方块、不掉出世界、会走动、被埋能自动脱困**、**龙息云持续伤害/范围判定/到期消散**、**配方书材料统计、尺寸过滤、一键摆料后网格可匹配**、**饥饿三段式（食用/消耗/回血/饿空下限/重生/创造模式不消耗）**、**天气状态机（雨雪判定、沙漠与雪原群系、雷暴闪电、下界停雨、光照削弱、存档往返、联机客户端不自行切换）**、**音效模块无设备降级与静音开关**、**成就解锁/去重/矿石与维度条件/存档往返/帧数成就**、**状态效果（施加/等级合并/到期/倍率/再生/中毒/存档往返）与药水配方、炼金术士成就**。
 
 游戏内输入 `/selftest` 会跑同一套断言并把结果显示在聊天区。
 
@@ -192,8 +195,8 @@ chrome --headless=new --virtual-time-budget=15000 --dump-dom \
 ```
 jump_rise=1.60格 | tap_air_frames=24 | tap_rise=1.55格 | landed_back=true
 walk_dx=4.48格 | eat_hunger=15 left=2 | mute=true unmute=true
-minimap_toggle=true | weather=rain/1.00 | ach_foodie=true ach_total=13
-mob_stuck=0/6269 | mob_oob=0 | mobs_moved=12
+minimap_toggle=true | weather=rain/1.00 | potion_night=true ach_alchemist=true
+ach_foodie=true ach_total=14 | mob_stuck=0/6344 | mob_oob=0 | mobs_moved=12
 dragon_segs=14 | RESULT=PASS
 ```
 

@@ -14,6 +14,7 @@
     { id: 'builder',      name: '建筑师',     desc: '放置 32 个方块',       check: s => s.placed >= 32 },
     { id: 'hunter',       name: '怪物猎人',   desc: '击杀 10 只生物',       check: s => s.mobs >= 10 },
     { id: 'foodie',       name: '补充能量',   desc: '吃下第一份食物',       check: s => s.eaten >= 1 },
+    { id: 'alchemist',    name: '炼金术士',   desc: '喝下第一瓶药水',       check: s => s.potions >= 1 },
     { id: 'nether',       name: '下界来客',   desc: '进入下界',             check: s => !!s.dims[1] },
     { id: 'end',          name: '末路之地',   desc: '进入末地',             check: s => !!s.dims[2] },
     { id: 'dragon',       name: '屠龙者',     desc: '击败末影龙',           check: s => !!s.dragonDead },
@@ -25,7 +26,8 @@
 
   function blankStats() {
     return { mined: 0, logs: 0, ironOre: 0, diamondOre: 0, placed: 0,
-             crafted: 0, mobs: 0, eaten: 0, dims: [false, false, false],
+             crafted: 0, mobs: 0, eaten: 0, potions: 0,
+             dims: [false, false, false],
              dragonDead: false, storm: false, ticks: 0 };
   }
 
@@ -57,6 +59,7 @@
         case 'craft':  s.crafted++; break;
         case 'mob':    s.mobs++; break;
         case 'eat':    s.eaten++; break;
+        case 'potion': s.potions++; break;
         case 'dim':    if (value >= 0 && value <= 2) s.dims[value] = true; break;
         case 'dragon': s.dragonDead = true; break;
         case 'storm':  s.storm = true; break;

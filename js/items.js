@@ -196,7 +196,15 @@
   item(I.COMPASS, 'compass', '指南针', '#c8453a');
   item(I.CLOCK, 'clock', '时钟', '#f0c65a');
   item(I.GOLDEN_APPLE, 'golden_apple', '金苹果', '#f6d33c', { food: 8 });
-  item(I.POTION, 'potion', '药水', '#9b5de5');
+  item(I.POTION, 'potion', '治疗药水', '#e0526a', { potion: 'heal' });
+  item(I.POTION_HEAL, 'potion_heal', '强效治疗药水', '#f06a7e', { potion: 'heal2' });
+  item(I.POTION_SPEED, 'potion_speed', '迅捷药水', '#5ad1ff', { potion: 'speed' });
+  item(I.POTION_JUMP, 'potion_jump', '跳跃药水', '#7ee787', { potion: 'jump' });
+  item(I.POTION_NIGHT, 'potion_night', '夜视药水', '#8f7bff', { potion: 'night' });
+  item(I.POTION_FIRE, 'potion_fire', '抗火药水', '#ff9f43', { potion: 'fire' });
+  item(I.POTION_REGEN, 'potion_regen', '再生药水', '#ff8fab', { potion: 'regen' });
+  item(I.POTION_POISON, 'potion_poison', '剧毒药水', '#9ccc65', { potion: 'poison' });
+  item(I.POTION_SLOW, 'potion_slow', '迟缓药水', '#9aa5b1', { potion: 'slow' });
   item(I.HONEYCOMB, 'honeycomb', '蜜脾', '#e5a72d');
   item(I.SWEET_BERRIES, 'sweet_berries', '甜浆果', '#c8324a', { food: 2 });
   item(I.GLOW_BERRIES, 'glow_berries', '发光浆果', '#f0b45c', { food: 2 });
@@ -288,6 +296,15 @@
   shapeless(I.BOOK, 1, [[I.PAPER, 3], [I.LEATHER, 1]]);
   shapeless(I.PAPER, 3, [[B.SUGAR_CANE, 3]]);
   shapeless(I.POTION, 1, [[I.GLOW_BERRIES, 1], [I.AMETHYST_SHARD, 1]]);
+  // 药水：发光浆果 + 对应材料（无序）
+  shapeless(I.POTION_HEAL, 1, [[I.GLOW_BERRIES, 1], [I.GOLDEN_APPLE, 1]]);
+  shapeless(I.POTION_SPEED, 1, [[I.GLOW_BERRIES, 1], [B.SUGAR_CANE, 1]]);
+  shapeless(I.POTION_JUMP, 1, [[I.GLOW_BERRIES, 1], [B.HAY, 1]]);
+  shapeless(I.POTION_NIGHT, 1, [[I.GLOW_BERRIES, 1], [B.GLOWSTONE, 1]]);
+  shapeless(I.POTION_FIRE, 1, [[I.GLOW_BERRIES, 1], [B.MAGMA, 1]]);
+  shapeless(I.POTION_REGEN, 1, [[I.GLOW_BERRIES, 1], [I.GHAST_TEAR, 1]]);
+  shapeless(I.POTION_POISON, 1, [[I.GLOW_BERRIES, 1], [B.SULFUR, 1]]);
+  shapeless(I.POTION_SLOW, 1, [[I.GLOW_BERRIES, 1], [B.SOUL_SAND, 1]]);
   shapeless(I.POPPED_CHORUS, 1, [[I.CHORUS_FRUIT, 1], [I.COAL, 1]]);
   shapeless(I.NETHERITE_INGOT, 1, [[I.NETHERITE_SCRAP, 4], [I.GOLD_INGOT, 4]]);
   shapeless(I.BREAD, 1, [[B.HAY, 1], [I.COAL, 1]]);
