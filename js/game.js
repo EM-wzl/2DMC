@@ -28,6 +28,11 @@
       this.dragon = new Entities.EnderDragon(this.world);
       this.lan = new LAN(this);
       this.ui = new UI(this);
+      // 程序化音效（Web Audio，首次按键/点击解锁）
+      this.sound = new DMC.Sound();
+      DMC.sound = this.sound;
+      // 天气状态机（纯逻辑，存档可往返）
+      this.weather = new DMC.Weather(this.seed);
       // 项目内的玩家皮肤 / 生物 skin，拼成 2D 正面 sprite
       this.sprites = new DMC.SpritePack();
       DMC.spritepack = this.sprites;
@@ -95,6 +100,9 @@
       inv.add(I.DIAMOND, 4);
       inv.add(I.GHAST_TEAR, 2);
       inv.add(I.BLAZE_ROD, 2);
+      inv.add(I.BREAD, 8);
+      inv.add(I.APPLE, 4);
+      inv.add(I.GOLDEN_APPLE, 1);
       inv.selected = 0;
     }
 
@@ -108,6 +116,7 @@
       this.craft = new Inv.CraftGrid(2);
       this.mobs = []; this.projectiles = []; this.clouds = []; this.drops = [];
       this.dragon = new Entities.EnderDragon(this.world);
+      this.weather = new DMC.Weather(this.seed);
       this.time = 6000; this.tick = 0;
       this._deathHandled = false;
       this.renderer.tiles.clear();
@@ -117,8 +126,14 @@
     /* ---------- 输入 ---------- */
     bindInput() {
       const cv = this.canvas;
+      // 任意鼠标/触摸点击都算用户手势：启动页按钮、HUD 按钮也能解锁音频
+      document.addEventListener('pointerdown', () => {
+        this.sound.unlock();
+        if (this.sound.enabled) this.sound.setAmbient(this.ambientKind());
+      });
       document.addEventListener('keydown', e => {
         if (this.ui.cmdOpen) return;
+        this.sound.unlock();
         const k = e.key.toLowerCase();
         if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'tab'].includes(k)) e.preventDefault();
         if (k >= '1' && k <= '9') { this.inv.selected = Number(k) - 1; return; }
@@ -146,6 +161,14 @@
           }
         }
         if (k === 'h') this.ui.toggleHelp();
+        if (k === 'm') {
+          const on = this.sound.toggle();
+          if (on) { this.sound.setAmbient(this.ambientKind()); this.sound.play('click'); }
+          this.ui.toast(on ? '音效已开启' : '音效已静音');
+        }
+        if (k === 'v') { this.renderer.minimapOn = !this.renderer.minimapOn;
+                         this.ui.toast(this.renderer.minimapOn ? '小地图已开启' : '小地图已关闭');
+                         this.sound.play('click'); }
         if (k === 'enter' || k === '/') this.ui.openCmd(k === '/' ? '/' : '');
         if (k === 'shift' || k === 'control') this.input.down = 1;
       });
@@ -160,6 +183,7 @@
       cv.addEventListener('mousemove', e => this.updateMouse(e));
       cv.addEventListener('mousedown', e => {
         if (this.ui.panelOpen) return;
+        this.sound.unlock();
         this.updateMouse(e);
         if (e.button === 0) { this.mouse.left = true; this.tryHit(true); }
         if (e.button === 2) { this.rightClick(); }
@@ -249,6 +273,7 @@
       }
       if (Math.random() < 0.12)
         this.renderer.emit(x + 0.5, y + 0.5, d.color, 1, { speed: 0.08, life: 18, size: 2 });
+      if (this.tick % 7 === 0) this.sound.play('dig');
       if (this.breakProgress >= 1) {
         this.breakBlock(x, y, id, d);
         this.breakProgress = 0;
@@ -260,6 +285,8 @@
       const tier = p.toolTier(this.inv) + (this.enchantBonus || 0);
       this.world.set(x, y, B.AIR);
       this.renderer.blockBreak(x, y, id);
+      this.sound.play('break');
+      this.player.exhaust(0.025);
       this.lan.block(x, y, B.AIR);
       // 末影水晶被破坏 → 停止回血
       if (id === B.END_CRYSTAL) {
@@ -274,10 +301,24 @@
 
     /* ---------- 右键：交互 / 放置 ---------- */
     rightClick() {
-      if (!this.target.valid || this.ui.panelOpen) return;
+      if (this.ui.panelOpen) return;
+      const held0 = this.inv.held();
+      // 手持食物：右键食用（不需要对准方块）
+      if (held0.id && DEF[held0.id] && DEF[held0.id].food) {
+        const food = DEF[held0.id].food;
+        if (this.player.eat(food)) {
+          this.inv.consumeHeld(1);
+          this.sound.play('eat');
+          this.renderer.emit(this.player.x, this.player.y - 0.4, '#ffd77a', 6,
+            { speed: 0.08, life: 20, grav: -0.002 });
+          this.ui.toast('吃了 ' + DEF[held0.id].cn + ' · 饱食 +' + food);
+        } else this.ui.toast('还不饿');
+        return;
+      }
+      if (!this.target.valid) return;
       const { x, y } = this.target;
       const id = this.world.get(x, y);
-      const held = this.inv.held();
+      const held = held0;
       // 交互方块
       if (id === B.CRAFTING_TABLE) { this.ui.openPanel('craft'); return; }
       if (id === B.FURNACE) { this.panel.kind = 'furnace'; this.ui.openPanel('furnace'); return; }
@@ -317,11 +358,13 @@
       this.world.set(px, py, held.id);
       this.lan.block(px, py, held.id);
       this.renderer.emit(px + 0.5, py + 0.5, DEF[held.id].color, 4, { speed: 0.1 });
+      this.sound.play('place');
       if (!this.player.creative) this.inv.consumeHeld(1);
     }
 
     usePortal(id, x, y) {
       const w = this.world;
+      this.sound.play('portal');
       if (id === B.NETHER_PORTAL) {
         if (w.dim === 0) {
           this.backPos = { x: this.player.x, y: this.player.y };
@@ -372,11 +415,14 @@
           const d = Math.hypot(dx, dy) + 0.001;
           g.projectiles.push(new Entities.Projectile('breath', x, y, dx / d * 0.36, dy / d * 0.36, 3));
           g.renderer.emit(x, y, '#c46bff', 4, { speed: 0.12, life: 24, grav: 0 });
+          g.sound.play('breath');
         },
         onDragonDeath(x, y) {
           if (g._deathHandled) return;
           g._deathHandled = true;
           g.renderer.explosion(x, y, 4);
+          g.sound.play('explode');
+          g.sound.play('levelup');
           g.inv.add(B.DRAGON_EGG, 1);
           const ep = g.world.endPortal;
           g.world.set(ep.x, ep.y, B.END_PORTAL);
@@ -413,6 +459,7 @@
         if (dist(d.x, d.y, this.player.x, this.player.y) < 1.3) {
           this.inv.add(d.id, d.count || 1);
           this.renderer.emit(d.x, d.y, '#ffe9a8', 5, { speed: 0.1 });
+          this.sound.play('pickup');
           this.drops.splice(i, 1);
         }
       }
@@ -427,8 +474,35 @@
         case 'help':
           g.ui.log('命令：/help /end /nether /overworld /lan host|join|stop|status /say <消息> ' +
                    '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /skin [名字] /save /load ' +
-                   '/spawn <生物> /dragon /selftest /clear');
+                   '/spawn <生物> /dragon /weather [类型] /hunger [数值] /sound [on|off] /selftest /clear');
           break;
+        case 'weather': {
+          const t = (args[0] || '').toLowerCase();
+          if (!t) { g.ui.log('当前天气：' + g.weather.name + '（剩余 ' + g.weather.ticks + ' 帧）'); break; }
+          const names = { qing: 'clear', clear: 'clear', rain: 'rain', yu: 'rain',
+                          snow: 'snow', xue: 'snow', thunder: 'thunder', leibao: 'thunder' };
+          const typ = names[t] || t;
+          if (g.weather.set(typ, 2400)) {
+            g.weather.intensity = g.weather.type === 'clear' ? 0 : 1;
+            if (typ === 'thunder') g.sound.play('thunder');
+            g.ui.toast('天气已设为' + g.weather.name);
+          } else g.ui.log('未知天气：clear / rain / snow / thunder');
+          break;
+        }
+        case 'hunger': {
+          const v = parseInt(args[0], 10);
+          if (!isNaN(v)) g.player.hunger = clamp(v, 0, 20);
+          g.ui.log('饱食度：' + g.player.hunger.toFixed(1) + ' / 20 · 饱和 ' +
+                   g.player.saturation.toFixed(1) + ' · 生命 ' + g.player.life);
+          break;
+        }
+        case 'sound': {
+          const a = (args[0] || '').toLowerCase();
+          g.sound.setEnabled(a ? (a === 'on' || a === '1') : !g.sound.enabled);
+          if (g.sound.enabled) { g.sound.setAmbient(g.ambientKind()); g.sound.play('click'); }
+          g.ui.toast(g.sound.enabled ? '音效已开启' : '音效已静音');
+          break;
+        }
         case 'end':
           if (g.world.dim === 2) {
             g.switchDim(0); g.player.x = g.backPos.x; g.player.y = g.backPos.y;
@@ -519,15 +593,27 @@
       }
     }
 
+    /* ---------- 环境声 ---------- */
+    ambientKind() {
+      if (this.world.dim === 1) return 'nether';
+      if (this.world.dim === 2) return 'end';
+      if (this.weather.raining || this.weather.snowing) return 'rain';
+      const bx = Math.floor(clamp(this.player.x, 0, C.W - 1));
+      if (this.world.dim === 0 && this.player.y > (this.world.heights[bx] | 0) + 8) return 'cave';
+      return 'none';
+    }
+
     /* ---------- 存档 ---------- */
     save() {
       try {
         const data = {
           world: this.world.serialize(),
           player: { x: this.player.x, y: this.player.y, life: this.player.life,
-                    creative: this.player.creative },
+                    creative: this.player.creative, hunger: this.player.hunger,
+                    saturation: this.player.saturation, exhaustion: this.player.exhaustion },
           inv: this.inv.toJSON(), craft: this.craft.toJSON(),
           panel: this.panel.toJSON(), dragon: this.dragon.serialize(),
+          weather: this.weather.serialize(),
           time: this.time, tick: this.tick, backPos: this.backPos,
           enchantBonus: this.enchantBonus
         };
@@ -551,6 +637,12 @@
         this.player.fly = this.player.creative;
         this.player.x = d.player.x; this.player.y = d.player.y;
         this.player.life = d.player.life; this.player.dead = false;
+        if (d.player.hunger !== undefined) {
+          this.player.hunger = d.player.hunger;
+          this.player.saturation = d.player.saturation || 0;
+          this.player.exhaustion = d.player.exhaustion || 0;
+        }
+        this.weather = DMC.Weather.restore(d.weather, w.seed);
         this.time = d.time || 6000; this.tick = d.tick || 0;
         this.backPos = d.backPos || { x: this.player.x, y: this.player.y };
         this.enchantBonus = d.enchantBonus || 0;
@@ -575,7 +667,21 @@
       this.tick++;
       this.time = (this.time + 1) % 24000;
       const p = this.player;
+      const prevLife = p.life, prevGround = p.onGround, prevVy = p.vy;
+      // 天气（按玩家所在群系决定雨雪）
+      const bx = Math.floor(clamp(p.x, 0, C.W - 1));
+      const wev = this.weather.step(this.world.dim,
+        this.world.dim === 0 ? (this.world.biomes[bx] | 0) : 0);
+      if (wev === 'thunder') this.sound.play('thunder');
+      if (wev === 'change')
+        this.ui.toast('天气转为' + this.weather.name);
       p.update(this.world, this.input);
+      // 音效：用状态差分统一捕捉受伤 / 死亡 / 起跳 / 落地 / 脚步
+      if (p.life < prevLife) this.sound.play(p.dead ? 'death' : 'hurt');
+      if (prevGround && !p.onGround && p.vy < -0.05) this.sound.play('jump');
+      if (!prevGround && p.onGround && prevVy > 0.12) this.sound.play('land');
+      if (p.onGround && Math.abs(p.vx) > 0.06 && this.tick % 13 === 0) this.sound.play('step');
+      if (this.tick % 60 === 0) this.sound.setAmbient(this.ambientKind());
       if (p.dead) {
         p.respawn(this.world);
         this.ui.toast('你死了，已重生');
@@ -586,6 +692,7 @@
       const mobAPI = {
         explode: (x, y, r) => {
           this.renderer.explosion(x, y, r);
+          this.sound.play('explode');
           for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
             const qx = Math.floor(x) + dx, qy = Math.floor(y) + dy;
             if (dx * dx + dy * dy > r * r) continue;

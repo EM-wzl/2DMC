@@ -86,6 +86,10 @@
       this.onGround = false;
       this.facing = 1;
       this.life = 20; this.maxLife = 20;
+      // 饥饿：20 点饱食度 + 隐藏饱和度 + 消耗度（原版三段式）
+      this.hunger = 20; this.maxHunger = 20;
+      this.saturation = 5; this.exhaustion = 0;
+      this.regenTick = 0; this.starveTick = 0;
       this.air = 0;
       this.invuln = 0;
       this.creative = false;
@@ -109,6 +113,7 @@
       if (this.invuln > 0) this.invuln--;
       if (this.attackCd > 0) this.attackCd--;
       if (this.dead) return;
+      const ox = this.x, oy = this.y;
       const inWater = world.get(Math.floor(this.x), Math.floor(this.y)) === B.WATER;
       if (this.creative && this.fly) {
         const sp = C.FLY_SPEED;
@@ -128,7 +133,10 @@
         this.vy = Math.min(C.MAX_FALL,
                            this.vy + (inWater ? C.GRAVITY * 0.35 : C.GRAVITY));
         if (inWater) this.vy *= 0.86;
-        if (input.jump && this.onGround) { this.vy = C.JUMP_V; this.onGround = false; }
+        if (input.jump && this.onGround) {
+          this.vy = C.JUMP_V; this.onGround = false;
+          this.exhaust(0.15);
+        }
         if (input.jump && inWater) this.vy = C.WATER_JUMP;
         this.onGround = false;
         this.move(world, this.vx, this.vy);
@@ -141,10 +149,47 @@
       if (this.y < 1) { this.y = 1; this.vy = Math.max(0, this.vy); }
       if (this.x < 1) { this.x = 1; this.vx = 0; }
       if (this.x > C.W - 2) { this.x = C.W - 2; this.vx = 0; }
+      this.metabolism(Math.abs(this.x - ox) + Math.abs(this.y - oy));
+    }
+
+    /* ---- 饥饿 / 代谢 ---- */
+    exhaust(n) {
+      if (this.creative) return;
+      this.exhaustion += n;
+    }
+    eat(food) {
+      if (!food || (this.hunger >= this.maxHunger && this.saturation >= 5))
+        return false;
+      this.hunger = clamp(this.hunger + food, 0, this.maxHunger);
+      this.saturation = clamp(this.saturation + food * 0.6, 0, this.maxHunger);
+      return true;
+    }
+    metabolism(moved) {
+      if (this.creative) return;
+      // 基础代谢 + 移动消耗；消耗度每满 4 先扣饱和度，饱和度见底才扣饥饿
+      this.exhaustion += 0.004 + moved * 0.02;
+      while (this.exhaustion >= 4) {
+        this.exhaustion -= 4;
+        if (this.saturation > 0) this.saturation = Math.max(0, this.saturation - 1);
+        else this.hunger = Math.max(0, this.hunger - 1);
+      }
+      // 饱食时缓慢自然回血（同时消耗额外饱食度）
+      if (this.hunger >= 18 && this.life < this.maxLife) {
+        if (++this.regenTick >= 80) {
+          this.regenTick = 0;
+          this.life = Math.min(this.maxLife, this.life + 1);
+          this.exhaustion += 6;
+        }
+      } else this.regenTick = 0;
+      // 饿空后持续掉血，但不会直接饿死（最低 1 点）
+      if (this.hunger <= 0 && this.life > 1) {
+        if (++this.starveTick >= 100) { this.starveTick = 0; this.life -= 1; }
+      } else this.starveTick = 0;
     }
     hurt(dmg, fromX) {
       if (this.invuln > 0 || this.creative) return false;
       this.life -= dmg;
+      this.exhaust(0.6);
       this.invuln = 40;
       this.vx = (this.x < fromX ? -1 : 1) * C.KNOCK_X;
       this.vy = C.KNOCK_Y;
@@ -167,6 +212,8 @@
       this.x = p.x + 0.5; this.y = p.y - 0.4;
       this.vx = 0; this.vy = 0;
       this.life = this.maxLife; this.dead = false; this.invuln = 60;
+      this.hunger = this.maxHunger; this.saturation = 5; this.exhaustion = 0;
+      this.regenTick = 0; this.starveTick = 0;
     }
   }
 

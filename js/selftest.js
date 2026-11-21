@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   const DMC = root.DMC || (root.DMC = {});
-  const { B, I, C, Core, Items, Inv, World, Entities } = DMC;
+  const { B, I, C, Core, DEF, Items, Inv, World, Entities } = DMC;
 
   function run() {
     const lines = [];
@@ -339,6 +339,79 @@
       ck(m3 && m3.out === B.FURNACE, '熔炉一键摆料后 3x3 网格能匹配');
       const needs = Items.recipeNeeds(rFurnace);
       eq(needs[B.COBBLE], 8, '熔炉材料统计正确（8 圆石）');
+    }
+
+    /* ---- 9. 饥饿 / 食物 ---- */
+    {
+      const w = new World(9); w.generateOverworld();
+      const p = new Entities.Player(C.W / 2, 60);
+      eq(p.hunger, 20, '初始饱食度 20');
+      eq(DEF[I.BREAD].food, 5, '面包提供 5 点饱食');
+      ck(!p.eat(5), '饱食时不浪费食物');
+      p.hunger = 10; p.saturation = 0;
+      ck(p.eat(5) && p.hunger === 15, '吃面包后饱食度 +5');
+      ck(p.saturation > 0, '吃东西同时补充隐藏饱和度');
+      p.hunger = 20; p.saturation = 0; p.exhaustion = 3.9;
+      p.exhaust(0.2); p.metabolism(0);
+      eq(p.hunger, 19, '消耗度满 4 且无饱和度时扣 1 点饥饿');
+      p.creative = true; p.hunger = 20;
+      p.exhaust(100); p.metabolism(100);
+      eq(p.hunger, 20, '创造模式不消耗饥饿');
+      p.creative = false; p.hunger = 20; p.saturation = 5; p.life = 10;
+      p.exhaustion = 0; p.regenTick = 0;
+      for (let i = 0; i < 80; i++) p.metabolism(0);
+      ck(p.life > 10, '饱食时自然回血（' + p.life + '）');
+      p.hunger = 0; p.saturation = 0; p.life = 5; p.starveTick = 0;
+      for (let i = 0; i < 420; i++) p.metabolism(0);
+      eq(p.life, 1, '饿空会掉血但最低保留 1 点');
+      p.respawn(w);
+      eq(p.hunger, 20, '重生恢复满饱食');
+    }
+
+    /* ---- 10. 天气状态机 ---- */
+    {
+      const Wea = DMC.Weather;
+      ck(!!Wea, '天气模块存在');
+      const w = new Wea(12345);
+      ck(w.set('rain', 800) && w.raining && !w.snowing, '可设为下雨');
+      w.intensity = 1;
+      ck(w.skyDim > 0.1, '雨天削弱天空光照（' + w.skyDim.toFixed(2) + '）');
+      ck(w.set('snow', 800) && w.snowing, '可设为下雪');
+      ck(!w.set('volcano', 100), '拒绝未知天气类型');
+      let desertOk = true, snowOk = true;
+      for (let i = 0; i < 60; i++) {
+        const a = new Wea(700 + i); a.pick(3); if (a.type !== 'clear') desertOk = false;
+        const b = new Wea(900 + i); b.pick(1);
+        if (b.type === 'rain' || b.type === 'thunder') snowOk = false;
+      }
+      ck(desertOk, '沙漠群系不会下雨');
+      ck(snowOk, '雪原群系下雨自动转为降雪');
+      const t = new Wea(5); t.set('thunder', 5000); t.intensity = 1; t.thunderCd = 1;
+      eq(t.step(0, 0), 'thunder', '雷暴会触发闪电事件');
+      ck(t.flash > 0.5, '闪电产生画面白闪');
+      const n = new Wea(6); n.set('rain', 900); n.intensity = 1;
+      eq(n.step(1, 0), 'stop', '下界自动停雨');
+      eq(n.type, 'clear', '非主世界天气为晴');
+      const s = n.serialize();
+      const r = Wea.restore(JSON.parse(JSON.stringify(s)), 6);
+      ck(r.type === n.type && r.ticks === n.ticks &&
+         Math.abs(r.intensity - n.intensity) < 1e-9, '天气存档往返无损');
+      const c = new Wea(8); c.set('clear', 3000);
+      eq(c.skyDim, 0, '晴天不削弱光照');
+    }
+
+    /* ---- 11. 音效模块 ---- */
+    {
+      ck(!!DMC.Sound, '音效模块存在');
+      const s = new DMC.Sound();
+      let threw = false;
+      try {
+        s.play('break'); s.play('eat'); s.setAmbient('rain'); s.setAmbient('none');
+      } catch (e) { threw = true; }
+      ck(!threw, '无音频设备时音效调用安全降级');
+      s.setEnabled(false);
+      ck(!s.enabled && !s.unlock(), '静音时不解锁音频上下文');
+      ck(s.toggle() === true && s.enabled, '静音开关可重新开启');
     }
 
     return { passed: pass, failed: fail, lines, ok: fail === 0 };

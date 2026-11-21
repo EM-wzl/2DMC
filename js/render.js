@@ -14,6 +14,7 @@
       this.cam = { x: 0, y: 0 };
       this.particles = [];
       this.dpr = 1;
+      this.minimapOn = true;
       this.resize();
       root.addEventListener('resize', () => this.resize());
     }
@@ -251,6 +252,12 @@
           ctx.fill();
         }
       }
+      // 阴天 / 雷暴：整片天空压暗
+      const wth = g.weather;
+      if (dim === 0 && wth && wth.intensity > 0.01) {
+        ctx.fillStyle = 'rgba(14,19,34,' + (0.38 * wth.intensity).toFixed(3) + ')';
+        ctx.fillRect(0, 0, W, H);
+      }
     }
 
     /* ---------- 主渲染 ---------- */
@@ -277,9 +284,10 @@
 
       this.sky(ctx, g, g.time, world.dim);
       // 方块
-      const dayFactor = g.world.dim === 0
+      const dimPenalty = (world.dim === 0 && g.weather) ? g.weather.skyDim : 0;
+      const dayFactor = (g.world.dim === 0
         ? (g.time < 12000 ? 0.45 + 0.55 * Math.sin(g.time / 12000 * Math.PI) : 0.30)
-        : 1;
+        : 1) * (1 - dimPenalty);
       for (let j = 0; j < this.rows; j++) {
         const wy = oy + j;
         if (wy < 0 || wy >= C.H) continue;
@@ -396,6 +404,145 @@
         ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('末影龙  ' + Math.ceil(g.dragon.hp) + ' / ' + g.dragon.maxHp, W / 2, by + 13);
       }
+      this.drawWeather(ctx, g, W, H);
+      if (this.minimapOn) this.drawMinimap(ctx, g, W, H);
+    }
+
+    /* ---------- 天气：雨丝 / 雪花 / 闪电 ---------- */
+    drawWeather(ctx, g, W, H) {
+      const w = g.weather;
+      if (!w || g.world.dim !== 0) return;
+      if (w.flash > 0.01) {
+        ctx.fillStyle = 'rgba(226,234,255,' + (w.flash * 0.48).toFixed(3) + ')';
+        ctx.fillRect(0, 0, W, H);
+      }
+      if (w.intensity <= 0.02) return;
+      const bx = clamp(Math.floor(g.player.x), 0, C.W - 1);
+      const surface = g.world.heights ? (g.world.heights[bx] | 0) : 96;
+      if (g.player.y > surface + 3) return;        // 地下看不到雨雪
+      if (w.snowing) {
+        const n = Math.floor(110 * w.intensity);
+        ctx.fillStyle = 'rgba(245,250,255,' + (0.72 * w.intensity).toFixed(2) + ')';
+        for (let i = 0; i < n; i++) {
+          const x = ((i * 811 + 137) % (W + 40)) + Math.sin(g.tick * 0.02 + i) * 9;
+          const y = ((i * 397 + g.tick * (1 + i % 3)) % (H + 30)) - 15;
+          const s = 1 + (i % 3);
+          ctx.fillRect(x, y, s, s);
+        }
+      } else if (w.raining) {
+        const n = Math.floor(190 * w.intensity);
+        ctx.strokeStyle = 'rgba(168,204,248,' + (0.42 * w.intensity).toFixed(2) + ')';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const x = ((i * 733 + 91 + g.tick * 2.4) % (W + 60)) - 30;
+          const y = ((i * 569 + g.tick * (17 + i % 7)) % (H + 50)) - 25;
+          ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 13);
+        }
+        ctx.stroke();
+        // 地面溅水
+        ctx.fillStyle = 'rgba(190,220,255,' + (0.28 * w.intensity).toFixed(2) + ')';
+        for (let i = 0; i < 24; i++) {
+          const x = (i * 379 + g.tick * 0.6) % W;
+          const y = (i * 167) % H;
+          ctx.fillRect(x, y, 4, 1);
+        }
+      }
+      // 淋雨时轻微冷色覆盖
+      ctx.fillStyle = 'rgba(70,100,150,' + (0.07 * w.intensity).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    /* ---------- 小地图：地形切片 + 实体标记 ---------- */
+    drawMinimap(ctx, g, W, H) {
+      const mw = 172, mh = 116, mx = W - mw - 16, my = 58;
+      const CELL = 2;                       // 每像素代表 2 格
+      const cols = Math.floor(mw / 3), rows = Math.floor(mh / 3);
+      const px = 3;
+      const ox = Math.floor(g.player.x) - Math.floor(cols / 2) * CELL;
+      const oy = Math.floor(g.player.y) - Math.floor(rows / 2) * CELL;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(mx, my, mw, mh); ctx.clip();
+      ctx.fillStyle = g.world.dim === 1 ? '#2a1210' :
+                      g.world.dim === 2 ? '#150d24' : '#0d1524';
+      ctx.fillRect(mx, my, mw, mh);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const wx = ox + c * CELL, wy = oy + r * CELL;
+          if (!Core.inWorld(wx, wy)) continue;
+          const id = g.world.get(wx, wy);
+          if (!id) continue;
+          const d = DEF[id];
+          if (!d) continue;
+          ctx.fillStyle = d.color || '#666';
+          ctx.fillRect(mx + c * px, my + r * px, px, px);
+          // 矿石 / 光源高亮
+          if (d.light || id === B.DIAMOND_ORE || id === B.DIAMOND_ORE_DEEP ||
+              id === B.ANCIENT_DEBRIS || id === B.END_CRYSTAL) {
+            ctx.fillStyle = 'rgba(255,255,255,.35)';
+            ctx.fillRect(mx + c * px, my + r * px, 1, 1);
+          }
+        }
+      }
+      const toMap = (wx, wy) => ({
+        x: mx + (wx - ox) / CELL * px,
+        y: my + (wy - oy) / CELL * px
+      });
+      // 生物
+      ctx.fillStyle = '#ff6b6b';
+      for (const m of g.mobs) {
+        const q = toMap(m.x, m.y);
+        if (q.x < mx || q.x > mx + mw || q.y < my || q.y > my + mh) continue;
+        ctx.fillRect(q.x - 1, q.y - 1, 3, 3);
+      }
+      // 末影水晶 / 传送门 / 龙
+      if (g.world.dim === 2) {
+        ctx.fillStyle = '#e59bff';
+        for (const c of (g.world.crystals || [])) {
+          if (!c.alive) continue;
+          const q = toMap(c.x, c.y);
+          if (q.x >= mx && q.x <= mx + mw && q.y >= my && q.y <= my + mh)
+            ctx.fillRect(q.x - 2, q.y - 2, 5, 5);
+        }
+        if (g.dragon && g.dragon.alive && g.dragon.head) {
+          const h = g.dragon.head, q = toMap(h.x, h.y);
+          ctx.fillStyle = '#c46bff';
+          ctx.fillRect(q.x - 3, q.y - 3, 7, 7);
+        }
+      }
+      const ep = g.world.endPortal, np = g.world.stronghold;
+      ctx.fillStyle = '#4de0d0';
+      for (const q0 of [ep, np]) {
+        if (!q0) continue;
+        const q = toMap(q0.x, q0.y);
+        if (q.x >= mx && q.x <= mx + mw && q.y >= my && q.y <= my + mh)
+          ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+      }
+      // 远程玩家
+      ctx.fillStyle = '#59e0c8';
+      for (const rp of (g.remotePlayers || [])) {
+        const q = toMap(rp.x, rp.y);
+        if (q.x >= mx && q.x <= mx + mw && q.y >= my && q.y <= my + mh)
+          ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+      }
+      // 玩家：白色菱形 + 朝向
+      const pc = { x: mx + mw / 2, y: my + mh / 2 };
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(pc.x, pc.y - 4); ctx.lineTo(pc.x + 4, pc.y);
+      ctx.lineTo(pc.x, pc.y + 4); ctx.lineTo(pc.x - 4, pc.y);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ffe27a';
+      ctx.fillRect(pc.x + g.player.facing * 5 - 1, pc.y - 1, 2, 2);
+      ctx.restore();
+      // 边框与标题
+      ctx.strokeStyle = 'rgba(180,200,235,.55)'; ctx.lineWidth = 1;
+      ctx.strokeRect(mx - 0.5, my - 0.5, mw + 1, mh + 1);
+      ctx.fillStyle = 'rgba(8,12,20,.72)'; ctx.fillRect(mx, my, mw, 15);
+      ctx.fillStyle = '#dce6f7'; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText(C.DIM_NAMES[g.world.dim] + '  x' + Math.floor(g.player.x) +
+                   ' y' + Math.floor(g.player.y) + '   V 隐藏', mx + 5, my + 11);
+      ctx.textAlign = 'center';
     }
 
     drawPlayer(ctx, p, sx, sy, g) {

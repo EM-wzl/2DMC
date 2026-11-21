@@ -124,6 +124,19 @@
           hearts.appendChild(h);
         }
       }
+      // 饱食度（10 个鸡腿位，每格 2 点）
+      const hungerBar = $('#hunger');
+      const hg = Math.ceil(p.hunger || 0);
+      if (hungerBar && hungerBar.dataset.v !== String(hg)) {
+        hungerBar.dataset.v = String(hg);
+        hungerBar.innerHTML = '';
+        for (let i = 0; i < 10; i++) {
+          const f = el('span', 'food' + (i * 2 < hg ? '' : ' empty'));
+          f.textContent = (hg - i * 2 >= 2) ? '◆' : (hg - i * 2 === 1 ? '◈' : '◇');
+          hungerBar.appendChild(f);
+        }
+        hungerBar.title = '饱食度 ' + hg + ' / 20 · 手持食物右键食用';
+      }
       // 快捷栏
       for (let i = 0; i < 9; i++) {
         const s = inv.slots[i], h = this.hot[i];
@@ -142,6 +155,8 @@
       $('#info').textContent =
         `${C.DIM_NAMES[g.world.dim]}  ·  x ${Math.floor(p.x)} y ${Math.floor(p.y)}  ·  ${bio}  ·  ` +
         `${String(clock).padStart(2, '0')}:00  ·  ${p.creative ? '创造' : '生存'}` +
+        (g.weather && g.world.dim === 0 ? '  ·  ' + g.weather.name : '') +
+        (!g.sound || g.sound.enabled ? '' : '  ·  静音') +
         (g.lan.role === 'host' ? '  ·  主机' : g.lan.role === 'client' ? '  ·  客户端' : '');
       // 目标方块名
       const tg = g.target;

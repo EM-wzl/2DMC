@@ -80,6 +80,29 @@ document.getElementById('fr').addEventListener('load', async () => {
     out.push('walk_dx=' + walkDx.toFixed(2) + '格');
     out.push('keyup_works=' + (g.input.right === 0));
 
+    // ---- 2b. 新系统试玩：吃食物 / 天气 / 音效 / 小地图 ----
+    const bread = w.DMC.I.BREAD;
+    g.inv.slots[0] = { id: bread, count: 3 };
+    g.inv.selected = 0;
+    p.hunger = 10; p.saturation = 0;
+    d.getElementById('game').dispatchEvent(
+      new MouseEvent('mousedown', { button: 2, bubbles: true }));
+    const ate = p.hunger === 15 && g.inv.slots[0].count === 2;
+    out.push('eat_hunger=' + p.hunger + ' left=' + g.inv.slots[0].count);
+    key(d, 'keydown', 'm');
+    const muted = !g.sound.enabled;
+    key(d, 'keydown', 'm');
+    key(d, 'keydown', 'v');
+    const mapOff = !g.renderer.minimapOn;
+    key(d, 'keydown', 'v');
+    out.push('mute=' + muted + ' unmute=' + g.sound.enabled + ' minimap_toggle=' + mapOff);
+    g.command('weather rain');
+    step(30);
+    const weatherOk = g.weather.raining && g.weather.intensity > 0.9;
+    out.push('weather=' + g.weather.type + '/' + g.weather.intensity.toFixed(2));
+    g.command('weather clear');
+    step(5);
+
     // ---- 3. 放一群生物，跑 400 帧看会不会卡进方块 ----
     const types = ['zombie', 'skeleton', 'spider', 'creeper', 'cube', 'sheep', 'enderman'];
     let spawned = 0;
@@ -121,7 +144,8 @@ document.getElementById('fr').addEventListener('load', async () => {
     step(1);                              // 恢复绘制并画一帧，验证渲染链路没坏
     const rise = baseY - top;
     out.push('RESULT=' + (stuck === 0 && oob === 0 && rise > 0.4 && rise < 2.6 &&
-                          tapAir >= 12 && tapAir <= 45 &&
+                          tapAir >= 12 && tapAir <= 45 && ate && muted && g.sound.enabled &&
+                          mapOff && g.renderer.minimapOn && weatherOk &&
                           Math.abs(walkDx) > 0.5 && g.input.right === 0 ? 'PASS' : 'FAIL'));
   } catch (e) { out.push('EXCEPTION=' + e.message); out.push('RESULT=FAIL'); }
   document.getElementById('result').textContent = out.join(' | ');

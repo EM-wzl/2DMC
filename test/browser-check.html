@@ -59,6 +59,37 @@
           }
           w.game.ui.closePanel();
         } catch (e) { out.push('recipe_err=' + e.message); }
+        // 新系统：饥饿 / 天气 / 音效 / 小地图 / 存档
+        try {
+          const g = w.game, I = w.DMC.I;
+          out.push('sound=' + !!g.sound + '/' + g.sound.enabled);
+          out.push('sound_ctx=' + (g.sound.ctx ? g.sound.ctx.state : 'none'));
+          g.command('weather rain');
+          out.push('weather_rain=' + g.weather.raining);
+          g.command('weather snow');
+          out.push('weather_snow=' + g.weather.snowing);
+          // 真实右键事件吃面包
+          g.inv.slots[0] = { id: I.BREAD, count: 3 };
+          g.inv.selected = 0;
+          g.player.hunger = 10; g.player.saturation = 0;
+          w.document.querySelector('#game').dispatchEvent(
+            new w.MouseEvent('mousedown', { button: 2, bubbles: true }));
+          out.push('eat_hunger=' + g.player.hunger);
+          out.push('eat_left=' + g.inv.slots[0].count);
+          const kd2 = k => w.document.dispatchEvent(
+            new w.KeyboardEvent('keydown', { key: k, bubbles: true }));
+          kd2('m'); out.push('m_mute=' + (!g.sound.enabled));
+          kd2('m'); out.push('m_on=' + g.sound.enabled);
+          kd2('v'); out.push('v_off=' + (!g.renderer.minimapOn));
+          kd2('v'); out.push('v_on=' + g.renderer.minimapOn);
+          try { g.renderer.render(g); out.push('render_weather_map=OK'); }
+          catch (e) { out.push('render_err=' + e.message); }
+          g.command('weather rain');
+          g.save();
+          g.command('weather clear');
+          g.load();
+          out.push('save_weather=' + g.weather.type);
+        } catch (e) { out.push('newsys_err=' + e.message); }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');
     }, 2200);
