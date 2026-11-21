@@ -408,6 +408,7 @@
         else if (inv.cursor.id === r.out && inv.cursor.count + r.count <= C.STACK) inv.cursor.count += r.count;
         else return;
         g.craft.consume();
+        if (g.ach) g.ach.note('craft');
         this.buildPanel(); return;
       } else if (kind === 'panel-input') s = g.panel.input;
       else if (kind === 'panel-fuel') s = g.panel.fuel;

@@ -4,7 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const webRoot = path.join(__dirname, '..');
-const files = ['core', 'audio', 'weather', 'items', 'inventory', 'world', 'entities', 'selftest'];
+const files = ['core', 'audio', 'weather', 'achievements', 'items', 'inventory',
+               'world', 'entities', 'selftest'];
 
 const ctx = { console, Buffer, setTimeout, clearTimeout };
 vm.createContext(ctx);

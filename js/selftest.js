@@ -398,6 +398,13 @@
          Math.abs(r.intensity - n.intensity) < 1e-9, '天气存档往返无损');
       const c = new Wea(8); c.set('clear', 3000);
       eq(c.skyDim, 0, '晴天不削弱光照');
+      // 联机客户端：只做渐变与闪电衰减，不自行切换天气
+      const cli = new Wea(77); cli.set('rain', 3);
+      const cev = [];
+      for (let i = 0; i < 10; i++) cev.push(cli.step(0, 0, true));
+      ck(cli.type === 'rain' && cli.ticks === 3 && cev.every(e => e === null),
+         '联机客户端不自行切换天气、不触发雷暴事件');
+      ck(cli.intensity > 0, '客户端仍平滑渐变天气强度');
     }
 
     /* ---- 11. 音效模块 ---- */
@@ -412,6 +419,35 @@
       s.setEnabled(false);
       ck(!s.enabled && !s.unlock(), '静音时不解锁音频上下文');
       ck(s.toggle() === true && s.enabled, '静音开关可重新开启');
+    }
+
+    /* ---- 12. 成就与统计 ---- */
+    {
+      const A = DMC.Achievements;
+      ck(!!A && DMC.ACHIEVEMENTS.length >= 10, '成就模块与成就表存在');
+      const a = new A();
+      ck(a.count === 0 && a.total === DMC.ACHIEVEMENTS.length, '初始未解锁任何成就');
+      a.note('mine', B.LOG);
+      let got = a.check(null);
+      ck(got.length === 1 && got[0].id === 'first_mine', '挖第一格解锁开局一镐');
+      ck(a.check(null).length === 0, '成就不会重复解锁');
+      for (let i = 0; i < 7; i++) a.note('mine', B.LOG);
+      ck(a.check(null).some(x => x.id === 'lumberjack'), '挖满 8 原木解锁伐木工');
+      a.note('mine', B.IRON_ORE);
+      a.note('mine', B.DIAMOND_ORE);
+      a.note('craft'); a.note('eat');
+      a.note('dim', 1); a.note('dim', 2); a.note('dragon'); a.note('storm');
+      got = a.check(null);
+      const ids = got.map(x => x.id);
+      ck(['iron_age', 'diamond', 'crafter', 'foodie', 'nether', 'end', 'dragon', 'storm']
+           .every(k => ids.indexOf(k) >= 0), '矿石/合成/进食/维度/屠龙/雷暴成就全部解锁');
+      const s = a.serialize();
+      const b = A.restore(JSON.parse(JSON.stringify(s)));
+      ck(b.count === a.count && b.stats.mined === a.stats.mined &&
+         b.stats.dims[2] === true && b.stats.dragonDead === true, '成就存档往返无损');
+      for (let i = 0; i < 6000; i++) a.note('tick');
+      ck(a.check(null).some(x => x.id === 'survivor'), '累计 6000 帧解锁老玩家');
+      ck(a.progress().length === a.total, '进度列表长度与成就总数一致');
     }
 
     return { passed: pass, failed: fail, lines, ok: fail === 0 };

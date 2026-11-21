@@ -91,6 +91,16 @@
           g.command('weather clear');
           g.load();
           out.push('save_weather=' + g.weather.type);
+          // 成就 / 联机天气同步
+          out.push('ach=' + g.ach.count + '/' + g.ach.total);
+          g.ach.note('mine', w.DMC.B.LOG);
+          g.ach.check(g);
+          out.push('ach_first=' + g.ach.has('first_mine'));
+          out.push('lan_state=' + (typeof g.lan.state === 'function'));
+          g.save();
+          const achBefore = g.ach.count;
+          g.load();
+          out.push('ach_save=' + (g.ach.count === achBefore && g.ach.has('first_mine')));
         } catch (e) { out.push('newsys_err=' + e.message); }
       } catch (e) { out.push('EXCEPTION=' + e.message); }
       document.getElementById('result').textContent = out.join(' | ');

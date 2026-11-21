@@ -50,8 +50,8 @@
       this.set(t, t === 'clear' ? 1800 + Math.floor(this.rng() * 2400)
                                 : 900 + Math.floor(this.rng() * 1500));
     }
-    /* 每帧调用；返回 'thunder' / 'start' / 'stop' / null */
-    step(dim, biome) {
+    /* 每帧调用；clientMode 用于联机客户端：只做渐变/闪电衰减，不自行切换天气 */
+    step(dim, biome, clientMode) {
       this.biome = biome | 0;
       if (this.flash > 0) this.flash = Math.max(0, this.flash - 0.085);
       if (dim !== 0) {
@@ -63,6 +63,7 @@
       const target = this.type === 'clear' ? 0 : 1;
       this.intensity += clamp(target - this.intensity, -0.008, 0.008);
       this.intensity = clamp(this.intensity, 0, 1);
+      if (clientMode) return null;          // 客户端状态完全由主机广播驱动
       if (--this.ticks <= 0) { this.pick(this.biome); return 'change'; }
       if (this.type === 'thunder' && --this.thunderCd <= 0) {
         this.thunderCd = 180 + Math.floor(this.rng() * 320);

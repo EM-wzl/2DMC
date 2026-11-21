@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>2DMC Web 联机天气同步验证</title>
+<style>
+html,body{margin:0;padding:0;background:#111;color:#ddd;font:12px monospace}
+iframe{width:640px;height:360px;border:1px solid #444;display:inline-block}
+#result{padding:6px;color:#7f7}
+</style>
+</head>
+<body>
+<div id="result">PENDING</div>
+<iframe id="a" src="../index.html"></iframe>
+<iframe id="b" src="../index.html"></iframe>
+<script>
+(async function () {
+  const out = [];
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    await wait(1800);
+    const A = document.getElementById('a').contentWindow;
+    const B = document.getElementById('b').contentWindow;
+    if (!A.game || !B.game) throw new Error('游戏未启动');
+    A.document.getElementById('btn-new').click();
+    B.document.getElementById('btn-new').click();
+    await wait(500);
+    out.push('host=' + A.game.lan.host());
+    out.push('join=' + B.game.lan.join());
+    await wait(1800);                     // 等 WORLD 快照与 STATE 广播
+    out.push('role_b=' + B.game.lan.role);
+    A.game.command('weather snow');       // 立即广播 STATE
+    A.game.time = 18000;
+    A.game.lan.state();
+    await wait(800);
+    out.push('host_weather=' + A.game.weather.type);
+    out.push('client_weather=' + B.game.weather.type);
+    out.push('client_time=' + Math.floor(B.game.time));
+    out.push('RESULT=' + (B.game.lan.role === 'client' &&
+                          B.game.weather.type === 'snow' &&
+                          Math.abs(B.game.time - 18000) < 400 ? 'PASS' : 'FAIL'));
+  } catch (e) { out.push('EXCEPTION=' + e.message); out.push('RESULT=FAIL'); }
+  document.getElementById('result').textContent = out.join(' | ');
+})();
+</script>
+</body>
+</html>

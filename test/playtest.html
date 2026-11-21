@@ -102,6 +102,8 @@ document.getElementById('fr').addEventListener('load', async () => {
     out.push('weather=' + g.weather.type + '/' + g.weather.intensity.toFixed(2));
     g.command('weather clear');
     step(5);
+    const achOk = g.ach.has('foodie');
+    out.push('ach_foodie=' + achOk + ' ach_total=' + g.ach.total);
 
     // ---- 3. 放一群生物，跑 400 帧看会不会卡进方块 ----
     const types = ['zombie', 'skeleton', 'spider', 'creeper', 'cube', 'sheep', 'enderman'];
@@ -145,7 +147,7 @@ document.getElementById('fr').addEventListener('load', async () => {
     const rise = baseY - top;
     out.push('RESULT=' + (stuck === 0 && oob === 0 && rise > 0.4 && rise < 2.6 &&
                           tapAir >= 12 && tapAir <= 45 && ate && muted && g.sound.enabled &&
-                          mapOff && g.renderer.minimapOn && weatherOk &&
+                          mapOff && g.renderer.minimapOn && weatherOk && achOk &&
                           Math.abs(walkDx) > 0.5 && g.input.right === 0 ? 'PASS' : 'FAIL'));
   } catch (e) { out.push('EXCEPTION=' + e.message); out.push('RESULT=FAIL'); }
   document.getElementById('result').textContent = out.join(' | ');

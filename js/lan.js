@@ -108,6 +108,14 @@
           g.world.switchTo(d.dim);
           g.player.x = d.x; g.player.y = d.y;
           break;
+        case 'STATE': {
+          if (this.role !== 'client') return;
+          const wasFlash = g.weather && g.weather.flash > 0.5;
+          if (d.weather) g.weather = DMC.Weather.restore(d.weather, g.world.seed);
+          if (typeof d.time === 'number') g.time = d.time;
+          if (!wasFlash && d.weather && d.weather.flash > 0.5) g.sound.play('thunder');
+          break;
+        }
         case 'DRAGON':
           if (this.role !== 'client' || !g.dragon) return;
           g.dragon.hp = d.hp; g.dragon.state = d.state;
@@ -131,14 +139,21 @@
 
     sendWorld(to) {
       if (this.role !== 'host') return;
-      this.send('WORLD', { to, world: this.g.world.serialize() });
+      this.send('WORLD', { to, world: this.g.world.serialize(),
+                           weather: this.g.weather.serialize(), time: this.g.time });
     }
     applyWorld(o) {
       const w = DMC.World.deserialize(o);
       if (!w) { this.g.ui.toast('世界快照版本不兼容'); return; }
       this.g.world = w;
       this.g.world.switchTo(o.dim | 0);
+      if (o.weather) this.g.weather = DMC.Weather.restore(o.weather, w.seed);
+      if (typeof o.time === 'number') this.g.time = o.time;
       this.g.renderer.tiles.clear();
+    }
+    state() {
+      if (!this.active || this.role !== 'host') return;
+      this.send('STATE', { weather: this.g.weather.serialize(), time: this.g.time });
     }
     block(x, y, id, dim) {
       if (!this.active) return;
@@ -170,6 +185,7 @@
       this.tick++;
       if (this.tick % 6 === 0) this.player();
       if (this.tick % 4 === 0 && this.role === 'host') this.dragon();
+      if (this.tick % 30 === 0 && this.role === 'host') this.state();
       if (this.tick % 60 === 0) {
         const now = Date.now();
         for (const [k, v] of this.peers) if (now - v.last > 20000) this.peers.delete(k);

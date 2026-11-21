@@ -33,6 +33,8 @@
       DMC.sound = this.sound;
       // 天气状态机（纯逻辑，存档可往返）
       this.weather = new DMC.Weather(this.seed);
+      // 成就与统计（纯逻辑，存档可往返）
+      this.ach = new DMC.Achievements();
       // 项目内的玩家皮肤 / 生物 skin，拼成 2D 正面 sprite
       this.sprites = new DMC.SpritePack();
       DMC.spritepack = this.sprites;
@@ -117,6 +119,7 @@
       this.mobs = []; this.projectiles = []; this.clouds = []; this.drops = [];
       this.dragon = new Entities.EnderDragon(this.world);
       this.weather = new DMC.Weather(this.seed);
+      this.ach = new DMC.Achievements();
       this.time = 6000; this.tick = 0;
       this._deathHandled = false;
       this.renderer.tiles.clear();
@@ -246,6 +249,7 @@
     }
 
     killMob(m) {
+      this.ach.note('mob');
       const drops = {
         zombie: I.LEATHER, skeleton: I.BONE, creeper: I.GUNPOWDER,
         spider: I.STRING, piglin: I.GOLD_INGOT, cube: I.RAW_SULFUR,
@@ -286,6 +290,7 @@
       this.world.set(x, y, B.AIR);
       this.renderer.blockBreak(x, y, id);
       this.sound.play('break');
+      this.ach.note('mine', id);
       this.player.exhaust(0.025);
       this.lan.block(x, y, B.AIR);
       // 末影水晶被破坏 → 停止回血
@@ -309,6 +314,7 @@
         if (this.player.eat(food)) {
           this.inv.consumeHeld(1);
           this.sound.play('eat');
+          this.ach.note('eat');
           this.renderer.emit(this.player.x, this.player.y - 0.4, '#ffd77a', 6,
             { speed: 0.08, life: 20, grav: -0.002 });
           this.ui.toast('吃了 ' + DEF[held0.id].cn + ' · 饱食 +' + food);
@@ -359,6 +365,7 @@
       this.lan.block(px, py, held.id);
       this.renderer.emit(px + 0.5, py + 0.5, DEF[held.id].color, 4, { speed: 0.1 });
       this.sound.play('place');
+      this.ach.note('place');
       if (!this.player.creative) this.inv.consumeHeld(1);
     }
 
@@ -384,6 +391,7 @@
       }
     }
     switchDim(d) {
+      this.ach.note('dim', d);
       this.world.switchTo(d);
       const sp = this.world.spawnPoint();
       this.player.x = sp.x + 0.5; this.player.y = sp.y - 0.4;
@@ -423,6 +431,7 @@
           g.renderer.explosion(x, y, 4);
           g.sound.play('explode');
           g.sound.play('levelup');
+          g.ach.note('dragon');
           g.inv.add(B.DRAGON_EGG, 1);
           const ep = g.world.endPortal;
           g.world.set(ep.x, ep.y, B.END_PORTAL);
@@ -474,8 +483,17 @@
         case 'help':
           g.ui.log('命令：/help /end /nether /overworld /lan host|join|stop|status /say <消息> ' +
                    '/give <名称|id> [数量] /tp <x> <y> /gamemode /time <0-24000> /seed /skin [名字] /save /load ' +
-                   '/spawn <生物> /dragon /weather [类型] /hunger [数值] /sound [on|off] /selftest /clear');
+                   '/spawn <生物> /dragon /weather [类型] /hunger [数值] /sound [on|off] ' +
+                   '/achievements /selftest /clear');
           break;
+        case 'achievements':
+        case 'ach': {
+          g.ui.log('成就进度：' + g.ach.count + ' / ' + g.ach.total);
+          for (const a of g.ach.progress())
+            g.ui.log((a.done ? '[已达成] ' : '[未达成] ') + a.name + ' — ' + a.desc);
+          g.ui.toast('成就 ' + g.ach.count + '/' + g.ach.total + '，详情见聊天区');
+          break;
+        }
         case 'weather': {
           const t = (args[0] || '').toLowerCase();
           if (!t) { g.ui.log('当前天气：' + g.weather.name + '（剩余 ' + g.weather.ticks + ' 帧）'); break; }
@@ -485,6 +503,7 @@
           if (g.weather.set(typ, 2400)) {
             g.weather.intensity = g.weather.type === 'clear' ? 0 : 1;
             if (typ === 'thunder') g.sound.play('thunder');
+            g.lan.state();
             g.ui.toast('天气已设为' + g.weather.name);
           } else g.ui.log('未知天气：clear / rain / snow / thunder');
           break;
@@ -614,6 +633,7 @@
           inv: this.inv.toJSON(), craft: this.craft.toJSON(),
           panel: this.panel.toJSON(), dragon: this.dragon.serialize(),
           weather: this.weather.serialize(),
+          ach: this.ach.serialize(),
           time: this.time, tick: this.tick, backPos: this.backPos,
           enchantBonus: this.enchantBonus
         };
@@ -643,6 +663,7 @@
           this.player.exhaustion = d.player.exhaustion || 0;
         }
         this.weather = DMC.Weather.restore(d.weather, w.seed);
+        this.ach = DMC.Achievements.restore(d.ach);
         this.time = d.time || 6000; this.tick = d.tick || 0;
         this.backPos = d.backPos || { x: this.player.x, y: this.player.y };
         this.enchantBonus = d.enchantBonus || 0;
@@ -671,10 +692,13 @@
       // 天气（按玩家所在群系决定雨雪）
       const bx = Math.floor(clamp(p.x, 0, C.W - 1));
       const wev = this.weather.step(this.world.dim,
-        this.world.dim === 0 ? (this.world.biomes[bx] | 0) : 0);
-      if (wev === 'thunder') this.sound.play('thunder');
-      if (wev === 'change')
+        this.world.dim === 0 ? (this.world.biomes[bx] | 0) : 0,
+        this.lan.role === 'client');
+      if (wev === 'thunder') { this.sound.play('thunder'); this.lan.state(); }
+      if (wev === 'change') {
         this.ui.toast('天气转为' + this.weather.name);
+        this.lan.state();
+      }
       p.update(this.world, this.input);
       // 音效：用状态差分统一捕捉受伤 / 死亡 / 起跳 / 落地 / 脚步
       if (p.life < prevLife) this.sound.play(p.dead ? 'death' : 'hurt');
@@ -682,6 +706,21 @@
       if (!prevGround && p.onGround && prevVy > 0.12) this.sound.play('land');
       if (p.onGround && Math.abs(p.vx) > 0.06 && this.tick % 13 === 0) this.sound.play('step');
       if (this.tick % 60 === 0) this.sound.setAmbient(this.ambientKind());
+      // 成就：累计游玩帧数、天气事件，每 20 帧结算一次
+      this.ach.note('tick');
+      if (this.weather.type === 'thunder') this.ach.note('storm');
+      if (this.tick % 20 === 0) {
+        const got = this.ach.check(this);
+        for (const a of got) {
+          this.sound.play('levelup');
+          this.ui.toast('成就达成：' + a.name + ' · ' + a.desc);
+          this.ui.log('[成就] ' + a.name + ' — ' + a.desc +
+                      '（' + this.ach.count + '/' + this.ach.total + '）');
+          this.renderer.emit(p.x, p.y - 1, '#ffe27a', 16,
+            { speed: 0.16, life: 34, grav: -0.002 });
+          this.save();
+        }
+      }
       if (p.dead) {
         p.respawn(this.world);
         this.ui.toast('你死了，已重生');
